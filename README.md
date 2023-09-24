@@ -1,5 +1,5 @@
 # ShepherdBMS2
-Application and drivers for Shepherd BMS 2
+Our from-scratch Battery Management Application, v2.
 
 ## Setting up Docker Environment
 For initial installation, visit here: https://nerdocs.atlassian.net/wiki/spaces/NER/pages/108888108/Setting+Up+STM32+Dev+Env
