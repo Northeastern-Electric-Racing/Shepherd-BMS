@@ -4,6 +4,7 @@
 // etc etc
 #endif
 
+#include "main.h"
 // #include <nerduino.h>
 #include <Watchdog_t4.h>
 #include <LTC68041.h>
