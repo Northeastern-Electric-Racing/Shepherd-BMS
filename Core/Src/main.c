@@ -1,43 +1,18 @@
-/* USER CODE BEGIN Header */
-/**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2023 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
-/* USER CODE END Header */
-/* Includes ------------------------------------------------------------------*/
+#ifdef DEBUG_EVERYTHING
+#define DEBUG_CHARGING
+#define DEBUG_STATS
+// etc etc
+#endif
+
 #include "main.h"
-
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
-
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
+// #include <nerduino.h>
+#include <Watchdog_t4.h>
+#include <LTC68041.h>
+#include "segment.h"
+#include "compute.h"
+#include "datastructs.h"
+#include "analyzer.h"
+#include "stateMachine.h"
 
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef hcan1;
@@ -51,10 +26,6 @@ UART_HandleTypeDef huart4;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
-
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -65,40 +36,118 @@ static void MX_SPI2_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_UART4_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
-/* USER CODE BEGIN PFP */
 
-/* USER CODE END PFP */
+WDT_T4<WDT1> wdt;
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+AccumulatorData_t *prevAccData = nullptr;
 
-/* USER CODE END 0 */
+StateMachine stateMachine;
 
-/**
-  * @brief  The application entry point.
-  * @retval int
-  */
+#ifdef DEBUG_STATS
+
+const void printBMSStats(AccumulatorData_t *accData)
+{
+	static Timer debug_statTimer;
+	static const uint16_t PRINT_STAT_WAIT = 500; //ms
+
+	if(!debug_statTimer.isTimerExpired()) return;
+
+	Serial.print("Prev Fault: 0x");
+	Serial.println(stateMachine.previousFault, HEX);
+	Serial.print("Current: ");
+	Serial.println((float)(accData->pack_current) / 10.0);
+	Serial.print("Min, Max, Avg Temps: ");
+	Serial.print(accData->min_temp.val);
+	Serial.print(",  ");
+	Serial.print(accData->max_temp.val);
+	Serial.print(",  ");
+	Serial.println(accData->avg_temp);
+	Serial.print("Min, Max, Avg, Delta Voltages: ");
+	Serial.print(accData->min_voltage.val);
+	Serial.print(",  ");
+	Serial.print(accData->max_voltage.val);
+	Serial.print(",  ");
+	Serial.print(accData->avg_voltage);
+	Serial.print(",  ");
+	Serial.println(accData->delt_voltage);
+
+	Serial.print("DCL: ");
+	Serial.println(accData->discharge_limit);
+
+	Serial.print("CCL: ");
+	Serial.println(accData->charge_limit);
+
+	Serial.print("SoC: ");
+	Serial.println(accData->soc);
+
+	Serial.print("Is Balancing?: ");
+	Serial.println(segment.isBalancing());
+
+	Serial.print("State: ");
+	if (stateMachine.current_state == 0) Serial.println("BOOT");
+	else if (stateMachine.current_state == 1) Serial.println("READY");
+	else if (stateMachine.current_state == 2) Serial.println("CHARGING");
+	else if (stateMachine.current_state == 1) Serial.println("FAULTED");
+
+	Serial.println("Raw Cell Voltage:");
+	for(uint8_t c = 0; c < NUM_CHIPS; c++)
+	{
+		for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+		{
+			Serial.print(accData->chip_data[c].voltage_reading[cell]);
+			Serial.print("\t");
+		}
+		Serial.println();
+	}
+
+	Serial.println("Open Cell Voltage:");
+	for(uint8_t c = 0; c < NUM_CHIPS; c++)
+	{
+		for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+		{
+			Serial.print(accData->chip_data[c].open_cell_voltage[cell]);
+			Serial.print("\t");
+		}
+		Serial.println();
+	}
+
+	Serial.println("Cell Temps:");
+	for(uint8_t c = 0; c < NUM_CHIPS; c++)
+	{
+		for(uint8_t cell = 17; cell < 28; cell++)
+		{
+			Serial.print(accData->chip_data[c].thermistor_reading[cell]);
+			Serial.print("\t");
+		}
+		Serial.println();
+	}
+
+	Serial.println("Avg Cell Temps:");
+	for(uint8_t c = 0; c < NUM_CHIPS; c++)
+	{
+		for(uint8_t cell = 17; cell < 28; cell++)
+		{
+			Serial.print(accData->chip_data[c].thermistor_value[cell]);
+			Serial.print("\t");
+		}
+		Serial.println();
+	}
+
+
+	debug_statTimer.startTimer(PRINT_STAT_WAIT);
+}
+
+
+#endif
+
+
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+ /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
-
-  /* USER CODE BEGIN SysInit */
-
-  /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
@@ -109,19 +158,39 @@ int main(void)
   MX_SPI3_Init();
   MX_UART4_Init();
   MX_USB_OTG_FS_PCD_Init();
-  /* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
+  WDT_timings_t config;
+  config.trigger = 5;         /* in seconds, 0->128 */
+  config.timeout = 15;        /* in seconds, 0->128 */
+  wdt.begin(config);
+//   NERduino.begin();
+  compute.setFault(NOT_FAULTED);
+  segment.init();
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+  while(1)
+  { 
+	//Create a dynamically allocated structure
+	AccumulatorData_t *accData = new AccumulatorData_t;
 
-    /* USER CODE BEGIN 3 */
-  }
-  /* USER CODE END 3 */
+	//accData->faultCode = FAULTS_CLEAR;
+
+	//Collect all the segment data needed to perform analysis
+	//Not state specific
+	segment.retrieveSegmentData(accData->chip_data);
+	accData->pack_current = compute.getPackCurrent();
+
+	//Perform calculations on the data in the frame
+	analyzer.push(accData);
+
+	stateMachine.handleState(accData);
+
+	#ifdef DEBUG_STATS
+	printBMSStats(analyzer.bmsdata);
+	#endif
+
+	wdt.feed();
+	//delay(10); // not sure if we need this in, it was in before
+}
 }
 
 /**
@@ -169,24 +238,15 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
 
-/**
+  /**
   * @brief CAN1 Initialization Function
   * @param None
   * @retval None
   */
 static void MX_CAN1_Init(void)
 {
-
-  /* USER CODE BEGIN CAN1_Init 0 */
-
-  /* USER CODE END CAN1_Init 0 */
-
-  /* USER CODE BEGIN CAN1_Init 1 */
-
-  /* USER CODE END CAN1_Init 1 */
-  hcan1.Instance = CAN1;
+	hcan1.Instance = CAN1;
   hcan1.Init.Prescaler = 16;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
@@ -202,10 +262,6 @@ static void MX_CAN1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN CAN1_Init 2 */
-
-  /* USER CODE END CAN1_Init 2 */
-
 }
 
 /**
@@ -215,14 +271,6 @@ static void MX_CAN1_Init(void)
   */
 static void MX_CAN2_Init(void)
 {
-
-  /* USER CODE BEGIN CAN2_Init 0 */
-
-  /* USER CODE END CAN2_Init 0 */
-
-  /* USER CODE BEGIN CAN2_Init 1 */
-
-  /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
   hcan2.Init.Prescaler = 16;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
@@ -239,10 +287,6 @@ static void MX_CAN2_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN CAN2_Init 2 */
-
-  /* USER CODE END CAN2_Init 2 */
-
 }
 
 /**
@@ -252,15 +296,7 @@ static void MX_CAN2_Init(void)
   */
 static void MX_SPI1_Init(void)
 {
-
-  /* USER CODE BEGIN SPI1_Init 0 */
-
-  /* USER CODE END SPI1_Init 0 */
-
-  /* USER CODE BEGIN SPI1_Init 1 */
-
-  /* USER CODE END SPI1_Init 1 */
-  /* SPI1 parameter configuration*/
+ /* SPI1 parameter configuration*/
   hspi1.Instance = SPI1;
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
@@ -277,10 +313,6 @@ static void MX_SPI1_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI1_Init 2 */
-
-  /* USER CODE END SPI1_Init 2 */
-
 }
 
 /**
@@ -290,15 +322,7 @@ static void MX_SPI1_Init(void)
   */
 static void MX_SPI2_Init(void)
 {
-
-  /* USER CODE BEGIN SPI2_Init 0 */
-
-  /* USER CODE END SPI2_Init 0 */
-
-  /* USER CODE BEGIN SPI2_Init 1 */
-
-  /* USER CODE END SPI2_Init 1 */
-  /* SPI2 parameter configuration*/
+	/* SPI2 parameter configuration*/
   hspi2.Instance = SPI2;
   hspi2.Init.Mode = SPI_MODE_MASTER;
   hspi2.Init.Direction = SPI_DIRECTION_2LINES;
@@ -315,10 +339,6 @@ static void MX_SPI2_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI2_Init 2 */
-
-  /* USER CODE END SPI2_Init 2 */
-
 }
 
 /**
@@ -328,14 +348,6 @@ static void MX_SPI2_Init(void)
   */
 static void MX_SPI3_Init(void)
 {
-
-  /* USER CODE BEGIN SPI3_Init 0 */
-
-  /* USER CODE END SPI3_Init 0 */
-
-  /* USER CODE BEGIN SPI3_Init 1 */
-
-  /* USER CODE END SPI3_Init 1 */
   /* SPI3 parameter configuration*/
   hspi3.Instance = SPI3;
   hspi3.Init.Mode = SPI_MODE_MASTER;
@@ -353,10 +365,6 @@ static void MX_SPI3_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN SPI3_Init 2 */
-
-  /* USER CODE END SPI3_Init 2 */
-
 }
 
 /**
@@ -366,14 +374,6 @@ static void MX_SPI3_Init(void)
   */
 static void MX_UART4_Init(void)
 {
-
-  /* USER CODE BEGIN UART4_Init 0 */
-
-  /* USER CODE END UART4_Init 0 */
-
-  /* USER CODE BEGIN UART4_Init 1 */
-
-  /* USER CODE END UART4_Init 1 */
   huart4.Instance = UART4;
   huart4.Init.BaudRate = 115200;
   huart4.Init.WordLength = UART_WORDLENGTH_8B;
@@ -386,10 +386,6 @@ static void MX_UART4_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN UART4_Init 2 */
-
-  /* USER CODE END UART4_Init 2 */
-
 }
 
 /**
@@ -399,14 +395,6 @@ static void MX_UART4_Init(void)
   */
 static void MX_USB_OTG_FS_PCD_Init(void)
 {
-
-  /* USER CODE BEGIN USB_OTG_FS_Init 0 */
-
-  /* USER CODE END USB_OTG_FS_Init 0 */
-
-  /* USER CODE BEGIN USB_OTG_FS_Init 1 */
-
-  /* USER CODE END USB_OTG_FS_Init 1 */
   hpcd_USB_OTG_FS.Instance = USB_OTG_FS;
   hpcd_USB_OTG_FS.Init.dev_endpoints = 4;
   hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;
@@ -421,10 +409,6 @@ static void MX_USB_OTG_FS_PCD_Init(void)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN USB_OTG_FS_Init 2 */
-
-  /* USER CODE END USB_OTG_FS_Init 2 */
-
 }
 
 /**
@@ -435,8 +419,6 @@ static void MX_USB_OTG_FS_PCD_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -533,13 +515,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
 }
-
-/* USER CODE BEGIN 4 */
-
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
@@ -570,5 +546,6 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
-}
+
+  }
 #endif /* USE_FULL_ASSERT */
