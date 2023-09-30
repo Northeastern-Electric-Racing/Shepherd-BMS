@@ -39,9 +39,12 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-WDT_T4<WDT1> wdt;
-AccumulatorData_t *prevAccData = nullptr;
-StateMachine stateMachine;
+
+#ifdef DEBUG_EVERYTHING
+#define DEBUG_CHARGING
+#define DEBUG_STATS
+// etc etc
+#endif
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -62,7 +65,9 @@ UART_HandleTypeDef huart4;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
+WDT_T4<WDT1> wdt;
+AccumulatorData_t *prevAccData = nullptr;
+StateMachine stateMachine;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
