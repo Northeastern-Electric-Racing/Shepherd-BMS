@@ -139,17 +139,31 @@ void logFault(uint32_t fault_code)
 
 void getFaults()
 {
-    //Get address of the faults partition
-    uint16_t* address = eepromGetAddress(const_cast<char*>("FAULTS"));
+    uint8_t* address;
+    eepromReadData("FAULTS", address, 1);
+
+    uint8_t startAddress =  eeprom_data[eepromGetIndex(const_cast<char*>("FAULTS"))].address;
+    uint8_t size = eeprom_data[eepromGetIndex(const_cast<char*>("FAULTS"))].size;
 
     /* read and store the faults */
+
     int currIter = 0;
-    uint16_t size = 4;
     while (currIter < NUM_EEPROM_FAULTS)
     {
-        eepromReadData(*address, &eeprom_faults[currIter], size);
+        eepromReadData(*index, &eeprom_faults[currIter], 4);
         currIter++;
-        *address += size;
-    }
 
+        /* if the index is at the end of the partition, wrap around (5 faults * 4 bytes per fault + offset - 3  for start of fault) */
+        if (*address == size + startAddress - 3)
+        {                             
+            /* first byte of partition is the index of the most recent fault, faults begin at second byte */
+            *address = startAddress + 1;
+        }
+        
+        else
+        {
+            /* 4 bytes per fault */
+            *address += 4;
+        }
+    }
 }
