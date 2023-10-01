@@ -1,4 +1,5 @@
 #include "eepromdirectory.h"
+#include "general/include/m24c32.h"
 
 void eepromInit()
 {   
@@ -13,9 +14,14 @@ void eepromInit()
     /* continue through array, setting offsets */
     while (eeprom_data[i].id != NULL)
     {
-        eeprom_data[i].address = eeprom_data[i-1].address + eeprom_data[i-1].size;
+        offset += eeprom_data[i-1].size;
+        eeprom_data[i].address = offset;
         i++;
     }
+    //Initialize first byte of faults partition to contain the address of the end of the partition so that the 
+    //logFault function logs the first fault to the first 4 bytes in the partition.
+    eepromWriteData(const_cast<char*>("FAULTS"), eeprom_data[ eepromGetAddress(const_cast<char*>("FAULTS"))]
+    + eeprom_data[ eepromGetIndex(const_cast<char*>("FAULTS"))].size - 3, 1);
 }
 
 uint16_t eepromGetAddress(char *key)
@@ -66,10 +72,10 @@ char* eepromGetKey(int index)
     return NULL;
 }
 
-void eepromReadData(char *key, void *data, uint16_t size)
+bool eepromReadData(char *key, void *data, uint16_t size)
 {
     if(!data) {
-        return -1;
+        return false;
     }
     /* read data from eeprom given key and size */
     int address = eepromGetAddress(key);
@@ -77,42 +83,58 @@ void eepromReadData(char *key, void *data, uint16_t size)
 
 }
 
-void eepromReadData(uint16_t address, void *data, uint16_t size)
+bool eepromReadData(uint16_t address, void *data, uint16_t size)
 {
     if(!data) {
-        return -1;
+        return false;
     }
     /* read data from eeprom given index */
     eeprom_read(address, data, size);
     //EEPROM.get(index, data); // TODO will need update with new eeprom driver
 }
 
-void eepromWriteData(char *key, void *data, uint16_t size)
+bool eepromWriteData(char *key, void *data, uint16_t size)
 {
     if(!data) {
-        return -1;
+        return false;
     }
     /* write data to eeprom given key, offset, and size of data */
     int address = eepromGetAddress(key);
     eeprom_write(address, data, size);
 }
 
-void eepromWriteData(uint16_t address, void *data, uint16_t size)
+bool eepromWriteData(uint16_t address, void *data, uint16_t size)
 {
     if(!data) {
-        return -1;
+        return false;
     }
     /* write data to eeprom given page, offset, and size of data */
     eeprom_write(address, data, size);
 }
 
-void logFault(uint32_t *fault_code)
+void logFault(uint32_t fault_code)
 {
-    //Get starting address of faults, then add the number of entries currently in eeprom_faults to find next available address.
-    uint16_t address = eepromGetAddress(const_cast<char*>("FAULTS")) + (sizeof(eeprom_faults) / 4);
+    uint32_t fault = fault_code;
+    //The next address to write a fault to is located in the first byte of the FAULTS partition.
+    uint8_t *address;
+    eepromReadData(eepromGetAddress(const_cast<char*>("FAULTS")), address, 1);
+
+    uint8_t startIndex =  eeprom_data[eepromGetIndex(const_cast<char*>("FAULTS"))].address;
+    uint8_t size = eeprom_data[eepromGetIndex(const_cast<char*>("FAULTS"))].size;
+
+    /* if the index is at the end of the partition, wrap around (currently store 5 faults, so max = 5 + offset) */
+    if (*address == size + startIndex - 3)
+    {
+        /* first byte of partition is the index of the most recent fault, faults begin at second byte */
+        *address = startIndex + 1;
+    }
+    else
+    {
+        *address += 4;
+    }
 
     /* write the fault code*/
-    eepromWriteData(address, fault_code, 4);
+    eepromWriteData(*address, &fault, 4);
 } 
 
 void getFaults()
