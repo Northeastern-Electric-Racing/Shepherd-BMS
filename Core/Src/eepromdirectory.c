@@ -134,7 +134,9 @@ void logFault(uint32_t fault_code)
     }
 
     /* write the fault code*/
-    eepromWriteData(*address, &fault, 4);
+    eepromWriteData(*address, fault, 4);
+    /* update first byte of faults partition*/
+    eepromWriteData(startIndex, *address + 4, 1);
 } 
 
 void getFaults()
