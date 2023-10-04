@@ -39,6 +39,12 @@ C_SOURCES =  \
 Core/Src/main.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
+Drivers/Embedded-Base/platforms/stm32f405/include \
+Drivers/Embedded-Base/platforms/stm32f405/can.c \
+Drivers/Embedded-Base/general/include \
+Drivers/Embedded-Base/general/m24c32.c \
+Drivers/Embedded-Base/general/ltc68041.c \
+Drivers/Embedded-Base/general/sht30.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c \
