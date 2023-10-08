@@ -245,7 +245,7 @@ int main(void)
 	//Perform calculations on the data in the frame
 	analyzer.push(accData);
 
-	stateMachine.handleState(accData);
+	stateMachine.sm_handle_state(accData);
 
 	#ifdef DEBUG_STATS
 	printBMSStats(analyzer.bmsdata);
