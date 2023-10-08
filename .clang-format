@@ -1,0 +1,13 @@
+﻿---
+BasedOnStyle: WebKit
+AlignConsecutiveMacros: 'true'
+AlignTrailingComments: 'true'
+AllowShortLoopsOnASingleLine: 'false'
+IndentWidth: '4'
+SpaceBeforeAssignmentOperators: 'true'
+SpaceBeforeRangeBasedForLoopColon: 'true'
+TabWidth: '4'
+UseTab: Always
+ColumnLimit: 100
+
+...
