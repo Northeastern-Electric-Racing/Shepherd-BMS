@@ -180,7 +180,7 @@ class ComputeInterface
        *
        * @return Returns a fault if we are not able to send
       */
-      void sendCellTemp(CriticalCellValue_t max_cell_temp, CriticalCellValue_t min_cell_temp, uint16_t avg_temp);
+      void sendCellTempMessage(CriticalCellValue_t max_cell_temp, CriticalCellValue_t min_cell_temp, uint16_t avg_temp);
 
       /**
        * @brief sends the average segment temperatures
@@ -189,11 +189,12 @@ class ComputeInterface
        * 
        * @return Returns a fault if we are not able to send
        */
-      void sendSegmentTemps(int8_t segmentTemps[NUM_SEGMENTS]);
+      void sendSegmentTempsMessage(int8_t segmentTemps[NUM_SEGMENTS]);
 
-      void sendDclPreFault(bool prefault);
+      void sendDclPreFaultMessage(bool prefault);
 };
 
 extern ComputeInterface compute;
 
 #endif
+
