@@ -28,7 +28,7 @@ void SegmentInterface::init()
     pushChipConfigurations();
 }
 
-void SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
+BMSFault_t SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
 {
     segment_data = databuf;
 
@@ -44,6 +44,12 @@ void SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
     memcpy(previous_data, segment_data, sizeof(ChipData_t)*NUM_CHIPS);
 
     segment_data = nullptr;
+
+    if (voltage_error) {
+        return voltage_error;
+    }else if (therm_error) {
+        return therm_error;
+    }
 }
 
 void SegmentInterface::configureDischarge(uint8_t chip, uint16_t cells)
@@ -169,7 +175,7 @@ void SegmentInterface::pushChipConfigurations()
     LTC6804_wrcfg(NUM_CHIPS, local_config);
 }
 
-FaultStatus_t SegmentInterface::pullVoltages()
+BMSFault_t SegmentInterface::pullVoltages()
 {
     /**
      * If we haven't waited long enough between pulling voltage data
@@ -181,7 +187,7 @@ FaultStatus_t SegmentInterface::pullVoltages()
         {
             memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading, sizeof(segment_data[i].voltage_reading));
         }
-        return voltage_error;
+        return INTERNAL_CELL_COMM_FAULT;
     }
 
     uint16_t segment_voltages[NUM_CHIPS][12];
@@ -199,7 +205,7 @@ FaultStatus_t SegmentInterface::pullVoltages()
         {
             memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading, sizeof(segment_data[i].voltage_reading));
         }
-        return FAULTED;
+        return INTERNAL_CELL_COMM_FAULT;
     }
 
     /**
@@ -232,10 +238,10 @@ FaultStatus_t SegmentInterface::pullVoltages()
      * Start the timer between readings if successful
      */
     voltage_reading_timer.startTimer(VOLTAGE_WAIT_TIME);
-    return NOT_FAULTED;
+    return FAULTS_CLEAR;
 }
 
-FaultStatus_t SegmentInterface::pullThermistors()
+BMSFault_t SegmentInterface::pullThermistors()
 {
     // If polled too soon, just copy existing values from memory
 	if (!therm_timer.isTimerExpired())
@@ -245,7 +251,7 @@ FaultStatus_t SegmentInterface::pullThermistors()
             memcpy(segment_data[i].thermistor_reading, previous_data[i].thermistor_reading, sizeof(segment_data[i].thermistor_reading));
             memcpy(segment_data[i].thermistor_value, previous_data[i].thermistor_value, sizeof(segment_data[i].thermistor_value));
         }
-        return voltage_error;
+        return INTERNAL_CELL_COMM_FAULT;
 	}
 
     uint16_t raw_temp_voltages[NUM_CHIPS][6];
@@ -284,7 +290,7 @@ FaultStatus_t SegmentInterface::pullThermistors()
     //averagingThermCheck();
     discardNeutrals();
     
-	return NOT_FAULTED; // Read successfully
+	return FAULTS_CLEAR; // Read successfully
 }
 
 void SegmentInterface::SelectTherm(uint8_t therm)

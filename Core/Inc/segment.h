@@ -24,8 +24,8 @@ class SegmentInterface
         Timer voltage_reading_timer;
         Timer variance_timer;
 
-        FaultStatus_t voltage_error = NOT_FAULTED;
-        FaultStatus_t therm_error = NOT_FAULTED;
+        BMSFault_t voltage_error = FAULTS_CLEAR;
+        BMSFault_t therm_error = FAULTS_CLEAR;
 
         uint16_t therm_settle_time_ = 0;
 
@@ -58,9 +58,9 @@ class SegmentInterface
 
         void SelectTherm(uint8_t therm);
 
-        FaultStatus_t pullThermistors();
+        BMSFault_t pullThermistors();
 
-        FaultStatus_t pullVoltages();
+        BMSFault_t pullVoltages();
 
         int8_t steinhartEst(uint16_t V);
 
