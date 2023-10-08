@@ -53,10 +53,10 @@ FaultStatus_t ComputeInterface::sendChargingMessage(uint16_t voltage_to_set, Acc
     chargerMsg.reserved2_3 = 0xFFFF;
 
     
-    unit8_t buf[8] = {0,0,0,0,0,0,0,0};
+    unit8_t buf[8] = {0};
     memcpy(buf, &chargerMsg, sizeof(chargerMsg));
 
-    sendMessageCAN2(CANMSG_CHARGER, 8, &buf);
+    sendMessageCAN2(CANMSG_CHARGER, 8, buf);
 
     //return isCharging() ? NOT_FAULTED : FAULTED; //return a fault if we DON'T detect a voltage after we begin charging
     return NOT_FAULTED;
@@ -134,10 +134,10 @@ void ComputeInterface::sendMCMsg(uint16_t user_max_charge, uint16_t user_max_dis
     mcMsg.maxCharge = user_max_charge;
     mcMsg.maxDischarge = user_max_discharge;
 
-    unit8_t buf[4] = {0,0,0,0};
+    unit8_t buf[4] = {0};
     memcpy(buf, &mcMsg, sizeof(mcMsg));
 
-    sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, &mcMsg);
+    sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, buf);
 }
 
 void ComputeInterface::sendAccStatusMessage(uint16_t voltage, int16_t current, uint16_t ah, uint8_t soc, uint8_t health)
@@ -159,9 +159,9 @@ void ComputeInterface::sendAccStatusMessage(uint16_t voltage, int16_t current, u
     accStatusMsg.cfg.packSoC = soc;
     accStatusMsg.cfg.packHealth = health;
 
-    unit8_t buf[8] = {0,0,0,0,0,0,0,0};
+    unit8_t buf[8] = {0};
     memcpy(buf, &accStatusMsg, sizeof(accStatusMsg));
-    sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, &buf);
+    sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, buf);
 }
 
 void ComputeInterface::sendBMSStatusMessage(int bms_state, uint32_t fault_status, int8_t avg_temp, int8_t internal_temp, bool balance)
@@ -193,9 +193,9 @@ void ComputeInterface::sendBMSStatusMessage(int bms_state, uint32_t fault_status
                          bmsStatusMsg.cfg.balance
                      };
     */
-    unit8_t buf[8] = {0,0,0,0,0,0,0,0};
+    unit8_t buf[8] = {0};
     memcpy(buf, &bmsStatusMsg, sizeof(bmsStatusMsg));
-    sendMessageCAN1(CANMSG_BMSDTCSTATUS, 8, &buf);
+    sendMessageCAN1(CANMSG_BMSDTCSTATUS, 8, buf);
 }
 
 void ComputeInterface::sendShutdownControlMessage(uint8_t mpe_state)
@@ -209,7 +209,9 @@ void ComputeInterface::sendShutdownControlMessage(uint8_t mpe_state)
 
     shutdownControlMsg.mpeState = mpe_state;
 
-    sendMessageCAN1(0x03, 1, *shutdownControlMsg);
+    unit8_t buf[1] = {0};
+    memcpy(buf, &sendShutdownControlMessage, sizeof(sendShutdownControlMessage));
+    sendMessageCAN1(0x03, 1, buff);
 }
 
 void ComputeInterface::sendCellDataMessage(CriticalCellValue_t high_voltage, CriticalCellValue_t low_voltage, uint16_t avg_voltage)
@@ -242,9 +244,9 @@ void ComputeInterface::sendCellDataMessage(CriticalCellValue_t high_voltage, Cri
                         ((cellDataMsg.cfg.voltAvg & 0xff00)>>8)
                      };
     */
-    unit8_t buf[8] = {0,0,0,0,0,0,0,0};
+    unit8_t buf[8] = {0};
     memcpy(buf, &cellDataMsg, sizeof(cellDataMsg));
-    sendMessageCAN1(CANMSG_BMSCELLDATA, 8, &buf);
+    sendMessageCAN1(CANMSG_BMSCELLDATA, 8, buf);
 }
 
 void ComputeInterface::sendCellVoltageMessage(uint8_t cell_id, uint16_t instant_voltage, uint16_t internal_Res, uint8_t shunted, uint16_t open_voltage)
@@ -267,7 +269,7 @@ void ComputeInterface::sendCellVoltageMessage(uint8_t cell_id, uint16_t instant_
     unit8_t buf[8] = {0};
     memcpy(0x07, &cellVoltageMsg, sizeof(cellVoltageMsg)); 
 
-    sendMessageCAN1(0x07, 8, &buf);
+    sendMessageCAN1(0x07, 8, buf);
 }
 
 void ComputeInterface::sendCurrentsStatusMessage(uint16_t discharge, uint16_t charge, uint16_t current)
@@ -283,10 +285,10 @@ void ComputeInterface::sendCurrentsStatusMessage(uint16_t discharge, uint16_t ch
     currentsStatusMsg.CCL = charge;
     currentsStatusMsg.packCurr = current;
 
-    uint8_t buf[6] = {0,0,0,0,0,0}; //is there a reason he did all the extras and stuff in the example one
+    uint8_t buf[6] = {0}; //is there a reason he did all the extras and stuff in the example one
     memcpy(buf, &currentsStatusMsg, sizeof(currentsStatusMsg));
 
-    sendMessageCAN1(CANMSG_BMSCURRENTS, 8, &buf);
+    sendMessageCAN1(CANMSG_BMSCURRENTS, 8, buf);
 }
 
 void ComputeInterface::MCCallback(const CAN_message_t &currentStatusMsg)
@@ -324,9 +326,9 @@ void ComputeInterface::sendCellTotalTempMessage(CriticalCellValue_t max_cell_tem
                         ((cellTempMsg.cfg.averageTemp & 0xff00)>>8)
                      };
     */
-    unit8_t buf[8] = {0,0,0,0,0,0,0,0};
+    unit8_t buf[8] = {0};
     memcpy(buf, &cellTempMsg, sizeof(cellTempMsg));
-    sendMessageCAN1(0x08, 8, &buf);
+    sendMessageCAN1(0x08, 8, buf);
 }
 
 void ComputeInterface::sendSegmentAvgTempsMessage(int8_t segment_temps[NUM_SEGMENTS])
@@ -344,10 +346,10 @@ void ComputeInterface::sendSegmentAvgTempsMessage(int8_t segment_temps[NUM_SEGME
     segmentTempsMsg.segment2_average_temp = segment_temps[1];
     segmentTempsMsg.segment3_average_temp = segment_temps[2];
     segmentTempsMsg.segment4_average_temp = segment_temps[3];
-    unit8_t buff[4] = {0,0,0,0};
+    unit8_t buff[4] = {0};
     memcpy(buff &segmentTempsMsg, sizeof(segmentTempsMsg));
     //Ask about these
-    sendMessageCAN1(0x09, 4, &buff);
+    sendMessageCAN1(0x09, 4, buff);
 }
 
 uint8_t ComputeInterface::calcChargerLEDState(AccumulatorData_t *bms_data)
