@@ -205,7 +205,7 @@ int main(void)
   config.timeout = 15;        /* in seconds, 0->128 */
   wdt.begin(config);
 //   NERduino.begin();
-  compute.setFault(NOT_FAULTED);
+  compute.compute_set_fault(NOT_FAULTED);
   segment.init();
   /* USER CODE END Init */
 
@@ -240,7 +240,7 @@ int main(void)
 	//Collect all the segment data needed to perform analysis
 	//Not state specific
 	segment.retrieveSegmentData(accData->chip_data);
-	accData->pack_current = compute.getPackCurrent();
+	accData->pack_current = compute.compute_get_pack_current();
 
 	//Perform calculations on the data in the frame
 	analyzer.push(accData);

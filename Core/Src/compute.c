@@ -1,60 +1,68 @@
 #include "compute.h"
 
+
+uint8_t fan_speed;
+bool is_charging_enabled;
+enum
+    {
+    CHARGE_ENABLED,
+    CHARGE_DISABLED
+    };
+
 ComputeInterface compute;
 
-ComputeInterface::ComputeInterface()
+void compute_init()
 {
+    // TODO UPDATE DRIVER HERE
     pinMode(CURRENT_SENSOR_PIN_H, INPUT);
     pinMode(CURRENT_SENSOR_PIN_L, INPUT);
     pinMode(MEAS_5VREF_PIN, INPUT);
     pinMode(FAULT_PIN, OUTPUT);
     pinMode(CHARGE_DETECT, INPUT);
-    initializeCAN(CANLINE_2, CHARGER_BAUD, &(this->chargerCallback));
-    initializeCAN(CANLINE_1, MC_BAUD, &(this->MCCallback));
+    initializeCAN(CANLINE_2, CHARGER_BAUD, &(this->compute_charger_callback));
+    initializeCAN(CANLINE_1, MC_BAUD, &(this->compute_mc_callback));
 }
 
-ComputeInterface::~ComputeInterface(){}
-
-void ComputeInterface::enableCharging(bool enable_charging)
+void compute_enable_charging(bool enable_charging)
 {
     is_charging_enabled_ = enable_charging;
 }
 
-FaultStatus_t ComputeInterface::sendChargingMessage(uint16_t voltage_to_set, AccumulatorData_t *bms_data)
+FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, AccumulatorData_t *bms_data)
 {
         struct __attribute__((packed))
         {
-            uint8_t chargerControl;
-            uint16_t chargerVoltage;    //Note the charger voltage sent over should be 10*desired voltage
-            uint16_t chargerCurrent;    //Note the charge current sent over should be 10*desired current + 3200
-            uint8_t chargerLEDs;
+            uint8_t charger_control;
+            uint16_t charger_voltage;    //Note the charger voltage sent over should be 10*desired voltage
+            uint16_t charger_current;    //Note the charge current sent over should be 10*desired current + 3200
+            uint8_t charger_leds;
             uint16_t reserved2_3;
-        } chargerMsg;
+        } charger_msg;
 
     uint16_t current_to_set = bms_data->charge_limit;
 
     if (!is_charging_enabled_)
     {
-        chargerMsg.chargerControl = 0b101;
-        sendMessageCAN2(CANMSG_CHARGER, 8, chargerMsg);
+        charger_msg.charger_control = 0b101;
+        sendMessageCAN2(CANMSG_CHARGER, 8, charger_msg);
         //return isCharging() ? FAULTED : NOT_FAULTED; //return a fault if we DO detect a voltage after we stop charging
         return NOT_FAULTED;
     }
 
     // equations taken from TSM2500 CAN protocol datasheet
-    chargerMsg.chargerControl = 0xFC;
-    chargerMsg.chargerVoltage = voltage_to_set * 10;
+    charger_msg.charger_control = 0xFC;
+    charger_msg.charger_voltage = voltage_to_set * 10;
     if (current_to_set > 10)
     {
         current_to_set = 10;
     }
-    chargerMsg.chargerCurrent = current_to_set * 10 + 3200;
-    chargerMsg.chargerLEDs = calcChargerLEDState(bms_data);
-    chargerMsg.reserved2_3 = 0xFFFF;
+    charger_msg.charger_current = current_to_set * 10 + 3200;
+    charger_msg.charger_leds = calc_charger_led_state(bms_data);
+    charger_msg.reserved2_3 = 0xFFFF;
 
     
     unit8_t buf[8] = {0};
-    memcpy(buf, &chargerMsg, sizeof(chargerMsg));
+    memcpy(buf, &charger_msg, sizeof(charger_msg));
 
     sendMessageCAN2(CANMSG_CHARGER, 8, buf);
 
@@ -62,29 +70,29 @@ FaultStatus_t ComputeInterface::sendChargingMessage(uint16_t voltage_to_set, Acc
     return NOT_FAULTED;
 }
 
-bool ComputeInterface::chargerConnected()
+bool compute_charger_connected()
 {
     return !(digitalRead(CHARGE_DETECT) == HIGH);
 }
 
-void ComputeInterface::chargerCallback(const CAN_message_t &msg)
+void compute_charger_callback(const CAN_message_t &msg)
 {
     return;
 }
 
-void ComputeInterface::setFanSpeed(uint8_t new_fan_speed)
+void compute_set_fan_speed(uint8_t new_fan_speed)
 {
     fan_speed_ = new_fan_speed;
     //NERduino.setAMCDutyCycle(new_fan_speed);  Replace
 }
 
-void ComputeInterface::setFault(FaultStatus_t fault_state)
+void compute_set_fault(FaultStatus_t fault_state)
 {
     digitalWrite(FAULT_PIN, !fault_state);
     if (FAULTED) digitalWrite(CHARGE_SAFETY_RELAY, HIGH);
 }
 
-int16_t ComputeInterface::getPackCurrent()
+int16_t compute_get_pack_current()
 {
     static const float CURRENT_LOWCHANNEL_MAX = 75.0; //Amps
     static const float CURRENT_LOWCHANNEL_MIN = -75.0; //Amps
@@ -120,7 +128,7 @@ int16_t ComputeInterface::getPackCurrent()
     return -high_current;
 }
 
-void ComputeInterface::sendMCMsg(uint16_t user_max_charge, uint16_t user_max_discharge)
+void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_discharge)
 {
    
     struct __attribute__((packed))
@@ -140,31 +148,31 @@ void ComputeInterface::sendMCMsg(uint16_t user_max_charge, uint16_t user_max_dis
     sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, buf);
 }
 
-void ComputeInterface::sendAccStatusMessage(uint16_t voltage, int16_t current, uint16_t ah, uint8_t soc, uint8_t health)
+void compute_send_acc_status_message(AccumulatorData_t* bmsdata)
 {
 
     struct __attribute__((packed))
     {
         uint16_t packVolt;
         uint16_t pack_current;
-        uint16_t packAH;
-        uint8_t packSoC;
-        uint8_t packHealth;
-    }accStatusMsg;
+        uint16_t pack_ah;
+        uint8_t pack_soc;
+        uint8_t pack_health;
+    }acc_status_msg;
 
  
-    accStatusMsg.cfg.packVolt = __builtin_bswap16(voltage);
-    accStatusMsg.cfg.pack_current = __builtin_bswap16(static_cast<uint16_t>(current)); // convert with 2s complement
-    accStatusMsg.cfg.packAH = __builtin_bswap16(ah);
-    accStatusMsg.cfg.packSoC = soc;
-    accStatusMsg.cfg.packHealth = health;
+    acc_status_msg.cfg.packVolt = __builtin_bswap16(bmsdata->pack_voltage);
+    acc_status_msg.cfg.pack_current = __builtin_bswap16(static_cast<uint16_t>(bmsdata->pack_current)); // convert with 2s complement
+    acc_status_msg.cfg.pack_ah = __builtin_bswap16(0);
+    acc_status_msg.cfg.pack_soc = bmsdata->soc;
+    acc_status_msg.cfg.pack_health = 0;
 
     unit8_t buf[8] = {0};
-    memcpy(buf, &accStatusMsg, sizeof(accStatusMsg));
+    memcpy(buf, &acc_status_msg, sizeof(acc_status_msg));
     sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, buf);
 }
 
-void ComputeInterface::sendBMSStatusMessage(int bms_state, uint32_t fault_status, int8_t avg_temp, int8_t internal_temp, bool balance)
+void compute_send_bms_status_message(AccumulatorData_t* bmsdata, int bms_state, bool balance) 
 {
    
     struct __attribute__((packed))
@@ -174,31 +182,31 @@ void ComputeInterface::sendBMSStatusMessage(int bms_state, uint32_t fault_status
         int8_t temp_avg;
         uint8_t temp_internal;
         uint8_t balance;
-    } bmsStatusMsg;
+    } bms_status_msg;
 
 
-    bmsStatusMsg.temp_avg = static_cast<int8_t>(avg_temp);
-    bmsStatusMsg.state = static_cast<uint8_t>(bms_state);
-    bmsStatusMsg.fault = fault_status;
-    bmsStatusMsg.temp_internal = static_cast<uint8_t>(internal_temp);
-    bmsStatusMsg.balance = static_cast<uint8_t>(balance);
+    bms_status_msg.temp_avg = static_cast<int8_t>(bms_data->avg_temp);
+    bms_status_msg.state = static_cast<uint8_t>(bms_state);
+    bms_status_msg.fault = bmsdata->fault_code;
+    bms_status_msg.temp_internal = static_cast<uint8_t>(0);
+    bms_status_msg.balance = static_cast<uint8_t>(balance);
 
      /* uint8_t msg[8] = {
-                         bmsStatusMsg.cfg.state, 
+                         bms_status_msg.cfg.state, 
                         (fault_status & 0xff000000),
                         (fault_status & 0x00ff0000), 
                         (fault_status & 0x0000ff00), 
                         (fault_status & 0x000000ff), 
-                         bmsStatusMsg.cfg.temp_avg,
-                         bmsStatusMsg.cfg.balance
+                         bms_status_msg.cfg.temp_avg,
+                         bms_status_msg.cfg.balance
                      };
     */
     unit8_t buf[8] = {0};
-    memcpy(buf, &bmsStatusMsg, sizeof(bmsStatusMsg));
+    memcpy(buf, &bms_status_msg, sizeof(bmsStatusMsg));
     sendMessageCAN1(CANMSG_BMSDTCSTATUS, 8, buf);
 }
 
-void ComputeInterface::sendShutdownControlMessage(uint8_t mpe_state)
+void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 {
  
     struct __attribute__((packed))
@@ -210,46 +218,46 @@ void ComputeInterface::sendShutdownControlMessage(uint8_t mpe_state)
     shutdownControlMsg.mpeState = mpe_state;
 
     unit8_t buf[1] = {0};
-    memcpy(buf, &sendShutdownControlMessage, sizeof(sendShutdownControlMessage));
+    memcpy(buf, &compute_send_shutdown_ctrl_message, sizeof(compute_send_shutdown_ctrl_message));
     sendMessageCAN1(0x03, 1, buff);
 }
 
-void ComputeInterface::sendCellDataMessage(CriticalCellValue_t high_voltage, CriticalCellValue_t low_voltage, uint16_t avg_voltage)
+void compute_send_cell_data_message(AccumulatorData_t* bmsdata)
 { 
         struct __attribute__((packed))
         {
-            uint16_t highCellVoltage;
-            uint8_t highCellID;
-            uint16_t lowCellVoltage;
-            uint8_t lowCellID;
-            uint16_t voltAvg;
-        } cellDataMsg;
+            uint16_t high_cell_voltage;
+            uint8_t high_cell_id;
+            uint16_t low_cell_voltage;
+            uint8_t low_cell_id;
+            uint16_t volt_avg;
+        } cell_data_msg;
 
 
-    cellDataMsg.highCellVoltage = high_voltage.val;
-    cellDataMsg.highCellID = high_voltage.chipIndex;
-    cellDataMsg.lowCellVoltage = low_voltage.val;
-                                    //Cip number                Cell number
-    cellDataMsg.lowCellID = (low_voltage.chipIndex << 4) | low_voltage.cellNum;
-    cellDataMsg.voltAvg = avg_voltage;
+    cell_data_msg.high_cell_voltage = bmsdata->max_voltage.val;
+    cell_data_msg.high_cell_id = bmsdata->max_voltage.chipIndex;
+    cell_data_msg.low_cell_voltage = bmsdata->min_voltage.val;
+                                //Chip number                           Cell number
+    cell_data_msg.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) | bmsdata->min_voltage.cellNum;
+    cell_data_msg.volt_avg = bmsdata->avg_voltage;
 
     /* uint8_t msg[8] = {
-                        ( cellDataMsg.cfg.highCellVoltage & 0x00ff), 
-                        ((cellDataMsg.cfg.highCellVoltage & 0xff00)>>8), 
-                          cellDataMsg.cfg.highCellID, 
-                        ( cellDataMsg.cfg.lowCellVoltage & 0x00ff), 
-                        ((cellDataMsg.cfg.lowCellVoltage & 0xff00)>>8), 
-                          cellDataMsg.cfg.lowCellID, 
-                        ( cellDataMsg.cfg.voltAvg & 0x00ff), 
-                        ((cellDataMsg.cfg.voltAvg & 0xff00)>>8)
+                        ( cell_data_msg.cfg.high_cell_voltage & 0x00ff), 
+                        ((cell_data_msg.cfg.high_cell_voltage & 0xff00)>>8), 
+                          cell_data_msg.cfg.high_cell_id, 
+                        ( cell_data_msg.cfg.low_cell_voltage & 0x00ff), 
+                        ((cell_data_msg.cfg.low_cell_voltage & 0xff00)>>8), 
+                          cell_data_msg.cfg.low_cell_id, 
+                        ( cell_data_msg.cfg.volt_avg & 0x00ff), 
+                        ((cell_data_msg.cfg.volt_avg & 0xff00)>>8)
                      };
     */
     unit8_t buf[8] = {0};
-    memcpy(buf, &cellDataMsg, sizeof(cellDataMsg));
+    memcpy(buf, &cell_data_msg, sizeof(cell_data_msg));
     sendMessageCAN1(CANMSG_BMSCELLDATA, 8, buf);
 }
 
-void ComputeInterface::sendCellVoltageMessage(uint8_t cell_id, uint16_t instant_voltage, uint16_t internal_Res, uint8_t shunted, uint16_t open_voltage)
+void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage, uint16_t internal_Res, uint8_t shunted, uint16_t open_voltage)
 { 
         struct __attribute__((packed))
         {
@@ -272,66 +280,66 @@ void ComputeInterface::sendCellVoltageMessage(uint8_t cell_id, uint16_t instant_
     sendMessageCAN1(0x07, 8, buf);
 }
 
-void ComputeInterface::sendCurrentsStatusMessage(uint16_t discharge, uint16_t charge, uint16_t current)
+void compute_send_current_message(AccumulatorData_t* bmsdata)
 {
     struct __attribute__((packed))
     {
-        uint16_t DCL;
-        uint16_t CCL;
-        uint16_t packCurr;
-    } currentsStatusMsg;
+        uint16_t dcl;
+        uint16_t ccl;
+        uint16_t pack_curr;
+    } current_status_msg;
 
-    currentsStatusMsg.DCL = discharge;
-    currentsStatusMsg.CCL = charge;
-    currentsStatusMsg.packCurr = current;
+    current_status_msg.dcl = bmsdata->discharge_limit;
+    current_status_msg.ccl = bmsdata->charge_limit;
+    current_status_msg.pack_curr = bmsdata->pack_current;
 
-    uint8_t buf[6] = {0}; //is there a reason he did all the extras and stuff in the example one
-    memcpy(buf, &currentsStatusMsg, sizeof(currentsStatusMsg));
+    uint8_t buf[8] = {0}; 
+    memcpy(buf, &current_status_msg, sizeof(current_status_msg));
 
     sendMessageCAN1(CANMSG_BMSCURRENTS, 8, buf);
 }
 
-void ComputeInterface::MCCallback(const CAN_message_t &currentStatusMsg)
+void compute_mc_callback(const CAN_message_t &currentStatusMsg)
 {
     return;
 }
 
-void ComputeInterface::sendCellTotalTempMessage(CriticalCellValue_t max_cell_temp, CriticalCellValue_t min_cell_temp, uint16_t avg_temp)
+void compute_send_cell_temp_message(AccumulatorData_t* bmsdata)
 {
    
     struct __attribute__((packed))
     {
-        uint16_t maxCellTemp;
-        uint8_t maxCellID;
-        uint16_t minCellTemp;
-        uint8_t minCellID;
-        uint16_t averageTemp;
-    } cellTempMsg;
+        uint16_t max_cell_temp;
+        uint8_t max_cell_id;
+        uint16_t min_cell_temp;
+        uint8_t min_cell_id;
+        uint16_t average_temp;
+    } cell_temp_msg;
 
-    cellTempMsg.maxCellTemp = max_cell_temp.val;
-    cellTempMsg.maxCellID = (max_cell_temp.chipIndex << 4) | (max_cell_temp.cellNum - 17);
-    cellTempMsg.minCellTemp = min_cell_temp.val;
-    cellTempMsg.minCellID = (min_cell_temp.chipIndex << 4) | (min_cell_temp.cellNum - 17);
-    cellTempMsg.averageTemp = avg_temp;
+    cell_temp_msg.max_cell_temp = bmsdata->max_temp.val;
+    cell_temp_msg.max_cell_id = (bmsdata->max_temp.chipIndex << 4) | (bmsdata->max_temp.cellNum - 17);
+    cell_temp_msg.min_cell_temp = bmsdata->min_temp.val;
+    cell_temp_msg.min_cell_id = (bmsdata->min_temp.chipIndex << 4) | (bmsdata->min_temp.cellNum - 17);
+    cell_temp_msg.average_temp = bmsdata->avg_temp;
 
     /*
     uint8_t msg[8] = {
-                        ( cellTempMsg.cfg.maxCellTemp & 0x00ff), 
-                        ((cellTempMsg.cfg.maxCellTemp & 0xff00)>>8), 
-                          cellTempMsg.cfg.maxCellID, 
-                        ( cellTempMsg.cfg.minCellTemp & 0x00ff),
-                        ((cellTempMsg.cfg.minCellTemp & 0xff00)>>8), 
-                          cellTempMsg.cfg.minCellID, 
-                        ( cellTempMsg.cfg.averageTemp & 0x00ff), 
-                        ((cellTempMsg.cfg.averageTemp & 0xff00)>>8)
+                        ( cell_temp_msg.cfg.max_cell_temp & 0x00ff), 
+                        ((cell_temp_msg.cfg.max_cell_temp & 0xff00)>>8), 
+                          cell_temp_msg.cfg.max_cell_id, 
+                        ( cell_temp_msg.cfg.min_cell_temp & 0x00ff),
+                        ((cell_temp_msg.cfg.min_cell_temp & 0xff00)>>8), 
+                          cell_temp_msg.cfg.min_cell_id, 
+                        ( cell_temp_msg.cfg.average_temp & 0x00ff), 
+                        ((cell_temp_msg.cfg.average_temp & 0xff00)>>8)
                      };
     */
     unit8_t buf[8] = {0};
-    memcpy(buf, &cellTempMsg, sizeof(cellTempMsg));
+    memcpy(buf, &cell_temp_msg, sizeof(cell_temp_msg));
     sendMessageCAN1(0x08, 8, buf);
 }
 
-void ComputeInterface::sendSegmentAvgTempsMessage(int8_t segment_temps[NUM_SEGMENTS])
+void send_segment_temp_message(AccumulatorData_t* bmsdata) 
 {
    
         struct __attribute__((packed))
@@ -340,19 +348,19 @@ void ComputeInterface::sendSegmentAvgTempsMessage(int8_t segment_temps[NUM_SEGME
             int8_t segment2_average_temp;
             int8_t segment3_average_temp;
             int8_t segment4_average_temp;
-        } segmentTempsMsg;
+        } segment_temp_msg;
 
-    segmentTempsMsg.segment1_average_temp = segment_temps[0];
-    segmentTempsMsg.segment2_average_temp = segment_temps[1];
-    segmentTempsMsg.segment3_average_temp = segment_temps[2];
-    segmentTempsMsg.segment4_average_temp = segment_temps[3];
+    segment_temp_msg.segment1_average_temp = bmsdata->segment_average_temps[0];
+    segment_temp_msg.segment2_average_temp = bmsdata->segment_average_temps[1];
+    segment_temp_msg.segment3_average_temp = bmsdata->segment_average_temps[2];
+    segment_temp_msg.segment4_average_temp = bmsdata->segment_average_temps[3];
     unit8_t buff[4] = {0};
-    memcpy(buff &segmentTempsMsg, sizeof(segmentTempsMsg));
+    memcpy(buff &segment_temp_msg, sizeof(segment_temp_msg));
     //Ask about these
     sendMessageCAN1(0x09, 4, buff);
 }
 
-uint8_t ComputeInterface::calcChargerLEDState(AccumulatorData_t *bms_data)
+uint8_t calc_charger_led_state(AccumulatorData_t *bms_data)
 {
   enum LED_state
   {
@@ -396,7 +404,7 @@ uint8_t ComputeInterface::calcChargerLEDState(AccumulatorData_t *bms_data)
 
 }
 
-void ComputeInterface::sendDclPreFaultMessage(bool prefault)
+void compute_send_dcl_prefault_message(bool prefault)
 {
     uint8_t msg[1] = {prefault};
     sendMessageCAN1(0x500, 1, msg);
