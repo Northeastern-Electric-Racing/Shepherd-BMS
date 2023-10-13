@@ -53,7 +53,7 @@ void handle_boot(AccumulatorData_t* bmsdata)
 {
 	prevAccData = nullptr;
 	segment.enableBalancing(false);
-	compute.enableCharging(false);
+	compute.compute_enable_charging(false);
 
 	// bmsdata->fault_code = FAULTS_CLEAR;
 
@@ -64,14 +64,14 @@ void handle_boot(AccumulatorData_t* bmsdata)
 void init_ready()
 {
 	segment.enableBalancing(false);
-	compute.enableCharging(false);
+	compute.compute_enable_charging(false);
 	return;
 }
 
 void handle_ready(AccumulatorData_t* bmsdata)
 {
 	/* check for charger connection */
-	if (compute.chargerConnected()) {
+	if (compute.compute_charger_connected()) {
 		request_transition(CHARGING_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
@@ -87,17 +87,17 @@ void init_charging()
 
 void handle_charging(AccumulatorData_t* bmsdata)
 {
-	if (!compute.chargerConnected()) {
+	if (!compute.compute_charger_connected()) {
 		request_transition(READY_STATE);
 		return;
 	} else {
 		/* Check if we should charge */
 		if (sm_charging_check(analyzer.bmsdata)) {
 			digitalWrite(CHARGE_SAFETY_RELAY, HIGH);
-			compute.enableCharging(true);
+			compute.compute_enable_charging(true);
 		} else {
 			digitalWrite(CHARGE_SAFETY_RELAY, LOW);
-			compute.enableCharging(false);
+			compute.compute_enable_charging(false);
 		}
 
 		/* Check if we should balance */
@@ -109,7 +109,7 @@ void handle_charging(AccumulatorData_t* bmsdata)
 
 		/* Send CAN message, but not too often */
 		if (charge_message_timer.isTimerExpired()) {
-			compute.sendChargingMessage(
+			compute.compute_send_charging_message(
 				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), analyzer.bmsdata);
 			charge_message_timer.startTimer(CHARGE_MESSAGE_WAIT);
 		} else {
@@ -121,7 +121,7 @@ void handle_charging(AccumulatorData_t* bmsdata)
 void init_faulted()
 {
 	segment.enableBalancing(false);
-	compute.enableCharging(false);
+	compute.compute_enable_charging(false);
 	entered_faulted = true;
 	return;
 }
@@ -134,13 +134,13 @@ void handle_faulted(AccumulatorData_t* bmsdata)
 	}
 
 	if (bmsdata->fault_code == FAULTS_CLEAR) {
-		compute.setFault(NOT_FAULTED);
+		compute.compute_set_fault(NOT_FAULTED);
 		request_transition(BOOT_STATE);
 		return;
 	}
 
 	else {
-		compute.setFault(FAULTED);
+		compute.compute_set_fault(FAULTED);
 		digitalWrite(CHARGE_SAFETY_RELAY, LOW);
 	}
 	return;
@@ -149,7 +149,7 @@ void handle_faulted(AccumulatorData_t* bmsdata)
 void sm_handle_state(AccumulatorData_t* bmsdata)
 {
 	preFaultCheck(bmsdata);
-	bmsdata->is_charger_connected = compute.chargerConnected();
+	bmsdata->is_charger_connected = compute.compute_charger_connected();
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
@@ -160,19 +160,19 @@ void sm_handle_state(AccumulatorData_t* bmsdata)
 	// TODO needs testing
 	handler_LUT[current_state](bmsdata);
 
-	compute.setFanSpeed(analyzer.calcFanPWM());
+	compute.compute_set_fan_speed(analyzer.calcFanPWM());
 	sm_broadcast_current_limit(bmsdata);
 
 	/* send relevant CAN msgs */
 	// clang-format off
 	if (can_msg_timer.isTimerExpired())
 	{
-		compute.sendAccStatusMessage(analyzer.bmsdata->pack_voltage, analyzer.bmsdata->pack_current, 0, analyzer.bmsdata->soc, 0);
-		compute.sendCurrentsStatus(analyzer.bmsdata->discharge_limit, analyzer.bmsdata->charge_limit, analyzer.bmsdata->pack_current);
-		compute.sendBMSStatusMessage(current_state, bmsdata->fault_code, bmsdata->avg_temp, static_cast<int8_t>(0), segment.isBalancing());
-		compute.sendCellTemp(analyzer.bmsdata->max_temp, analyzer.bmsdata->min_temp, analyzer.bmsdata->avg_temp);
-		compute.sendCellDataMessage(analyzer.bmsdata->max_voltage, analyzer.bmsdata->min_voltage, analyzer.bmsdata->avg_voltage);
-		compute.sendSegmentTemps(analyzer.bmsdata->segment_average_temps);
+		compute.compute_send_acc_status_message(analyzer.bmsdata);
+		compute.compute_send_current_message(analyzer.bmsdata);
+		compute.compute_send_bms_status_message(analyzer.bmsdata, current_state, segment.isBalancing());
+		compute.compute_send_cell_temp_message(analyzer.bmsdata->max_temp, analyzer.bmsdata->min_temp, analyzer.bmsdata->avg_temp);
+		compute.compute_send_cell_data_message(analyzer.bmsdata);
+		compute.send_segment_temp_message(analyzer.bmsdata);
 		can_msg_timer.startTimer(CAN_MESSAGE_WAIT);
 	}
 	// clang-format on
@@ -271,7 +271,7 @@ uint32_t sm_fault_eval(fault_eval index)
 
 bool sm_charging_check(AccumulatorData_t* bmsdata)
 {
-	if (!compute.chargerConnected())
+	if (!compute.compute_charger_connected())
 		return false;
 	if (!charge_timeout.isTimerExpired())
 		return false;
@@ -296,7 +296,7 @@ bool sm_charging_check(AccumulatorData_t* bmsdata)
 
 bool statemachine_balancing_check(AccumulatorData_t* bmsdata)
 {
-	if (!compute.chargerConnected())
+	if (!compute.compute_charger_connected())
 		return false;
 	if (bmsdata->max_temp.val > MAX_CELL_TEMP_BAL)
 		return false;
