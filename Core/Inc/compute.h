@@ -6,16 +6,15 @@
 #include "canMsgHandler.h"
 #include "stateMachine.h"
 
-#define CURRENT_SENSOR_PIN_L  A1
-#define CURRENT_SENSOR_PIN_H  A0
-#define MEAS_5VREF_PIN        A7
-#define FAULT_PIN             2
-#define CHARGE_SAFETY_RELAY   4
-#define CHARGE_DETECT         5
-#define CHARGER_BAUD          250000U
-#define MC_BAUD               1000000U
-#define MAX_ADC_RESOLUTION    1023 // 13 bit ADC
-
+#define CURRENT_SENSOR_PIN_L A1
+#define CURRENT_SENSOR_PIN_H A0
+#define MEAS_5VREF_PIN		 A7
+#define FAULT_PIN			 2
+#define CHARGE_SAFETY_RELAY	 4
+#define CHARGE_DETECT		 5
+#define CHARGER_BAUD		 250000U
+#define MC_BAUD				 1000000U
+#define MAX_ADC_RESOLUTION	 1023 // 13 bit ADC
 
 /**
  * @brief inits the compute interface
@@ -37,7 +36,7 @@ void compute_enable_charging(bool enable_charging);
  *
  * @return Returns a fault if we are not able to communicate with charger
  */
-FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, AccumulatorData_t *bms_data);
+FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, AccumulatorData_t* bms_data);
 
 /**
  * @brief Returns if charger interlock is engaged, indicating charger LV connector is plugged in
@@ -52,9 +51,9 @@ bool compute_charger_connected();
  *
  * @param msg
  */
-static void compute_charger_callback(const CAN_message_t &msg);
+static void compute_charger_callback(const CAN_message_t& msg);
 
-static void compute_mc_callback(const CAN_message_t &msg);
+static void compute_mc_callback(const CAN_message_t& msg);
 
 /**
  * @brief Sets the desired fan speed
@@ -141,7 +140,9 @@ void compute_send_cell_data_message(AccumulatorData_t* bmsdata);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_volt, uint16_t internal_res, uint8_t shunted, uint16_t open_voltage);
+void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_volt,
+									   uint16_t internal_res, uint8_t shunted,
+									   uint16_t open_voltage);
 
 /**
  * @brief sends out the calculated values of currents
@@ -154,16 +155,16 @@ void compute_send_current_message(AccumulatorData_t* bmsdata);
 
 /**
  * @brief sends cell temperature message
- * 
+ *
  * @return Returns a fault if we are not able to send
-*/
+ */
 void compute_send_cell_temp_message(AccumulatorData_t* bmsdata);
 
 /**
  * @brief sends the average segment temperatures
- * 
- * 
- * 
+ *
+ *
+ *
  * @return Returns a fault if we are not able to send
  */
 void compute_send_segment_temp_message(AccumulatorData_t* bmsdata);
@@ -171,4 +172,3 @@ void compute_send_segment_temp_message(AccumulatorData_t* bmsdata);
 void compute_send_dcl_prefault_message(bool prefault);
 
 #endif // COMPUTE_H
-
