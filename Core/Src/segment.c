@@ -48,9 +48,9 @@ BMSFault_t SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
 
     uint16_t err = 0;
     if (voltage_error) {
-        err |= 1;
+        err = INTERNAL_CELL_COMM_FAULT;
     }else if (therm_error) {
-        err |= 2;
+        err = INTERNAL_CELL_COMM_FAULT;
     }
     CELL_COMM_FAULT_STATUS = err;
 }

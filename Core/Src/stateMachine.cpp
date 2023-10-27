@@ -324,7 +324,7 @@ void StateMachine::preFaultCheck(AccumulatorData_t *bmsdata)
         prefaultLowCell_tmr.startTimer(PRE_UNDER_VOLT_TIME);
         prefaultLowCell_tmr.eval_state = DURING_EVAL;
     }
-    else if (prefaultLowCell_tmr.eval_state == DURING_EVAL) 
+    else if (prefaultLowCell_tmr.eval_state == DURING_EVAL)
     {
         if (prefaultLowCell_tmr.isTimerExpired())
         {
