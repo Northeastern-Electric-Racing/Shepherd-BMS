@@ -46,11 +46,13 @@ BMSFault_t SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
 
     segment_data = nullptr;
 
+    uint16_t err = 0;
     if (voltage_error) {
-        return INTERNAL_CELL_COMM_FAULT;
+        err |= 1;
     }else if (therm_error) {
-        return INTERNAL_CELL_COMM_FAULT;
+        err |= 2;
     }
+    CELL_COMM_FAULT_STATUS = err;
 }
 
 void SegmentInterface::configureDischarge(uint8_t chip, uint16_t cells)

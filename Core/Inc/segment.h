@@ -10,6 +10,8 @@
 #define VOLTAGE_WAIT_TIME   100 //ms
 #define THERM_AVG           15 // Number of values to average
 
+#define CELL_COMM_FAULT_STATUS 0 
+
 #define MAX_VOLT_DELTA      2500
 #define MAX_VOLT_DELTA_COUNT    10
 
