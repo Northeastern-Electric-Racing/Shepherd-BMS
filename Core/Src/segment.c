@@ -46,7 +46,7 @@ void segment_init()
 	push_chip_configurations();
 }
 
-void segment_retrieve_data(ChipData_t databuf[NUM_CHIPS])
+void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
 {
 	segment_data = databuf;
 
@@ -57,7 +57,7 @@ void segment_retrieve_data(ChipData_t databuf[NUM_CHIPS])
 
 	/* Save the contents of the reading so that we can use it to fill in missing
 	 * data */
-	memcpy(previous_data, segment_data, sizeof(ChipData_t) * NUM_CHIPS);
+	memcpy(previous_data, segment_data, sizeof(chipdata_t) * NUM_CHIPS);
 
 	segment_data = nullptr;
 }

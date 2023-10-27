@@ -1,6 +1,6 @@
 #include "stateMachine.h"
 
-AccumulatorData_t* prevAccData;
+acc_data_t* prevAccData;
 uint32_t bms_fault = FAULTS_CLEAR;
 
 BMSState_t current_state = BOOT_STATE;
@@ -38,7 +38,7 @@ const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	{ true, false, false, true } /* FAULTED */
 };
 
-typedef void (*HandlerFunction_t)(AccumulatorData_t* bmsdata);
+typedef void (*HandlerFunction_t)(acc_data_t* bmsdata);
 typedef void (*InitFunction_t)();
 
 const InitFunction_t init_LUT[NUM_STATES]
@@ -49,7 +49,7 @@ const HandlerFunction_t handler_LUT[NUM_STATES]
 
 void init_boot() { return; }
 
-void handle_boot(AccumulatorData_t* bmsdata)
+void handle_boot(acc_data_t* bmsdata)
 {
 	prevAccData = nullptr;
 	segment.enableBalancing(false);
@@ -68,7 +68,7 @@ void init_ready()
 	return;
 }
 
-void handle_ready(AccumulatorData_t* bmsdata)
+void handle_ready(acc_data_t* bmsdata)
 {
 	/* check for charger connection */
 	if (compute.compute_charger_connected()) {
@@ -85,7 +85,7 @@ void init_charging()
 	return;
 }
 
-void handle_charging(AccumulatorData_t* bmsdata)
+void handle_charging(acc_data_t* bmsdata)
 {
 	if (!compute.compute_charger_connected()) {
 		request_transition(READY_STATE);
@@ -126,7 +126,7 @@ void init_faulted()
 	return;
 }
 
-void handle_faulted(AccumulatorData_t* bmsdata)
+void handle_faulted(acc_data_t* bmsdata)
 {
 	if (entered_faulted) {
 		entered_faulted = false;
@@ -146,7 +146,7 @@ void handle_faulted(AccumulatorData_t* bmsdata)
 	return;
 }
 
-void sm_handle_state(AccumulatorData_t* bmsdata)
+void sm_handle_state(acc_data_t* bmsdata)
 {
 	preFaultCheck(bmsdata);
 	bmsdata->is_charger_connected = compute.compute_charger_connected();
@@ -189,7 +189,7 @@ void request_transition(BMSState_t next_state)
 	current_state = next_state;
 }
 
-uint32_t sm_fault_return(AccumulatorData_t* accData)
+uint32_t sm_fault_return(acc_data_t* accData)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
@@ -269,7 +269,7 @@ uint32_t sm_fault_eval(fault_eval index)
 	return 0;
 }
 
-bool sm_charging_check(AccumulatorData_t* bmsdata)
+bool sm_charging_check(acc_data_t* bmsdata)
 {
 	if (!compute.compute_charger_connected())
 		return false;
@@ -294,7 +294,7 @@ bool sm_charging_check(AccumulatorData_t* bmsdata)
 	return true;
 }
 
-bool statemachine_balancing_check(AccumulatorData_t* bmsdata)
+bool statemachine_balancing_check(acc_data_t* bmsdata)
 {
 	if (!compute.compute_charger_connected())
 		return false;
@@ -308,7 +308,7 @@ bool statemachine_balancing_check(AccumulatorData_t* bmsdata)
 	return true;
 }
 
-void preFaultCheck(AccumulatorData_t* bmsdata)
+void preFaultCheck(acc_data_t* bmsdata)
 {
 	// prefault for Low Cell Voltage
 	if (prefaultLowCell_tmr.eval_state == BEFORE_TIMER_START
@@ -350,7 +350,7 @@ void preFaultCheck(AccumulatorData_t* bmsdata)
 	}
 }
 
-void sm_broadcast_current_limit(AccumulatorData_t* bmsdata)
+void sm_broadcast_current_limit(acc_data_t* bmsdata)
 {
 	// States for Boosting State Machine
 	static enum { BOOST_STANDBY, BOOSTING, BOOST_RECHARGE } BoostState;
@@ -385,7 +385,7 @@ void sm_broadcast_current_limit(AccumulatorData_t* bmsdata)
 	}
 }
 
-void sm_balance_cells(AccumulatorData_t* bms_data)
+void sm_balance_cells(acc_data_t* bms_data)
 {
 	bool balanceConfig[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 

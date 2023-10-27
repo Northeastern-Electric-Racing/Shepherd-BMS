@@ -115,7 +115,7 @@ Timer ocvTimer;
 
 bool is_first_reading_ = true;
 
-void push(AccumulatorData_t* data)
+void push(acc_data_t* data)
 {
 	if (prevbmsdata != nullptr)
 		delete prevbmsdata;

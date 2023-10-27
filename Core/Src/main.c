@@ -16,7 +16,6 @@
 // #include <nerduino.h>
 // TODO: import and replace new watchdog library
 //#include <Watchdog_t4.h>
-#include <LTC68041.h>
 #include "segment.h"
 #include "compute.h"
 #include "datastructs.h"
@@ -58,8 +57,7 @@ UART_HandleTypeDef huart4;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-WDT_T4<WDT1> wdt;
-AccumulatorData_t *prev_acc_data = nullptr;
+acc_data_t *prev_acc_data = NULL;
 StateMachine stateMachine;
 /* USER CODE END PV */
 
@@ -81,7 +79,7 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 /* USER CODE BEGIN 0 */
 #ifdef DEBUG_STATS
 
-const void print_bms_stats(AccumulatorData_t *acc_data)
+const void print_bms_stats(acc_data_t *acc_data)
 {
 	static Timer debug_stat_timer;
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
@@ -193,11 +191,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  WDT_timings_t config;
-  config.trigger = 5;         /* in seconds, 0->128 */
-  config.timeout = 15;        /* in seconds, 0->128 */
-  wdt.begin(config);
-//   NERduino.begin();
   compute.compute_set_fault(NOT_FAULTED);
   segment.init();
   /* USER CODE END Init */
@@ -224,33 +217,31 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  for(;;) {
+    /* Create a dynamically allocated structure */
+    acc_data_t *acc_data = malloc(sizeof(acc_data_t));
 
-	//Create a dynamically allocated structure
-	AccumulatorData_t *acc_data = new AccumulatorData_t;
+    //acc_data->faultCode = FAULTS_CLEAR;
 
-	//acc_data->faultCode = FAULTS_CLEAR;
+    /*
+     * Collect all the segment data needed to perform analysis
+     * Not state specific
+     */
+    segment_retrieve_segment_data(acc_data->chip_data);
+    acc_data->pack_current = compute.compute_get_pack_current();
 
-	//Collect all the segment data needed to perform analysis
-	//Not state specific
-	segment_retrieve_segment_data(acc_data->chip_data);
-	acc_data->pack_current = compute.compute_get_pack_current();
+    /* Perform calculations on the data in the frame */
+    analyzer.push(acc_data);
 
-	//Perform calculations on the data in the frame
-	analyzer.push(acc_data);
+    stateMachine_sm_handle_state(acc_data);
 
-	stateMachine_sm_handle_state(acc_data);
-
-	#ifdef DEBUG_STATS
-	print_bms_stats(analyzer.bmsdata);
-	#endif
-
-	wdt.feed();
-	//delay(10); // not sure if we need this in, it was in before
-
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
+    #ifdef DEBUG_STATS
+    print_bms_stats(analyzer.bmsdata);
+    #endif
+    //delay(10); // not sure if we need this in, it was in before
   }
+  /* USER CODE END WHILE */
+  /* USER CODE BEGIN 3 */
   /* USER CODE END 3 */
 }
 

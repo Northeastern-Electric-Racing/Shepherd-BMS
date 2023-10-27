@@ -13,7 +13,7 @@
 * @return true
 * @return false
 */
-bool sm_balancing_check(AccumulatorData_t *bmsdata);
+bool sm_balancing_check(acc_data_t *bmsdata);
 
 /**
 * @brief Returns if we want to charge cells during a particular frame
@@ -22,7 +22,7 @@ bool sm_balancing_check(AccumulatorData_t *bmsdata);
 * @return true
 * @return false
 */
-bool sm_charging_check(AccumulatorData_t *bmsdata);
+bool sm_charging_check(acc_data_t *bmsdata);
 
 
 /**
@@ -32,7 +32,7 @@ bool sm_charging_check(AccumulatorData_t *bmsdata);
 * @param accData
 * @return uint32_t
 */
-uint32_t sm_fault_return(AccumulatorData_t *accData);
+uint32_t sm_fault_return(acc_data_t *accData);
 
  /**
  * @brief Used in parellel to faultReturn(), calculates each fault to append the fault status
@@ -40,21 +40,21 @@ uint32_t sm_fault_return(AccumulatorData_t *accData);
  * @param index
  * @return fault_code
  */
-uint32_t sm_fault_eval(fault_eval index);
+uint32_t sm_fault_eval(fault_eval_t index);
 
 /**
  * @brief Used to check for faults immedietly before reaching faulted state, allows for easier handling
  * 
  * @param bmsdata 
  */
-void preFaultCheck(AccumulatorData_t *bmsdata);
+void preFaultCheck(acc_data_t *bmsdata);
 
 /**
  * @brief handles the state machine, calls the appropriate handler function and runs every loop functions
  * 
  * @param bmsdata 
  */
-void sm_handle_state(AccumulatorData_t *bmsdata);
+void sm_handle_state(acc_data_t *bmsdata);
 
 /**
 * @brief Algorithm behind determining which cells we want to balance
@@ -62,7 +62,7 @@ void sm_handle_state(AccumulatorData_t *bmsdata);
 *
 * @param bms_data
 */
-void sm_balance_cells(AccumulatorData_t *bms_data);
-void sm_broadcast_current_limit(AccumulatorData_t *bmsdata);
+void sm_balance_cells(acc_data_t *bms_data);
+void sm_broadcast_current_limit(acc_data_t *bmsdata);
 
 #endif //BMS_STATES_H

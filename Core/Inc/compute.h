@@ -2,8 +2,6 @@
 #define COMPUTE_H
 
 #include "datastructs.h"
-//#include "nerduino.h"     Replace
-#include "canMsgHandler.h"
 #include "stateMachine.h"
 
 #define CURRENT_SENSOR_PIN_L A1
@@ -36,7 +34,7 @@ void compute_enable_charging(bool enable_charging);
  *
  * @return Returns a fault if we are not able to communicate with charger
  */
-FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, AccumulatorData_t* bms_data);
+int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data);
 
 /**
  * @brief Returns if charger interlock is engaged, indicating charger LV connector is plugged in
@@ -82,7 +80,7 @@ void compute_send_mc_message(uint16_t max_charge, uint16_t max_discharge);
  *
  * @param fault_state
  */
-void compute_set_fault(FaultStatus_t fault_state);
+void compute_set_fault(int fault_state);
 
 /**
  * @brief sends acc status message
@@ -95,7 +93,7 @@ void compute_set_fault(FaultStatus_t fault_state);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_acc_status_message(AccumulatorData_t* bmsdata);
+void compute_send_acc_status_message(acc_data_t* bmsdata);
 
 /**
  * @brief sends BMS status message
@@ -107,7 +105,7 @@ void compute_send_acc_status_message(AccumulatorData_t* bmsdata);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_bms_status_message(AccumulatorData_t* bmsdata, int bms_state, bool balance);
+void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance);
 
 /**
  * @brief sends shutdown control message
@@ -127,7 +125,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_cell_data_message(AccumulatorData_t* bmsdata);
+void compute_send_cell_data_message(acc_data_t* bmsdata);
 
 /**
  * @brief sends cell voltage message
@@ -151,14 +149,14 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_volt,
  * @param charge
  * @param current
  */
-void compute_send_current_message(AccumulatorData_t* bmsdata);
+void compute_send_current_message(acc_data_t* bmsdata);
 
 /**
  * @brief sends cell temperature message
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_cell_temp_message(AccumulatorData_t* bmsdata);
+void compute_send_cell_temp_message(acc_data_t* bmsdata);
 
 /**
  * @brief sends the average segment temperatures
@@ -167,7 +165,7 @@ void compute_send_cell_temp_message(AccumulatorData_t* bmsdata);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_segment_temp_message(AccumulatorData_t* bmsdata);
+void compute_send_segment_temp_message(acc_data_t* bmsdata);
 
 void compute_send_dcl_prefault_message(bool prefault);
 

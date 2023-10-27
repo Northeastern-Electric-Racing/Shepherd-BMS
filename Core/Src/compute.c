@@ -23,7 +23,7 @@ void compute_enable_charging(bool enable_charging)
 	is_charging_enabled_ = enable_charging;
 }
 
-FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, AccumulatorData_t* bms_data)
+FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 {
 	struct __attribute__((packed)) {
 		uint8_t charger_control;
@@ -148,7 +148,7 @@ void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_dischar
 	sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, buf);
 }
 
-void compute_send_acc_status_message(AccumulatorData_t* bmsdata)
+void compute_send_acc_status_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((packed)) {
@@ -171,7 +171,7 @@ void compute_send_acc_status_message(AccumulatorData_t* bmsdata)
 	sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, buf);
 }
 
-void compute_send_bms_status_message(AccumulatorData_t* bmsdata, int bms_state, bool balance)
+void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
 {
 
 	struct __attribute__((packed)) {
@@ -218,7 +218,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	sendMessageCAN1(0x03, 1, buff);
 }
 
-void compute_send_cell_data_message(AccumulatorData_t* bmsdata)
+void compute_send_cell_data_message(acc_data_t* bmsdata)
 {
 	struct __attribute__((packed)) {
 		uint16_t high_cell_voltage;
@@ -276,7 +276,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
 	sendMessageCAN1(0x07, 8, buf);
 }
 
-void compute_send_current_message(AccumulatorData_t* bmsdata)
+void compute_send_current_message(acc_data_t* bmsdata)
 {
 	struct __attribute__((packed)) {
 		uint16_t dcl;
@@ -299,7 +299,7 @@ void compute_mc_callback(const CAN_message_t& currentStatusMsg)
 	return;
 }
 
-void compute_send_cell_temp_message(AccumulatorData_t* bmsdata)
+void compute_send_cell_temp_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((packed)) {
@@ -335,7 +335,7 @@ void compute_send_cell_temp_message(AccumulatorData_t* bmsdata)
 	sendMessageCAN1(0x08, 8, buf);
 }
 
-void send_segment_temp_message(AccumulatorData_t* bmsdata)
+void send_segment_temp_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((packed)) {
@@ -355,7 +355,7 @@ void send_segment_temp_message(AccumulatorData_t* bmsdata)
 	sendMessageCAN1(0x09, 4, buff);
 }
 
-uint8_t calc_charger_led_state(AccumulatorData_t* bms_data)
+uint8_t calc_charger_led_state(acc_data_t* bms_data)
 {
 	enum LED_state {
 		RED_BLINKING	   = 0x00,
