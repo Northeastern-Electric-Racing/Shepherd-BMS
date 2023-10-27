@@ -29,7 +29,7 @@ void SegmentInterface::init()
     pushChipConfigurations();
 }
 
-BMSFault_t SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
+void SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
 {
     segment_data = databuf;
 
