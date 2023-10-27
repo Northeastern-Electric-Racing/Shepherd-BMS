@@ -1,4 +1,5 @@
 #include "segment.h"
+#include "datastructs.h"
 
 SegmentInterface segment;
 uint8_t therm_avg_counter = 0;
@@ -46,9 +47,9 @@ BMSFault_t SegmentInterface::retrieveSegmentData(ChipData_t databuf[NUM_CHIPS])
     segment_data = nullptr;
 
     if (voltage_error) {
-        return voltage_error;
+        return INTERNAL_CELL_COMM_FAULT;
     }else if (therm_error) {
-        return therm_error;
+        return INTERNAL_CELL_COMM_FAULT;
     }
 }
 
