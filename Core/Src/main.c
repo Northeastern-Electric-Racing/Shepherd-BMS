@@ -58,7 +58,6 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
 acc_data_t *prev_acc_data = NULL;
-StateMachine stateMachine;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -191,8 +190,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  compute.compute_set_fault(NOT_FAULTED);
-  segment.init();
+  compute_set_fault(0);
+  segment_init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -228,12 +227,12 @@ int main(void)
      * Not state specific
      */
     segment_retrieve_segment_data(acc_data->chip_data);
-    acc_data->pack_current = compute.compute_get_pack_current();
+    acc_data->pack_current = compute_get_pack_current();
 
     /* Perform calculations on the data in the frame */
-    analyzer.push(acc_data);
+    analyzer_push(acc_data);
 
-    stateMachine_sm_handle_state(acc_data);
+    sm_handle_state(acc_data);
 
     #ifdef DEBUG_STATS
     print_bms_stats(analyzer.bmsdata);
