@@ -2,6 +2,7 @@
 #define DATASTRUCTS_H
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "bmsConfig.h"
 
 /**
@@ -76,7 +77,7 @@ typedef struct {
 	/* Array of data from all chips in the system */
 	chipdata_t chip_data[NUM_CHIPS];
 
-	int fault_status = NOT_FAULTED;
+	int fault_status;
 
 	int16_t pack_current; /* this value is multiplied by 10 to account for decimal precision */
 	uint16_t pack_voltage;
@@ -181,11 +182,11 @@ typedef struct {
 	int timeout;
 	int code;
 
-	int data_2			   = 0;
-	fault_evalop_t optype_2 = NOP;
-	int lim_2			   = 0;
+	fault_evalop_t optype_2;
+	int data_2;
+	int lim_2;
 
-	bool is_faulted = false;
+	bool is_faulted;
 } fault_eval_t;
 
 #endif

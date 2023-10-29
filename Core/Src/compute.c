@@ -20,7 +20,7 @@ void compute_init()
 
 void compute_enable_charging(bool enable_charging)
 {
-	is_charging_enabled_ = enable_charging;
+	is_charging_enabled = enable_charging;
 }
 
 FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
@@ -36,12 +36,12 @@ FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, acc_data_t*
 
 	uint16_t current_to_set = bms_data->charge_limit;
 
-	if (!is_charging_enabled_) {
+	if (!is_charging_enabled) {
 		charger_msg.charger_control = 0b101;
 		sendMessageCAN2(CANMSG_CHARGER, 8, charger_msg);
 		// return isCharging() ? FAULTED : NOT_FAULTED; //return a fault if we DO detect a voltage
 		// after we stop charging
-		return NOT_FAULTED;
+		return 0;
 	}
 
 	// equations taken from TSM2500 CAN protocol datasheet
@@ -54,19 +54,19 @@ FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, acc_data_t*
 	charger_msg.charger_leds	= calc_charger_led_state(bms_data);
 	charger_msg.reserved2_3		= 0xFFFF;
 
-	unit8_t buf[8] = { 0 };
+	uint8_t buf[8] = { 0 };
 	memcpy(buf, &charger_msg, sizeof(charger_msg));
 
 	sendMessageCAN2(CANMSG_CHARGER, 8, buf);
 
 	// return isCharging() ? NOT_FAULTED : FAULTED; //return a fault if we DON'T detect a voltage
 	// after we begin charging
-	return NOT_FAULTED;
+	return 0;
 }
 
 bool compute_charger_connected()
 {
-	return !(digitalRead(CHARGE_DETECT) == HIGH);
+	return !(digitalRead(CHARGE_DETECT) == 1);
 }
 
 void compute_charger_callback(const CAN_message_t& msg)
@@ -76,15 +76,15 @@ void compute_charger_callback(const CAN_message_t& msg)
 
 void compute_set_fan_speed(uint8_t new_fan_speed)
 {
-	fan_speed_ = new_fan_speed;
+	fan_speed = new_fan_speed;
 	// NERduino.setAMCDutyCycle(new_fan_speed);  Replace
 }
 
-void compute_set_fault(FaultStatus_t fault_state)
+void compute_set_fault(int fault_state)
 {
 	digitalWrite(FAULT_PIN, !fault_state);
-	if (FAULTED)
-		digitalWrite(CHARGE_SAFETY_RELAY, HIGH);
+	if (true)
+		digitalWrite(CHARGE_SAFETY_RELAY, 1);
 }
 
 int16_t compute_get_pack_current()
@@ -142,7 +142,7 @@ void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_dischar
 	mcMsg.maxCharge	   = user_max_charge;
 	mcMsg.maxDischarge = user_max_discharge;
 
-	unit8_t buf[4] = { 0 };
+	uint8_t buf[4] = { 0 };
 	memcpy(buf, &mcMsg, sizeof(mcMsg));
 
 	sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, buf);
@@ -166,7 +166,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 	acc_status_msg.cfg.pack_soc	   = bmsdata->soc;
 	acc_status_msg.cfg.pack_health = 0;
 
-	unit8_t buf[8] = { 0 };
+	uint8_t buf[8] = { 0 };
 	memcpy(buf, &acc_status_msg, sizeof(acc_status_msg));
 	sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, buf);
 }
@@ -198,8 +198,8 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
 						bms_status_msg.cfg.balance
 					};
    */
-	unit8_t buf[8] = { 0 };
-	memcpy(buf, &bms_status_msg, sizeof(bmsStatusMsg));
+	uint_t buf[8] = { 0 };
+	memcpy(buf, &bms_status_msg, sizeof(bms_status_msg));
 	sendMessageCAN1(CANMSG_BMSDTCSTATUS, 8, buf);
 }
 
@@ -213,9 +213,9 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 
 	shutdownControlMsg.mpeState = mpe_state;
 
-	unit8_t buf[1] = { 0 };
+	uint8_t buf[1] = { 0 };
 	memcpy(buf, &compute_send_shutdown_ctrl_message, sizeof(compute_send_shutdown_ctrl_message));
-	sendMessageCAN1(0x03, 1, buff);
+	sendMessageCAN1(0x03, 1, buf);
 }
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
@@ -247,7 +247,7 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
 						((cell_data_msg.cfg.volt_avg & 0xff00)>>8)
 					 };
 	*/
-	unit8_t buf[8] = { 0 };
+	uint8_t buf[8] = { 0 };
 	memcpy(buf, &cell_data_msg, sizeof(cell_data_msg));
 	sendMessageCAN1(CANMSG_BMSCELLDATA, 8, buf);
 }
