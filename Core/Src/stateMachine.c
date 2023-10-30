@@ -6,13 +6,13 @@ uint32_t bms_fault = FAULTS_CLEAR;
 BMSState_t current_state = BOOT_STATE;
 uint32_t previousFault = 0;
 
-timer_t ovr_curr_timer 	= {.active = false, .completed = false};
-timer_t ovr_chgcurr_timer = { .active = false, .completed = false};
-timer_t undr_volt_timer = { .active = false, .completed = false };
-timer_t ovr_chgvolt_timer = { .active = false, .completed = false };
-timer_t ovr_volt_timer = { .active = false, .completed = false };
-timer_t low_cell_timer = { .active = false, .completed = false };
-timer_t high_temp_timer = { .active = false, .completed = false };
+timer_t ovr_curr_timer 	= {0};
+timer_t ovr_chgcurr_timer = {0};
+timer_t undr_volt_timer = {0};
+timer_t ovr_chgvolt_timer = {0};
+timer_t ovr_volt_timer = {0};
+timer_t low_cell_timer = {0};
+timer_t high_temp_timer = {0};
 
 timer_t charge_timeout = { .active = false };
 timer_t charge_cut_off_timer = { .active = false };
