@@ -6,6 +6,8 @@
 #include "compute.h"
 #include "analyzer.h"
 
+#include "Embedded-Base/Middleware/Inc/timer.h"
+
 /**
 * @brief Returns if we want to balance cells during a particular frame
 *
@@ -41,13 +43,6 @@ uint32_t sm_fault_return(acc_data_t *accData);
  * @return fault_code
  */
 uint32_t sm_fault_eval(fault_eval_t index);
-
-/**
- * @brief Used to check for faults immedietly before reaching faulted state, allows for easier handling
- * 
- * @param bmsdata 
- */
-void preFaultCheck(acc_data_t *bmsdata);
 
 /**
  * @brief handles the state machine, calls the appropriate handler function and runs every loop functions

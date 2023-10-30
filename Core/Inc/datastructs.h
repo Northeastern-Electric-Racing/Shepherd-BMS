@@ -123,24 +123,6 @@ typedef struct {
 } acc_data_t;
 
 /**
- * @brief Represents the state of the BMS fault timers
- */
-typedef enum {
-	BEFORE_TIMER_START,
-	DURING_EVAL
-
-} TSTimerEvalState;
-
-/**
- * @brief Represents a timer that can be in one of three states
- */
-struct tristate_timer : public Timer {
-
-	TSTimerEvalState eval_state = BEFORE_TIMER_START;
-	int eval_length;
-};
-
-/**
  * @brief Represents individual BMS states
  */
 typedef enum {
