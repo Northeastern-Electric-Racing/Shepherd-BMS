@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "bmsConfig.h"
+#include "timer.h"
 
 /**
  * @brief Individual chip data
@@ -155,7 +156,7 @@ typedef enum {
  */
 typedef struct {
 	char* id;
-	tristate_timer timer;
+	timer_t timer;
 
 	int data_1;
 	fault_evalop_t optype_1;

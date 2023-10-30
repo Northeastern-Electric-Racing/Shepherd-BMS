@@ -49,9 +49,9 @@ bool compute_charger_connected();
  *
  * @param msg
  */
-static void compute_charger_callback(const CAN_message_t& msg);
+//static void compute_charger_callback(const CAN_message_t& msg);
 
-static void compute_mc_callback(const CAN_message_t& msg);
+//static void compute_mc_callback(const CAN_message_t& msg);
 
 /**
  * @brief Sets the desired fan speed

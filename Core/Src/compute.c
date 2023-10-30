@@ -9,13 +9,13 @@ ComputeInterface compute;
 void compute_init()
 {
 	// TODO UPDATE DRIVER HERE
-	pinMode(CURRENT_SENSOR_PIN_H, INPUT);
-	pinMode(CURRENT_SENSOR_PIN_L, INPUT);
-	pinMode(MEAS_5VREF_PIN, INPUT);
-	pinMode(FAULT_PIN, OUTPUT);
-	pinMode(CHARGE_DETECT, INPUT);
-	initializeCAN(CANLINE_2, CHARGER_BAUD, &(this->compute_charger_callback));
-	initializeCAN(CANLINE_1, MC_BAUD, &(this->compute_mc_callback));
+	//pinMode(CURRENT_SENSOR_PIN_H, INPUT);
+	//pinMode(CURRENT_SENSOR_PIN_L, INPUT);
+	//pinMode(MEAS_5VREF_PIN, INPUT);
+	//pinMode(FAULT_PIN, OUTPUT);
+	//pinMode(CHARGE_DETECT, INPUT);
+	//initializeCAN(CANLINE_2, CHARGER_BAUD, &(this->compute_charger_callback));
+	//initializeCAN(CANLINE_1, MC_BAUD, &(this->compute_mc_callback));
 }
 
 void compute_enable_charging(bool enable_charging)
@@ -23,7 +23,7 @@ void compute_enable_charging(bool enable_charging)
 	is_charging_enabled = enable_charging;
 }
 
-FaultStatus_t compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
+int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 {
 	struct __attribute__((packed)) {
 		uint8_t charger_control;

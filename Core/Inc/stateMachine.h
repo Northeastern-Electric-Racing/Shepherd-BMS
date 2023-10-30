@@ -5,8 +5,7 @@
 #include "segment.h"
 #include "compute.h"
 #include "analyzer.h"
-
-#include "Embedded-Base/Middleware/Inc/timer.h"
+#include "timer.h"
 
 /**
 * @brief Returns if we want to balance cells during a particular frame
