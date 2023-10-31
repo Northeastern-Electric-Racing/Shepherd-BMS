@@ -167,6 +167,4 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata);
  */
 void compute_send_segment_temp_message(acc_data_t* bmsdata);
 
-void compute_send_dcl_prefault_message(bool prefault);
-
 #endif // COMPUTE_H

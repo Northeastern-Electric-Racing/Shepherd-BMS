@@ -38,10 +38,12 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 
 	if (!is_charging_enabled) {
 		charger_msg.charger_control = 0b101;
-		sendMessageCAN2(CANMSG_CHARGER, 8, charger_msg);
-		// return isCharging() ? FAULTED : NOT_FAULTED; //return a fault if we DO detect a voltage
-		// after we stop charging
-		return 0;
+		//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+		//sendMessageCAN2(CANMSG_CHARGER, 8, charger_msg);
+
+		/* return a fault if we DO detect a voltage after we stop charging */
+		 return isCharging() ? 1 : 0; 
+		
 	}
 
 	// equations taken from TSM2500 CAN protocol datasheet
@@ -57,7 +59,8 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 	uint8_t buf[8] = { 0 };
 	memcpy(buf, &charger_msg, sizeof(charger_msg));
 
-	sendMessageCAN2(CANMSG_CHARGER, 8, buf);
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN2(CANMSG_CHARGER, 8, buf);
 
 	// return isCharging() ? NOT_FAULTED : FAULTED; //return a fault if we DON'T detect a voltage
 	// after we begin charging
@@ -145,7 +148,8 @@ void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_dischar
 	uint8_t buf[4] = { 0 };
 	memcpy(buf, &mcMsg, sizeof(mcMsg));
 
-	sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, buf);
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(CANMSG_BMSCURRENTLIMITS, 4, buf);
 }
 
 void compute_send_acc_status_message(acc_data_t* bmsdata)
@@ -168,7 +172,9 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 
 	uint8_t buf[8] = { 0 };
 	memcpy(buf, &acc_status_msg, sizeof(acc_status_msg));
-	sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, buf);
+
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(CANMSG_BMSACCSTATUS, 8, buf);
 }
 
 void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
@@ -200,7 +206,9 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
    */
 	uint_t buf[8] = { 0 };
 	memcpy(buf, &bms_status_msg, sizeof(bms_status_msg));
-	sendMessageCAN1(CANMSG_BMSDTCSTATUS, 8, buf);
+
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(CANMSG_BMSDTCSTATUS, 8, buf);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
@@ -215,7 +223,9 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 
 	uint8_t buf[1] = { 0 };
 	memcpy(buf, &compute_send_shutdown_ctrl_message, sizeof(compute_send_shutdown_ctrl_message));
-	sendMessageCAN1(0x03, 1, buf);
+
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(0x03, 1, buf);
 }
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
@@ -249,7 +259,9 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
 	*/
 	uint8_t buf[8] = { 0 };
 	memcpy(buf, &cell_data_msg, sizeof(cell_data_msg));
-	sendMessageCAN1(CANMSG_BMSCELLDATA, 8, buf);
+
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(CANMSG_BMSCELLDATA, 8, buf);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage,
@@ -273,7 +285,8 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
 	unit8_t buf[8] = { 0 };
 	memcpy(0x07, &cellVoltageMsg, sizeof(cellVoltageMsg));
 
-	sendMessageCAN1(0x07, 8, buf);
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(0x07, 8, buf);
 }
 
 void compute_send_current_message(acc_data_t* bmsdata)
@@ -291,7 +304,8 @@ void compute_send_current_message(acc_data_t* bmsdata)
 	uint8_t buf[8] = { 0 };
 	memcpy(buf, &current_status_msg, sizeof(current_status_msg));
 
-	sendMessageCAN1(CANMSG_BMSCURRENTS, 8, buf);
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(CANMSG_BMSCURRENTS, 8, buf);
 }
 
 void compute_mc_callback(const CAN_message_t& currentStatusMsg)
@@ -332,7 +346,9 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
 	*/
 	unit8_t buf[8] = { 0 };
 	memcpy(buf, &cell_temp_msg, sizeof(cell_temp_msg));
-	sendMessageCAN1(0x08, 8, buf);
+
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(0x08, 8, buf);
 }
 
 void send_segment_temp_message(acc_data_t* bmsdata)
@@ -350,9 +366,10 @@ void send_segment_temp_message(acc_data_t* bmsdata)
 	segment_temp_msg.segment3_average_temp = bmsdata->segment_average_temps[2];
 	segment_temp_msg.segment4_average_temp = bmsdata->segment_average_temps[3];
 	unit8_t buff[4]						   = { 0 };
-	memcpy(buff & segment_temp_msg, sizeof(segment_temp_msg));
-	// Ask about these
-	sendMessageCAN1(0x09, 4, buff);
+	memcpy(buff &segment_temp_msg, sizeof(segment_temp_msg));
+	
+	//TODO NEW CAN DRIVER--------------------------------------------------------------------------------------------//
+	//sendMessageCAN1(0x09, 4, buff);
 }
 
 uint8_t calc_charger_led_state(acc_data_t* bms_data)
@@ -384,8 +401,3 @@ uint8_t calc_charger_led_state(acc_data_t* bms_data)
 	}
 }
 
-void compute_send_dcl_prefault_message(bool prefault)
-{
-	uint8_t msg[1] = { prefault };
-	sendMessageCAN1(0x500, 1, msg);
-}
