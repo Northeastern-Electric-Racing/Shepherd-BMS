@@ -208,6 +208,8 @@ uint32_t StateMachine::faultReturn(AccumulatorData_t *accData)
             {.id = "High Cell Voltage",       .timer =       overVolt_tmr, .data_1 = accData->max_voltage.val, .optype_1 = GT, .lim_1 =                                       MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME,	.code =            CELL_VOLTAGE_TOO_HIGH,   .data_2 = accData->is_charger_connected, .optype_2 = EQ, .lim_2 =         false }, 
             {.id = "High Temp",               .timer =       highTemp_tmr, .data_1 =    accData->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP,	.timeout =       LOW_CELL_TIME,	.code =                     PACK_TOO_HOT   /* -----------------------------------UNUSED---------------------------------*/  }, 
             {.id = "Extremely Low Voltage",   .timer =        lowCell_tmr, .data_1 = accData->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      HIGH_TEMP_TIME,	.code =                 LOW_CELL_VOLTAGE   /* -----------------------------------UNUSED---------------------------------*/  }, 
+			{.id = "High Thermistor Temp",    .timer =  highThermTemp_tmr, .data_1 = accData->thermistor_temp, .optype_1 = GT, .lim_1 =                                    THERMISTOR_MAX_TEMP, .timeout =      THERMISTOR_TIME,.code =       THERMISTOR_OVER_TEMP_FAULT																					},
+			{.id = "Low Thermistor Temp",     .timer =   lowThermTemp_tmr, .data_1 = accData->thermistor_temp, .optype_1 = LT, .lim_1 =                                    THERMISTOR_MIN_TEMP, .timeout =      THERMISTOR_TIME,.code =      THERMISTOR_UNDER_TEMP_FAULT                             														},
 
             NULL
         };

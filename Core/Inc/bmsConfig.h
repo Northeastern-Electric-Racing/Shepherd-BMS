@@ -28,6 +28,8 @@
 #define MAX_CELL_CURR       700 // Amps per BMS cell
 #define MAX_CELL_TEMP_BAL   45
 #define MAX_CHG_CELL_CURR   20  
+#define THERMISTOR_MIN_TEMP -40 // minimum safe temp in Celsius
+#define THERMISTOR_MAX_TEMP 85 // maximum safe temp in Celsius
 
 // Algorithm settings
 #define CHARGE_TIMEOUT      300000 // 5 minutes, may need adjustment
@@ -48,6 +50,7 @@
 #define LOW_CELL_TIME       15000
 #define HIGH_TEMP_TIME      60000
 #define CURR_ERR_MARG       50       // in A * 10
+#define THERMISTOR_TIME     5000
 
 #define DCDC_CURRENT_DRAW   2 // in A, this is generous
 

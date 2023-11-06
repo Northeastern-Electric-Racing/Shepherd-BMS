@@ -21,6 +21,8 @@ class StateMachine
         tristate_timer overVolt_tmr;
         tristate_timer lowCell_tmr;
         tristate_timer highTemp_tmr;
+        tristate_timer highThermTemp_tmr;
+        tristate_timer lowThermTemp_tmr;
 
         tristate_timer prefaultOverCurr_tmr;
         tristate_timer prefaultLowCell_tmr;
