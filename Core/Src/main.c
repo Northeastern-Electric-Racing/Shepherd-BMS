@@ -200,6 +200,8 @@ int main(void)
 //   NERduino.begin();
   compute.compute_set_fault(NOT_FAULTED);
   segment.init();
+
+  analyzer.sht30_init();
   /* USER CODE END Init */
 
   /* Configure the system clock */

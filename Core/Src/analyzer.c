@@ -115,13 +115,15 @@ Timer ocvTimer;
 
 bool is_first_reading_ = true;
 
-void push(AccumulatorData_t* data)
+void push(AccumulatorData_t* data, sht30_t* sht30data)
 {
 	if (prevbmsdata != nullptr)
 		delete prevbmsdata;
 
 	prevbmsdata = bmsdata;
 	bmsdata		= data;
+
+	sht30_get_temp_humid(sht30data)
 
 	disable_therms();
 
@@ -524,4 +526,9 @@ void diff_curr_therm_check()
 			}
 		}
 	}
+}
+
+void sht30_init(sht30_t* sht30data)
+{
+	sht30data->i2c_handle = &hi2c1;
 }

@@ -4,6 +4,7 @@
 //#include <nerduino.h> Replace
 #include "datastructs.h"
 #include "segment.h"
+#include "Core/Drivers/Embedded-Base/general/include/sht30.h"
 
 /* We want to make sure we aren't doing useless analysis on the same set of data since we are
  * backfilling segment data */
@@ -32,5 +33,15 @@ uint8_t analyzer_calc_fan_pwm();
 AccumulatorData_t* bmsdata;
 
 AccumulatorData_t* prevbmsdata;
+
+/**
+ * @brief Create a new object to store the most recent data point for the temp sensor
+ */
+sht30_t* sht30data;
+
+/**
+ * @brief Create a new object to store the most recent data point for the temp sensor
+ */
+void sht30_init();
 
 #endif

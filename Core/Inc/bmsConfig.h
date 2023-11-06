@@ -12,6 +12,7 @@
 #define MIN_TEMP            -15 // deg C
 #define MAX_VOLT_MEAS       65535
 #define MIN_VOLT_MEAS       0
+#define MAX_INTERNAL_TEMP   0 // needs to be set
 
 // Boosting Parameters
 #define BOOST_TIME          5   // seconds
@@ -48,6 +49,7 @@
 #define LOW_CELL_TIME       15000
 #define HIGH_TEMP_TIME      60000
 #define CURR_ERR_MARG       50       // in A * 10
+#define HIGH_INT_TEMP_TIME  0   // to be determined
 
 #define DCDC_CURRENT_DRAW   2 // in A, this is generous
 

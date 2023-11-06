@@ -13,6 +13,7 @@ tristate_timer over_voltcharge_tmr;
 tristate_timer overVolt_tmr;
 tristate_timer lowCell_tmr;
 tristate_timer highTemp_tmr;
+tristate_timer internalTemp_tmr;
 
 tristate_timer prefaultOverCurr_tmr;
 tristate_timer prefaultLowCell_tmr;
@@ -189,7 +190,7 @@ void request_transition(BMSState_t next_state)
 	current_state = next_state;
 }
 
-uint32_t sm_fault_return(AccumulatorData_t* accData)
+uint32_t sm_fault_return(AccumulatorData_t* accData, sht30_t* sht30_data)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
@@ -204,7 +205,7 @@ uint32_t sm_fault_return(AccumulatorData_t* accData)
             {.id = "High Cell Voltage",       .timer =       overVolt_tmr, .data_1 = accData->max_voltage.val, .optype_1 = GT, .lim_1 =                                       MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME,	.code =            CELL_VOLTAGE_TOO_HIGH,   .data_2 = accData->is_charger_connected, .optype_2 = EQ, .lim_2 =         false }, 
             {.id = "High Temp",               .timer =       highTemp_tmr, .data_1 =    accData->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP,	.timeout =       LOW_CELL_TIME,	.code =                     PACK_TOO_HOT   /* -----------------------------------UNUSED---------------------------------*/  }, 
             {.id = "Extremely Low Voltage",   .timer =        lowCell_tmr, .data_1 = accData->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      HIGH_TEMP_TIME,	.code =                 LOW_CELL_VOLTAGE   /* -----------------------------------UNUSED---------------------------------*/  }, 
-
+			{.id = "High Internal Temp",	  .timer = 	 internalTemp_tmr, .data_1 = sht30_data->temp		   .optype_1 = GT, .lim_1 = 									 MAX_INTERNAL_TEMP, .timeout =  HIGH_INT_TEMP_TIME, .code =			  INTERNAL_THERMAL_ERROR	/* -----------------------------------UNUSED---------------------------------*/ },
             NULL
 		// clang-format on
 	};
