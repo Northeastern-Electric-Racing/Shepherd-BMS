@@ -37,6 +37,11 @@ BUILD_DIR = build
 # C sources
 C_SOURCES =  \
 Core/Src/main.c \
+Core/Src/analyzer.c \
+Core/Src/compute.c \
+Core/Src/eepromdirectory.c \
+Core/Src/segment.c \
+Core/Src/stateMachine.c.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \

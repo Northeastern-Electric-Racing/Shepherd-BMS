@@ -1,10 +1,12 @@
 #include "compute.h"
+#include <string.h>
 
 uint8_t fan_speed;
 bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
 
-ComputeInterface compute;
+/* private function defintions */
+uint8_t calc_charger_led_state();
 
 void compute_init()
 {
@@ -42,7 +44,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 		//sendMessageCAN2(CANMSG_CHARGER, 8, charger_msg);
 
 		/* return a fault if we DO detect a voltage after we stop charging */
-		 return isCharging() ? 1 : 0; 
+		 //return isCharging() ? 1 : 0; 
 		
 	}
 
@@ -69,7 +71,8 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 
 bool compute_charger_connected()
 {
-	return !(digitalRead(CHARGE_DETECT) == 1);
+	//TODO update pin
+	//return !(digitalRead(CHARGE_DETECT) == 1);
 }
 
 void compute_charger_callback(const CAN_message_t& msg)
