@@ -1,6 +1,10 @@
 #include "analyzer.h"
 #include <stdlib.h>
 
+acc_data_t* bmsdata;
+
+acc_data_t* prevbmsdata;
+
 // clang-format off
 /**
  * @brief Mapping Cell temperature to the cell resistance based on the
@@ -111,8 +115,8 @@ const uint8_t THERM_DISABLE[8][11] =
 
 // clang-format on
 
-timer_t analysisTimer;
-timer_t ocvTimer;
+nertimer_t analysisTimer;
+nertimer_t ocvTimer;
 
 bool is_first_reading_ = true;
 
@@ -273,7 +277,7 @@ void calc_cell_resistances()
 
 void calc_dcl()
 {
-	timer_t dcl_timer;
+	nertimer_t dcl_timer;
 
 	int16_t current_limit = 0x7FFF;
 
@@ -432,7 +436,7 @@ void calc_open_cell_voltage()
 	}
 }
 
-uint8_t anaylzer_calc_fan_pwm()
+uint8_t analyzer_calc_fan_pwm()
 {
 	/* Resistance LUT increments by 5C for each index, plus we account for negative minimum */
 	uint8_t min_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5;

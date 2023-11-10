@@ -1,4 +1,8 @@
 #include "stateMachine.h"
+#include <stdlib.h>
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 
 acc_data_t* prevAccData;
 uint32_t bms_fault = FAULTS_CLEAR;
@@ -6,14 +10,14 @@ uint32_t bms_fault = FAULTS_CLEAR;
 BMSState_t current_state = BOOT_STATE;
 uint32_t previousFault = 0;
 
-timer_t charge_timeout = { .active = false };
-timer_t charge_cut_off_timer = { .active = false };
+nertimer_t charge_timeout = { .active = false };
+nertimer_t charge_cut_off_timer = { .active = false };
 
-timer_t can_msg_timer = { .active = false };
+nertimer_t can_msg_timer = { .active = false };
 
 bool entered_faulted = false;
 
-timer_t charger_message_timer;
+nertimer_t charger_message_timer;
 static const uint16_t CHARGE_MESSAGE_WAIT = 250; /* ms */
 
 const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
@@ -23,6 +27,18 @@ const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	{ false, true, true, true }, /* CHARGING */
 	{ true, false, false, true } /* FAULTED */
 };
+
+/* private function prototypes */
+void init_boot(void);
+void init_ready(void);
+void init_charging(void);
+void init_faulted(void);
+void handle_boot(acc_data_t* bmsdata);
+void handle_ready(acc_data_t* bmsdata);
+void handle_charging(acc_data_t* bmsdata);
+void handle_faulted(acc_data_t* bmsdata);
+void request_transition(BMSState_t next_state);
+
 
 typedef void (*HandlerFunction_t)(acc_data_t* bmsdata);
 typedef void (*InitFunction_t)();
@@ -79,15 +95,17 @@ void handle_charging(acc_data_t* bmsdata)
 	} else {
 		/* Check if we should charge */
 		if (sm_charging_check(bmsdata)) {
-			digitalWrite(CHARGE_SAFETY_RELAY, 1);
+			//TODO update to HAL 
+			//digitalWrite(CHARGE_SAFETY_RELAY, 1);
 			compute_enable_charging(true);
 		} else {
-			digitalWrite(CHARGE_SAFETY_RELAY, 0);
+			//TODO update to HAL
+			//digitalWrite(CHARGE_SAFETY_RELAY, 0);
 			compute_enable_charging(false);
 		}
 
 		/* Check if we should balance */
-		if (statemachine_balancing_check(bmsdata)) {
+		if (sm_balancing_check(bmsdata)) {
 			sm_balance_cells(bmsdata);
 		} else {
 			segment_enable_balancing(false);
@@ -99,7 +117,8 @@ void handle_charging(acc_data_t* bmsdata)
 				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), bmsdata);
 			start_timer(&charger_message_timer, CHARGE_MESSAGE_WAIT);
 		} else {
-			digitalWrite(CHARGE_SAFETY_RELAY, 0);
+			//TODO update to HAL
+			//digitalWrite(CHARGE_SAFETY_RELAY, 0);
 		}
 	}
 }
@@ -127,14 +146,15 @@ void handle_faulted(acc_data_t* bmsdata)
 
 	else {
 		compute_set_fault(1);
-		digitalWrite(CHARGE_SAFETY_RELAY, 0);
+
+		//TODO update to HAL
+		//digitalWrite(CHARGE_SAFETY_RELAY, 0);
 	}
 	return;
 }
 
 void sm_handle_state(acc_data_t* bmsdata)
 {
-	preFaultCheck(bmsdata);
 	bmsdata->is_charger_connected = compute_charger_connected();
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
@@ -151,14 +171,14 @@ void sm_handle_state(acc_data_t* bmsdata)
 
 	/* send relevant CAN msgs */
 	// clang-format off
-	if (is_timer_expired(&can_msg_timer)))
+	if (is_timer_expired(&can_msg_timer))
 	{
 		compute_send_acc_status_message(bmsdata);
 		compute_send_current_message(bmsdata);
 		compute_send_bms_status_message(bmsdata, current_state, segment_is_balancing());
 		compute_send_cell_temp_message(bmsdata);
 		compute_send_cell_data_message(bmsdata);
-		send_segment_temp_message(bmsdata);
+		compute_send_segment_temp_message(bmsdata);
 		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
 	}
 	// clang-format on
@@ -179,13 +199,13 @@ uint32_t sm_fault_return(acc_data_t* accData)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
-	static timer_t ovr_curr_timer 	= {0};
-	static timer_t ovr_chgcurr_timer = {0};
-	static timer_t undr_volt_timer = {0};
-	static timer_t ovr_chgvolt_timer = {0};
-	static timer_t ovr_volt_timer = {0};
-	static timer_t low_cell_timer = {0};
-	static timer_t high_temp_timer = {0};
+	static nertimer_t ovr_curr_timer 	= {0};
+	static nertimer_t ovr_chgcurr_timer = {0};
+	static nertimer_t undr_volt_timer = {0};
+	static nertimer_t ovr_chgvolt_timer = {0};
+	static nertimer_t ovr_volt_timer = {0};
+	static nertimer_t low_cell_timer = {0};
+	static nertimer_t high_temp_timer = {0};
 	static fault_eval_t* fault_table = NULL;
 	static acc_data_t* fault_data = NULL;
 
@@ -194,7 +214,7 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	if (!fault_table)
 	{
 		/* Note that we are only allocating this table once at runtime, so there is no need to free it */
-		fault_table = (fault_eval_t*) malloc(NUM * sizeof(fault_eval_t));
+		fault_table = (fault_eval_t*) malloc(NUM_FAULTS * sizeof(fault_eval_t));
 		// clang-format off
     	// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ _______________DATA 2______________     __THRESHOLD 2__
         fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10*1.04, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ---------------------------UNUSED------------------- */ };
@@ -232,7 +252,8 @@ uint32_t sm_fault_eval(fault_eval_t index)
         case LE: condition1 = index.data_1 <= index.lim_1; break;
         case EQ: condition1 = index.data_1 == index.lim_1; break;
 		case NEQ: condition1 = index.data_1 != index.lim_1; break;
-        case NOP: condition1 = true; break;
+        case NOP:
+		default: condition1 = true;
     }
 
     switch (index.optype_2)
@@ -243,7 +264,8 @@ uint32_t sm_fault_eval(fault_eval_t index)
         case LE: condition2 = index.data_2 <= index.lim_2; break;
         case EQ: condition2 = index.data_2 == index.lim_2; break;
 		case NEQ: condition2 = index.data_2 != index.lim_2; break;
-        case NOP: condition2 = true; break;
+        case NOP: 
+		default: condition2 = true;
     }
 	// clang-format on
 
@@ -253,7 +275,7 @@ uint32_t sm_fault_eval(fault_eval_t index)
 	}
 
 	else if (is_timer_active(&index.timer) && condition1 && condition2) {
-		if (is_timer_expired(&index.timer))) {
+		if (is_timer_expired(&index.timer)) {
 			return index.code;
 		}
 		if (!(condition1 && condition2)) {
@@ -272,22 +294,22 @@ bool sm_charging_check(acc_data_t* bmsdata)
 		return false;
 
 	if (bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000)
-		&& !is_active(&charge_cut_off_timer)) {
+		&& !charge_cut_off_timer.active){
 		start_timer(&charge_cut_off_timer, 5000);
-	} else if (is_active(&charge_cut_off_timer)) {
+	} else if (charge_cut_off_timer.active) {
 		if (is_timer_expired(&charge_cut_off_timer)) {
 			start_timer(&charge_timeout, CHARGE_TIMEOUT);
 			return false;
 		}
 		if (!(bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000))) {
-			cancel_timer(&charge_cut_off_timer));
+			cancel_timer(&charge_cut_off_timer);
 		}
 	}
 
 	return true;
 }
 
-bool statemachine_balancing_check(acc_data_t* bmsdata)
+bool sm_balancing_check(acc_data_t* bmsdata)
 {
 	if (!compute_charger_connected())
 		return false;
@@ -306,8 +328,8 @@ void sm_broadcast_current_limit(acc_data_t* bmsdata)
 	// States for Boosting State Machine
 	static enum { BOOST_STANDBY, BOOSTING, BOOST_RECHARGE } BoostState;
 
-	static timer_t boost_timer;
-	static timer_t boost_recharge_timer;
+	static nertimer_t boost_timer;
+	static nertimer_t boost_recharge_timer;
 
 	/* Transitioning out of boost */
 	if (is_timer_expired(&boost_timer) && BoostState == BOOSTING) {
@@ -327,12 +349,12 @@ void sm_broadcast_current_limit(acc_data_t* bmsdata)
 	/* Currently boosting */
 	if (BoostState == BOOSTING || BoostState == BOOST_STANDBY) {
 		bmsdata->boost_setting
-			= min(bmsdata->discharge_limit, bmsdata->cont_DCL * CONTDCL_MULTIPLIER);
+			= MIN(bmsdata->discharge_limit, bmsdata->cont_DCL * CONTDCL_MULTIPLIER);
 	}
 
 	/* Currently recharging boost */
 	else {
-		bmsdata->boost_setting = min(bmsdata->cont_DCL, bmsdata->discharge_limit);
+		bmsdata->boost_setting = MIN(bmsdata->cont_DCL, bmsdata->discharge_limit);
 	}
 }
 

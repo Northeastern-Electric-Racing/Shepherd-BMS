@@ -355,7 +355,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
 	//sendMessageCAN1(0x08, 8, buf);
 }
 
-void send_segment_temp_message(acc_data_t* bmsdata)
+void compute_send_segment_temp_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((packed)) {

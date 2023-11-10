@@ -17,7 +17,7 @@ void segment_init();
  *
  * @return int*
  */
-void segment_retrieve_segment_data(chipdata_t databuf[NUM_CHIPS]);
+void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS]);
 
 /**
  * @brief Enables/disables balancing for all cells

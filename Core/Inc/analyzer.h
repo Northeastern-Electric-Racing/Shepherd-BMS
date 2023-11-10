@@ -29,8 +29,8 @@ uint8_t analyzer_calc_fan_pwm();
 /**
  * @brief Pointer to the address of the most recent data point
  */
-acc_data_t* bmsdata;
+extern acc_data_t* bmsdata;
 
-acc_data_t* prevbmsdata;
+extern acc_data_t* prevbmsdata;
 
 #endif

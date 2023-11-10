@@ -156,7 +156,7 @@ typedef enum {
  */
 typedef struct {
 	char* id;
-	timer_t timer;
+	nertimer_t timer;
 
 	int data_1;
 	fault_evalop_t optype_1;

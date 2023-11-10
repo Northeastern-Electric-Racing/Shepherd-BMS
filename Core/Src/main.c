@@ -230,7 +230,7 @@ int main(void)
      * Collect all the segment data needed to perform analysis
      * Not state specific
      */
-    segment_retrieve_segment_data(acc_data->chip_data);
+    segment_retrieve_data(acc_data->chip_data);
     acc_data->pack_current = compute_get_pack_current();
 
     /* Perform calculations on the data in the frame */
