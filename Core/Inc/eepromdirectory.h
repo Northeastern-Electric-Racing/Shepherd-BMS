@@ -2,6 +2,12 @@
 #define EEPROMDIRECTORY_H
 
 #include "bmsConfig.h"
+#include <stdint.h>
+#include <stdbool.h>
+
+#define NUM_EEPROM_FAULTS 5
+#define NUM_EEPROM_ITEMS  2
+#define EEPROM_ROOT_ADDR  0
 
 /* index 0 = newest, index 4 = oldest */
 static uint32_t eeprom_faults[NUM_EEPROM_FAULTS];
@@ -13,13 +19,10 @@ struct eeprom_partition
     uint16_t address;     /* start address */
 };
 
-struct eeprom_partition eeprom_data[NUM_EEPROM_ITEMS]
-{
+struct eeprom_partition eeprom_data[NUM_EEPROM_ITEMS];
 /*  ____________KEY________________         _BYTES_   */
-    {.id = const_cast<char*>("ROOT"),      .size = 1},
-    {.id = const_cast<char*>("FAULTS"),    .size = 21}                       
+  
 
-};
 
 
 /**
@@ -35,14 +38,14 @@ void eepromInit();
  * @param key
  * @return int 
  */
-int eepromGetIndex(char *key);
+uint16_t eeprom_get_index(char *key);
 
 /**
  * @brief returns the key at the passed index
  *  
  * 
  */
-char *eepromGetKey(int index);
+char *eeprom_get_key(int index);
 
 
 
@@ -53,9 +56,9 @@ char *eepromGetKey(int index);
  * @param key
  * @param data
  */
-void eepromReadData(char *key, void *data);
+bool eeprom_read_data_key(char *key, void *data, uint16_t size);
 
-void eepromReadData(uint8_t index, void *data);
+bool eeprom_read_data_address(uint16_t address, void *data, uint16_t size);
 
 /**
  * @brief loads eeprom with data from passed pointer
@@ -64,9 +67,9 @@ void eepromReadData(uint8_t index, void *data);
  * @param key 
  * @param data 
  */
-void eepromWriteData(char *key, void *data);
+bool eeprom_write_data_key(char *key, void *data, uint16_t size);
 
-void eepromWriteData(uint8_t index, void *data);
+bool eeprom_write_data_address(uint16_t address, void *data, uint16_t size);
 
 /**
  * @brief logs fault code in eeprom
@@ -74,17 +77,17 @@ void eepromWriteData(uint8_t index, void *data);
  * 
  * @param fault_code 
  */
-void logFault(uint32_t fault_code);
+void log_fault(uint32_t fault_code);
 /**
  * @brief reads all stored faults from eeprom
  *
  * 
  * @note this updates a static array of fault codes, should be called before accessing the array
- * @note this function is blocking, and will take a few ms to complete. This is why it is kept seperate from logFault(), 
+ * @note this function is blocking, and will take a few ms to complete. This is why it is kept seperate from log_fault(), 
  *      allwing the user more control as to when to use this
  */
 
-void getFaults();
+void get_faults();
 
 
 #endif
