@@ -1,8 +1,7 @@
 #ifndef SEGMENT_H
 #define SEGMENT_H
 
-#include <LTC68041.h>
-//#include <nerduino.h> <---------- REPLACE W/ NEW DRIVER
+#include "ltc68041.h"
 #include "bmsConfig.h"
 #include "datastructs.h"
 
@@ -18,7 +17,7 @@ void segment_init();
  *
  * @return int*
  */
-void segment_retrieve_segment_data(ChipData_t databuf[NUM_CHIPS]);
+void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS]);
 
 /**
  * @brief Enables/disables balancing for all cells
@@ -34,7 +33,7 @@ void segment_enable_balancing(bool balance_enable);
  * @param cell_num
  * @param balance_enable
  */
-void enable_balancing(uint8_t chip_num, uint8_t cell_num, bool balance_enable);
+void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num, bool balance_enable);
 
 /**
  * @brief Sets each cell to whatever state is passed in the boolean config area
@@ -50,7 +49,7 @@ void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_
  * @return true
  * @return false
  */
-bool segment_is_balancing(uint8_t chip_num, uint8_t cell_num);
+bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num);
 
 /**
  * @brief Returns if any cells are balancing

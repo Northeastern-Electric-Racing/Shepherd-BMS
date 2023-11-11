@@ -1,20 +1,21 @@
 #ifndef DATASTRUCTS_H
 #define DATASTRUCTS_H
 
+#include <stdbool.h>
+#include <stdint.h>
 #include "bmsConfig.h"
-#include <nerduino.h>
-#include <vector>
+#include "timer.h"
 
 /**
  * @brief Individual chip data
  * @note stores thermistor values, voltage readings, and the discharge status
  */
-struct ChipData_t {
+typedef struct {
 	/* These are retrieved from the initial LTC comms */
 	uint16_t voltage_reading[NUM_CELLS_PER_CHIP];	/* store voltage readings from each chip */
 	int8_t thermistor_reading[NUM_THERMS_PER_CHIP]; /* store all therm readings from each chip */
 	int8_t thermistor_value[NUM_THERMS_PER_CHIP];
-	FaultStatus_t error_reading;
+	int error_reading;
 
 	/* These are calculated during the analysis of data */
 	int8_t cell_temp[NUM_CELLS_PER_CHIP];
@@ -22,7 +23,7 @@ struct ChipData_t {
 	uint16_t open_cell_voltage[NUM_CELLS_PER_CHIP];
 
 	uint8_t bad_volt_diff_count[NUM_CELLS_PER_CHIP];
-};
+} chipdata_t;
 
 /**
  * @brief Enuemrated possible fault codes for the BMS
@@ -30,7 +31,7 @@ struct ChipData_t {
  *          to set or get the error codes
  */
 // clang-format off
-enum BMSFault_t {
+typedef enum {
 	FAULTS_CLEAR = 0x0,
 
 	/* Orion BMS faults */
@@ -54,30 +55,30 @@ enum BMSFault_t {
 	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
-};
+} bms_fault_t;
 // clang-format on
 
 /**
  * @brief Stores critical values for the pack, and where that critical value can be found
  *
  */
-struct CriticalCellValue_t {
+typedef struct {
 	int32_t val;
 	uint8_t chipIndex;
 	uint8_t cellNum;
-};
+} crit_cellval_t;
 
 /**
  * @brief Represents one "frame" of BMS data
  * @note the size of this structure is **9752 bits** (~1.3k bytes), as of October 22, 2022
  */
-#define ACCUMULATOR_FRAME_SIZE sizeof(AccumulatorData_t);
+#define ACCUMULATOR_FRAME_SIZE sizeof(acc_data_t);
 
-struct AccumulatorData_t {
+typedef struct {
 	/* Array of data from all chips in the system */
-	ChipData_t chip_data[NUM_CHIPS];
+	chipdata_t chip_data[NUM_CHIPS];
 
-	FaultStatus_t fault_status = NOT_FAULTED;
+	int fault_status;
 
 	int16_t pack_current; /* this value is multiplied by 10 to account for decimal precision */
 	uint16_t pack_voltage;
@@ -98,47 +99,29 @@ struct AccumulatorData_t {
 	uint32_t fault_code;
 
 	/* Max, min, and avg thermistor readings */
-	CriticalCellValue_t max_temp;
-	CriticalCellValue_t min_temp;
+	crit_cellval_t max_temp;
+	crit_cellval_t min_temp;
 	int8_t avg_temp;
 
 	/* Max and min cell resistances */
-	CriticalCellValue_t max_res;
-	CriticalCellValue_t min_res;
+	crit_cellval_t max_res;
+	crit_cellval_t min_res;
 
 	/* Max, min, and avg voltage of the cells */
-	CriticalCellValue_t max_voltage;
-	CriticalCellValue_t min_voltage;
+	crit_cellval_t max_voltage;
+	crit_cellval_t min_voltage;
 	uint16_t avg_voltage;
 	uint16_t delt_voltage;
 
-	CriticalCellValue_t max_ocv;
-	CriticalCellValue_t min_ocv;
+	crit_cellval_t max_ocv;
+	crit_cellval_t min_ocv;
 	uint16_t avg_ocv;
 	uint16_t delt_ocv;
 
 	uint16_t boost_setting;
 
 	bool is_charger_connected;
-};
-
-/**
- * @brief Represents the state of the BMS fault timers
- */
-typedef enum {
-	BEFORE_TIMER_START,
-	DURING_EVAL
-
-} TSTimerEvalState;
-
-/**
- * @brief Represents a timer that can be in one of three states
- */
-struct tristate_timer : public Timer {
-
-	TSTimerEvalState eval_state = BEFORE_TIMER_START;
-	int eval_length;
-};
+} acc_data_t;
 
 /**
  * @brief Represents individual BMS states
@@ -166,27 +149,27 @@ typedef enum {
 	NEQ, /* fault if {data} not equal to {threshold}             */
 	NOP	 /* no operation, use for single threshold faults        */
 
-} FaultEvalType;
+} fault_evalop_t;
 
 /**
  * @brief Represents data to be packaged into a fault evaluation
  */
-struct fault_eval {
+typedef struct {
 	char* id;
-	tristate_timer timer;
+	nertimer_t timer;
 
 	int data_1;
-	FaultEvalType optype_1;
+	fault_evalop_t optype_1;
 	int lim_1;
 
 	int timeout;
 	int code;
 
-	int data_2			   = 0;
-	FaultEvalType optype_2 = NOP;
-	int lim_2			   = 0;
+	fault_evalop_t optype_2;
+	int data_2;
+	int lim_2;
 
-	bool is_faulted = false;
-};
+	bool is_faulted;
+} fault_eval_t;
 
 #endif

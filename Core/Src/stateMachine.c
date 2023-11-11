@@ -1,33 +1,23 @@
 #include "stateMachine.h"
+#include <stdlib.h>
 
-AccumulatorData_t* prevAccData;
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+
+acc_data_t* prevAccData;
 uint32_t bms_fault = FAULTS_CLEAR;
 
 BMSState_t current_state = BOOT_STATE;
 uint32_t previousFault = 0;
 
-tristate_timer over_curr_tmr;
-tristate_timer over_chgcurr_tmr;
-tristate_timer under_volt_tmr;
-tristate_timer over_voltcharge_tmr;
-tristate_timer overVolt_tmr;
-tristate_timer lowCell_tmr;
-tristate_timer highTemp_tmr;
+nertimer_t charge_timeout = { .active = false };
+nertimer_t charge_cut_off_timer = { .active = false };
 
-tristate_timer prefaultOverCurr_tmr;
-tristate_timer prefaultLowCell_tmr;
-
-Timer charge_timeout;
-tristate_timer charge_cut_off_time;
-
-Timer prefaultCANDelay1; // low cell
-Timer prefaultCANDelay2; // dcl
-
-Timer can_msg_timer;
+nertimer_t can_msg_timer = { .active = false };
 
 bool entered_faulted = false;
 
-Timer charge_message_timer;
+nertimer_t charger_message_timer;
 static const uint16_t CHARGE_MESSAGE_WAIT = 250; /* ms */
 
 const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
@@ -38,7 +28,19 @@ const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	{ true, false, false, true } /* FAULTED */
 };
 
-typedef void (*HandlerFunction_t)(AccumulatorData_t* bmsdata);
+/* private function prototypes */
+void init_boot(void);
+void init_ready(void);
+void init_charging(void);
+void init_faulted(void);
+void handle_boot(acc_data_t* bmsdata);
+void handle_ready(acc_data_t* bmsdata);
+void handle_charging(acc_data_t* bmsdata);
+void handle_faulted(acc_data_t* bmsdata);
+void request_transition(BMSState_t next_state);
+
+
+typedef void (*HandlerFunction_t)(acc_data_t* bmsdata);
 typedef void (*InitFunction_t)();
 
 const InitFunction_t init_LUT[NUM_STATES]
@@ -49,11 +51,11 @@ const HandlerFunction_t handler_LUT[NUM_STATES]
 
 void init_boot() { return; }
 
-void handle_boot(AccumulatorData_t* bmsdata)
+void handle_boot(acc_data_t* bmsdata)
 {
-	prevAccData = nullptr;
-	segment.enableBalancing(false);
-	compute.compute_enable_charging(false);
+	prevAccData = NULL;
+	segment_enable_balancing(false);
+	compute_enable_charging(false);
 
 	// bmsdata->fault_code = FAULTS_CLEAR;
 
@@ -63,15 +65,15 @@ void handle_boot(AccumulatorData_t* bmsdata)
 
 void init_ready()
 {
-	segment.enableBalancing(false);
-	compute.compute_enable_charging(false);
+	segment_enable_balancing(false);
+	compute_enable_charging(false);
 	return;
 }
 
-void handle_ready(AccumulatorData_t* bmsdata)
+void handle_ready(acc_data_t* bmsdata)
 {
 	/* check for charger connection */
-	if (compute.compute_charger_connected()) {
+	if (compute_charger_connected()) {
 		request_transition(CHARGING_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
@@ -81,52 +83,55 @@ void handle_ready(AccumulatorData_t* bmsdata)
 
 void init_charging()
 {
-	charge_timeout.cancelTimer();
+	cancel_timer(&charge_timeout);
 	return;
 }
 
-void handle_charging(AccumulatorData_t* bmsdata)
+void handle_charging(acc_data_t* bmsdata)
 {
-	if (!compute.compute_charger_connected()) {
+	if (!compute_charger_connected()) {
 		request_transition(READY_STATE);
 		return;
 	} else {
 		/* Check if we should charge */
-		if (sm_charging_check(analyzer.bmsdata)) {
-			digitalWrite(CHARGE_SAFETY_RELAY, HIGH);
-			compute.compute_enable_charging(true);
+		if (sm_charging_check(bmsdata)) {
+			//TODO update to HAL 
+			//digitalWrite(CHARGE_SAFETY_RELAY, 1);
+			compute_enable_charging(true);
 		} else {
-			digitalWrite(CHARGE_SAFETY_RELAY, LOW);
-			compute.compute_enable_charging(false);
+			//TODO update to HAL
+			//digitalWrite(CHARGE_SAFETY_RELAY, 0);
+			compute_enable_charging(false);
 		}
 
 		/* Check if we should balance */
-		if (statemachine_balancing_check(analyzer.bmsdata)) {
-			sm_balance_cells(analyzer.bmsdata);
+		if (sm_balancing_check(bmsdata)) {
+			sm_balance_cells(bmsdata);
 		} else {
-			segment.enableBalancing(false);
+			segment_enable_balancing(false);
 		}
 
 		/* Send CAN message, but not too often */
-		if (charge_message_timer.isTimerExpired()) {
-			compute.compute_send_charging_message(
-				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), analyzer.bmsdata);
-			charge_message_timer.startTimer(CHARGE_MESSAGE_WAIT);
+		if (is_timer_expired(&charger_message_timer)) {
+			compute_send_charging_message(
+				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), bmsdata);
+			start_timer(&charger_message_timer, CHARGE_MESSAGE_WAIT);
 		} else {
-			digitalWrite(CHARGE_SAFETY_RELAY, LOW);
+			//TODO update to HAL
+			//digitalWrite(CHARGE_SAFETY_RELAY, 0);
 		}
 	}
 }
 
 void init_faulted()
 {
-	segment.enableBalancing(false);
-	compute.compute_enable_charging(false);
+	segment_enable_balancing(false);
+	compute_enable_charging(false);
 	entered_faulted = true;
 	return;
 }
 
-void handle_faulted(AccumulatorData_t* bmsdata)
+void handle_faulted(acc_data_t* bmsdata)
 {
 	if (entered_faulted) {
 		entered_faulted = false;
@@ -134,22 +139,23 @@ void handle_faulted(AccumulatorData_t* bmsdata)
 	}
 
 	if (bmsdata->fault_code == FAULTS_CLEAR) {
-		compute.compute_set_fault(NOT_FAULTED);
+		compute_set_fault(0);
 		request_transition(BOOT_STATE);
 		return;
 	}
 
 	else {
-		compute.compute_set_fault(FAULTED);
-		digitalWrite(CHARGE_SAFETY_RELAY, LOW);
+		compute_set_fault(1);
+
+		//TODO update to HAL
+		//digitalWrite(CHARGE_SAFETY_RELAY, 0);
 	}
 	return;
 }
 
-void sm_handle_state(AccumulatorData_t* bmsdata)
+void sm_handle_state(acc_data_t* bmsdata)
 {
-	preFaultCheck(bmsdata);
-	bmsdata->is_charger_connected = compute.compute_charger_connected();
+	bmsdata->is_charger_connected = compute_charger_connected();
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
@@ -160,20 +166,20 @@ void sm_handle_state(AccumulatorData_t* bmsdata)
 	// TODO needs testing
 	handler_LUT[current_state](bmsdata);
 
-	compute.compute_set_fan_speed(analyzer.calcFanPWM());
+	compute_set_fan_speed(analyzer_calc_fan_pwm());
 	sm_broadcast_current_limit(bmsdata);
 
 	/* send relevant CAN msgs */
 	// clang-format off
-	if (can_msg_timer.isTimerExpired())
+	if (is_timer_expired(&can_msg_timer))
 	{
-		compute.compute_send_acc_status_message(analyzer.bmsdata);
-		compute.compute_send_current_message(analyzer.bmsdata);
-		compute.compute_send_bms_status_message(analyzer.bmsdata, current_state, segment.isBalancing());
-		compute.compute_send_cell_temp_message(analyzer.bmsdata->max_temp, analyzer.bmsdata->min_temp, analyzer.bmsdata->avg_temp);
-		compute.compute_send_cell_data_message(analyzer.bmsdata);
-		compute.send_segment_temp_message(analyzer.bmsdata);
-		can_msg_timer.startTimer(CAN_MESSAGE_WAIT);
+		compute_send_acc_status_message(bmsdata);
+		compute_send_current_message(bmsdata);
+		compute_send_bms_status_message(bmsdata, current_state, segment_is_balancing());
+		compute_send_cell_temp_message(bmsdata);
+		compute_send_cell_data_message(bmsdata);
+		compute_send_segment_temp_message(bmsdata);
+		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
 	}
 	// clang-format on
 }
@@ -189,30 +195,42 @@ void request_transition(BMSState_t next_state)
 	current_state = next_state;
 }
 
-uint32_t sm_fault_return(AccumulatorData_t* accData)
+uint32_t sm_fault_return(acc_data_t* accData)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
-	static struct fault_eval fault_table[8] = {
+	static nertimer_t ovr_curr_timer 	= {0};
+	static nertimer_t ovr_chgcurr_timer = {0};
+	static nertimer_t undr_volt_timer = {0};
+	static nertimer_t ovr_chgvolt_timer = {0};
+	static nertimer_t ovr_volt_timer = {0};
+	static nertimer_t low_cell_timer = {0};
+	static nertimer_t high_temp_timer = {0};
+	static fault_eval_t* fault_table = NULL;
+	static acc_data_t* fault_data = NULL;
+
+	fault_data = accData;
+
+	if (!fault_table)
+	{
+		/* Note that we are only allocating this table once at runtime, so there is no need to free it */
+		fault_table = (fault_eval_t*) malloc(NUM_FAULTS * sizeof(fault_eval_t));
 		// clang-format off
-
-          // ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    _______________DATA_____________________  ___OPERATOR___  ________THRESHOLD________
-            {.id = "Discharge Current Limit", .timer =       over_curr_tmr, .data_1 =    accData->pack_current, .optype_1 = GT, .lim_1 = (accData->discharge_limit + DCDC_CURRENT_DRAW)*10*1.04, .timeout =      OVER_CURR_TIME,	.code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT   /* -----------------------------------UNUSED---------------------------------*/ }, 
-            {.id = "Charge Current Limit",    .timer =    over_chgcurr_tmr, .data_1 =    accData->pack_current, .optype_1 = GT, .lim_1 =                             (accData->charge_limit)*10, .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .data_2 =         accData->pack_current, .optype_2 = LT, .lim_2 =             0 },
-            {.id = "Low Cell Voltage",        .timer =      under_volt_tmr, .data_1 = accData->min_voltage.val, .optype_1 = LT, .lim_1 =                                       MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME,	.code =             CELL_VOLTAGE_TOO_LOW   /* -----------------------------------UNUSED---------------------------------*/  },
-            {.id = "High Cell Voltage",       .timer = over_voltcharge_tmr, .data_1 = accData->max_voltage.val, .optype_1 = GT, .lim_1 =                                MAX_CHARGE_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =            CELL_VOLTAGE_TOO_HIGH   /* -----------------------------------UNUSED---------------------------------*/  }, 
-            {.id = "High Cell Voltage",       .timer =       overVolt_tmr, .data_1 = accData->max_voltage.val, .optype_1 = GT, .lim_1 =                                       MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME,	.code =            CELL_VOLTAGE_TOO_HIGH,   .data_2 = accData->is_charger_connected, .optype_2 = EQ, .lim_2 =         false }, 
-            {.id = "High Temp",               .timer =       highTemp_tmr, .data_1 =    accData->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP,	.timeout =       LOW_CELL_TIME,	.code =                     PACK_TOO_HOT   /* -----------------------------------UNUSED---------------------------------*/  }, 
-            {.id = "Extremely Low Voltage",   .timer =        lowCell_tmr, .data_1 = accData->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      HIGH_TEMP_TIME,	.code =                 LOW_CELL_VOLTAGE   /* -----------------------------------UNUSED---------------------------------*/  }, 
-
-            NULL
+    	// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ _______________DATA 2______________     __THRESHOLD 2__
+        fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10*1.04, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ---------------------------UNUSED------------------- */ };
+        fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 =                             (fault_data->charge_limit)*10, .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =    0  };
+        fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                       MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
+        fault_table[3]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =    ovr_chgvolt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                MAX_CHARGE_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
+        fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                       MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ,  .data_2 = fault_data->is_charger_connected,  .lim_2 = false };
+        fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =    fault_data->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP, .timeout =       LOW_CELL_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ----------------------------------------------------*/  };
+        fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      HIGH_TEMP_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* --------------------------UNUSED--------------------*/  };
+		fault_table[7]  = (fault_eval_t) {.id = NULL};
 		// clang-format on
-	};
-
+	}
 	uint32_t fault_status = 0;
 	int incr = 0;
 
-	while (&fault_table[incr] != NULL) {
+	while (&fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(fault_table[incr]);
 		incr++;
 	}
@@ -220,12 +238,10 @@ uint32_t sm_fault_return(AccumulatorData_t* accData)
 	return fault_status;
 }
 
-uint32_t sm_fault_eval(fault_eval index)
+uint32_t sm_fault_eval(fault_eval_t index)
 {
 	bool condition1;
 	bool condition2;
-
-	index.timer.eval_length = index.timeout;
 
 	// clang-format off
     switch (index.optype_1)
@@ -236,7 +252,8 @@ uint32_t sm_fault_eval(fault_eval index)
         case LE: condition1 = index.data_1 <= index.lim_1; break;
         case EQ: condition1 = index.data_1 == index.lim_1; break;
 		case NEQ: condition1 = index.data_1 != index.lim_1; break;
-        case NOP: condition1 = true; break;
+        case NOP:
+		default: condition1 = true;
     }
 
     switch (index.optype_2)
@@ -247,56 +264,54 @@ uint32_t sm_fault_eval(fault_eval index)
         case LE: condition2 = index.data_2 <= index.lim_2; break;
         case EQ: condition2 = index.data_2 == index.lim_2; break;
 		case NEQ: condition2 = index.data_2 != index.lim_2; break;
-        case NOP: condition2 = true; break;
+        case NOP: 
+		default: condition2 = true;
     }
 	// clang-format on
 
-	if (index.timer.eval_state == BEFORE_TIMER_START && condition1 && condition2) {
-		index.timer.startTimer(index.timer.eval_length);
-		index.timer.eval_state = DURING_EVAL;
+	if (!is_timer_active(&index.timer) && condition1 && condition2) 
+	{
+		start_timer(&index.timer, index.timeout);
 	}
 
-	else if (index.timer.eval_state == DURING_EVAL) {
-		if (index.timer.isTimerExpired()) {
+	else if (is_timer_active(&index.timer) && condition1 && condition2) {
+		if (is_timer_expired(&index.timer)) {
 			return index.code;
 		}
 		if (!(condition1 && condition2)) {
-			index.timer.cancelTimer();
-			index.timer.eval_state = BEFORE_TIMER_START;
+			cancel_timer(&index.timer);
 		}
 	}
 
 	return 0;
 }
 
-bool sm_charging_check(AccumulatorData_t* bmsdata)
+bool sm_charging_check(acc_data_t* bmsdata)
 {
-	if (!compute.compute_charger_connected())
+	if (!compute_charger_connected())
 		return false;
-	if (!charge_timeout.isTimerExpired())
+	if (!is_timer_expired(&charge_timeout))
 		return false;
 
 	if (bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000)
-		&& charge_cut_off_time.eval_state == BEFORE_TIMER_START) {
-		charge_cut_off_time.startTimer(5000);
-		charge_cut_off_time.eval_state = DURING_EVAL;
-	} else if (charge_cut_off_time.eval_state == DURING_EVAL) {
-		if (charge_cut_off_time.isTimerExpired()) {
-			charge_timeout.startTimer(CHARGE_TIMEOUT);
+		&& !charge_cut_off_timer.active){
+		start_timer(&charge_cut_off_timer, 5000);
+	} else if (charge_cut_off_timer.active) {
+		if (is_timer_expired(&charge_cut_off_timer)) {
+			start_timer(&charge_timeout, CHARGE_TIMEOUT);
 			return false;
 		}
 		if (!(bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000))) {
-			charge_cut_off_time.cancelTimer();
-			charge_cut_off_time.eval_state = BEFORE_TIMER_START;
+			cancel_timer(&charge_cut_off_timer);
 		}
 	}
 
 	return true;
 }
 
-bool statemachine_balancing_check(AccumulatorData_t* bmsdata)
+bool sm_balancing_check(acc_data_t* bmsdata)
 {
-	if (!compute.compute_charger_connected())
+	if (!compute_charger_connected())
 		return false;
 	if (bmsdata->max_temp.val > MAX_CELL_TEMP_BAL)
 		return false;
@@ -308,84 +323,42 @@ bool statemachine_balancing_check(AccumulatorData_t* bmsdata)
 	return true;
 }
 
-void preFaultCheck(AccumulatorData_t* bmsdata)
-{
-	// prefault for Low Cell Voltage
-	if (prefaultLowCell_tmr.eval_state == BEFORE_TIMER_START
-		&& bmsdata->min_voltage.val < MIN_VOLT * 10000) {
-		prefaultLowCell_tmr.startTimer(PRE_UNDER_VOLT_TIME);
-		prefaultLowCell_tmr.eval_state = DURING_EVAL;
-	} else if (prefaultLowCell_tmr.eval_state == DURING_EVAL) {
-		if (prefaultLowCell_tmr.isTimerExpired()) {
-			if (prefaultCANDelay1.isTimerExpired()) {
-				compute.sendDclPreFault(true);
-				prefaultCANDelay1.startTimer(CAN_MESSAGE_WAIT);
-			}
-		}
-		if (!(bmsdata->min_voltage.val < MIN_VOLT * 10000)) {
-			prefaultLowCell_tmr.cancelTimer();
-			prefaultLowCell_tmr.eval_state = BEFORE_TIMER_START;
-		}
-	}
-
-	/* prefault for DCL */
-	if (prefaultOverCurr_tmr.eval_state == BEFORE_TIMER_START
-		&& (bmsdata->pack_current) > ((bmsdata->discharge_limit + DCDC_CURRENT_DRAW) * 10
-			   * 1.04)) // *104% to account for current sensor +/-A
-	{
-		prefaultOverCurr_tmr.startTimer(PRE_OVER_CURR_TIME);
-		prefaultOverCurr_tmr.eval_state = DURING_EVAL;
-	} else if (prefaultOverCurr_tmr.eval_state == DURING_EVAL) {
-		if (prefaultOverCurr_tmr.isTimerExpired()) {
-			if (prefaultCANDelay2.isTimerExpired()) {
-				compute.sendDclPreFault(true);
-				prefaultCANDelay2.startTimer(CAN_MESSAGE_WAIT);
-			}
-		}
-		if (!((bmsdata->pack_current)
-				> ((bmsdata->discharge_limit + DCDC_CURRENT_DRAW) * 10 * 1.04))) {
-			prefaultOverCurr_tmr.cancelTimer();
-			prefaultOverCurr_tmr.eval_state = BEFORE_TIMER_START;
-		}
-	}
-}
-
-void sm_broadcast_current_limit(AccumulatorData_t* bmsdata)
+void sm_broadcast_current_limit(acc_data_t* bmsdata)
 {
 	// States for Boosting State Machine
 	static enum { BOOST_STANDBY, BOOSTING, BOOST_RECHARGE } BoostState;
 
-	static Timer boostTimer;
-	static Timer boostRechargeTimer;
+	static nertimer_t boost_timer;
+	static nertimer_t boost_recharge_timer;
 
 	/* Transitioning out of boost */
-	if (boostTimer.isTimerExpired() && BoostState == BOOSTING) {
+	if (is_timer_expired(&boost_timer) && BoostState == BOOSTING) {
 		BoostState = BOOST_RECHARGE;
-		boostRechargeTimer.startTimer(BOOST_RECHARGE_TIME);
+		start_timer(&boost_recharge_timer, BOOST_RECHARGE_TIME);
 	}
 	/* Transition out of boost recharge */
-	if (boostRechargeTimer.isTimerExpired() && BoostState == BOOST_RECHARGE) {
+	if (is_timer_expired(&boost_recharge_timer) && BoostState == BOOST_RECHARGE) {
 		BoostState = BOOST_STANDBY;
 	}
 	/* Transition to boosting */
 	if ((bmsdata->pack_current) > ((bmsdata->cont_DCL) * 10) && BoostState == BOOST_STANDBY) {
 		BoostState = BOOSTING;
-		boostTimer.startTimer(BOOST_TIME);
+		start_timer(&boost_timer, BOOST_TIME);
 	}
 
 	/* Currently boosting */
 	if (BoostState == BOOSTING || BoostState == BOOST_STANDBY) {
 		bmsdata->boost_setting
-			= min(bmsdata->discharge_limit, bmsdata->cont_DCL * CONTDCL_MULTIPLIER);
+			= MIN(bmsdata->discharge_limit, bmsdata->cont_DCL * CONTDCL_MULTIPLIER);
 	}
 
 	/* Currently recharging boost */
 	else {
-		bmsdata->boost_setting = min(bmsdata->cont_DCL, bmsdata->discharge_limit);
+		bmsdata->boost_setting = MIN(bmsdata->cont_DCL, bmsdata->discharge_limit);
 	}
 }
 
-void sm_balance_cells(AccumulatorData_t* bms_data)
+void sm_balance_cells(acc_data_t* bms_data)
 {
 	bool balanceConfig[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 
@@ -413,5 +386,5 @@ void sm_balance_cells(AccumulatorData_t* bms_data)
 	}
 #endif
 
-	segment.configureBalancing(balanceConfig);
+	segment_configure_balancing(balanceConfig);
 }

@@ -16,7 +16,6 @@
 // #include <nerduino.h>
 // TODO: import and replace new watchdog library
 //#include <Watchdog_t4.h>
-#include <LTC68041.h>
 #include "segment.h"
 #include "compute.h"
 #include "datastructs.h"
@@ -49,6 +48,8 @@
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
+I2C_HandleTypeDef hi2c1;
+
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
 SPI_HandleTypeDef hspi3;
@@ -58,9 +59,7 @@ UART_HandleTypeDef huart4;
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-WDT_T4<WDT1> wdt;
-AccumulatorData_t *prev_acc_data = nullptr;
-StateMachine stateMachine;
+acc_data_t *prev_acc_data = NULL;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,6 +72,7 @@ static void MX_SPI2_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_UART4_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
+static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -81,7 +81,7 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 /* USER CODE BEGIN 0 */
 #ifdef DEBUG_STATS
 
-const void print_bms_stats(AccumulatorData_t *acc_data)
+const void print_bms_stats(acc_data_t *acc_data)
 {
 	static Timer debug_stat_timer;
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
@@ -193,13 +193,8 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  WDT_timings_t config;
-  config.trigger = 5;         /* in seconds, 0->128 */
-  config.timeout = 15;        /* in seconds, 0->128 */
-  wdt.begin(config);
-//   NERduino.begin();
-  compute.compute_set_fault(NOT_FAULTED);
-  segment.init();
+  compute_set_fault(0);
+  segment_init();
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -218,39 +213,39 @@ int main(void)
   MX_SPI3_Init();
   MX_UART4_Init();
   MX_USB_OTG_FS_PCD_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  for(;;) {
+    /* Create a dynamically allocated structure */
+    acc_data_t *acc_data = malloc(sizeof(acc_data_t));
 
-	//Create a dynamically allocated structure
-	AccumulatorData_t *acc_data = new AccumulatorData_t;
+    //acc_data->faultCode = FAULTS_CLEAR;
 
-	//acc_data->faultCode = FAULTS_CLEAR;
+    /*
+     * Collect all the segment data needed to perform analysis
+     * Not state specific
+     */
+    segment_retrieve_data(acc_data->chip_data);
+    acc_data->pack_current = compute_get_pack_current();
 
-	//Collect all the segment data needed to perform analysis
-	//Not state specific
-	segment_retrieve_segment_data(acc_data->chip_data);
-	acc_data->pack_current = compute.compute_get_pack_current();
+    /* Perform calculations on the data in the frame */
+    analyzer_push(acc_data);
 
-	//Perform calculations on the data in the frame
-	analyzer.push(acc_data);
+    sm_handle_state(acc_data);
 
-	stateMachine_sm_handle_state(acc_data);
-
-	#ifdef DEBUG_STATS
-	print_bms_stats(analyzer.bmsdata);
-	#endif
-
-	wdt.feed();
-	//delay(10); // not sure if we need this in, it was in before
-
+    #ifdef DEBUG_STATS
+    print_bms_stats(analyzer.bmsdata);
+    #endif
+    //delay(10); // not sure if we need this in, it was in before
+  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-  }
   /* USER CODE END 3 */
 }
 
@@ -372,6 +367,40 @@ static void MX_CAN2_Init(void)
   /* USER CODE BEGIN CAN2_Init 2 */
 
   /* USER CODE END CAN2_Init 2 */
+
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
 
 }
 
@@ -654,14 +683,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(External_GPIO_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : PB6 PB7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

@@ -16,7 +16,7 @@
  *
  * @param data
  */
-void analyzer_push(AccumulatorData_t* data);
+void analyzer_push(acc_data_t* data);
 
 /**
  * @brief Calculates the PWM required to drive the fans at the current moment in time
@@ -29,8 +29,8 @@ uint8_t analyzer_calc_fan_pwm();
 /**
  * @brief Pointer to the address of the most recent data point
  */
-AccumulatorData_t* bmsdata;
+extern acc_data_t* bmsdata;
 
-AccumulatorData_t* prevbmsdata;
+extern acc_data_t* prevbmsdata;
 
 #endif
