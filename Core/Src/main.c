@@ -238,7 +238,7 @@ int main(void)
 	acc_data->pack_current = compute.compute_get_pack_current();
 
 	//Perform calculations on the data in the frame
-	analyzer.push(acc_data);
+	analyzer.push(acc_data, sht30data);
 
 	stateMachine_sm_handle_state(acc_data);
 

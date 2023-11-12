@@ -4,7 +4,7 @@
 //#include <nerduino.h> Replace
 #include "datastructs.h"
 #include "segment.h"
-#include "Core/Drivers/Embedded-Base/general/include/sht30.h"
+#include "sht30.h"
 
 /* We want to make sure we aren't doing useless analysis on the same set of data since we are
  * backfilling segment data */
