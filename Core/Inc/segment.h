@@ -5,6 +5,9 @@
 #include "bmsConfig.h"
 #include "datastructs.h"
 
+// global that passes cell comm faults upstream to sm
+bool cell_comm_fault_status;
+
 /**
  * @brief Initializes the segments
  */

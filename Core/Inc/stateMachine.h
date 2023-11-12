@@ -7,7 +7,7 @@
 #include "analyzer.h"
 #include "timer.h"
 
-#define NUM_FAULTS 8
+#define NUM_FAULTS 9 
 
 /**
 * @brief Returns if we want to balance cells during a particular frame

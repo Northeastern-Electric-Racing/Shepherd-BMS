@@ -25,8 +25,8 @@ nertimer_t therm_timer;
 nertimer_t voltage_reading_timer;
 nertimer_t variance_timer;
 
-int voltage_error = 0; //not faulted
-int therm_error = 0; //not faulted
+int voltage_error = FAULTS_CLEAR;
+int therm_error = FAULTS_CLEAR;
 
 uint16_t therm_settle_time_ = 0;
 
@@ -69,6 +69,8 @@ void segment_init()
 		local_config[c][5] = 0x00;
 	}
 	push_chip_configuration();
+
+	cell_comm_fault_status = false;
 }
 
 void select_therm(uint8_t therm)
@@ -199,7 +201,7 @@ int pull_voltages()
 			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
 				sizeof(segment_data[i].voltage_reading));
 		}
-		return 1;
+		return 1; //error
 	}
 
 	/* If the read was successful, copy the voltage data */
@@ -223,7 +225,7 @@ int pull_voltages()
 
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-	return 0;
+	return 0; /* Read Succesfully */
 }
 
 int pull_thermistors()
@@ -300,6 +302,8 @@ void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
 	/* Save the contents of the reading so that we can use it to fill in missing
 	 * data */
 	memcpy(previous_data, segment_data, sizeof(chipdata_t) * NUM_CHIPS);
+
+	cell_comm_fault_status = (voltage_error || therm_error);
 
 	segment_data = NULL;
 }
