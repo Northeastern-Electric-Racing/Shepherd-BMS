@@ -49,9 +49,13 @@
 #define LOW_CELL_TIME       15000
 #define HIGH_TEMP_TIME      60000
 #define INT_CELL_COMM_TIME  1000
+#define HIGH_INT_TEMP_TIME  0 // TODO SET THIS
 #define CURR_ERR_MARG       50       // in A * 10
 
 #define DCDC_CURRENT_DRAW   2 // in A, this is generous
+
+//Compute limits
+#define MAX_INTERNAL_TEMP   0 // TODO SET THIS
 
 #define CAN_MESSAGE_WAIT    10
 

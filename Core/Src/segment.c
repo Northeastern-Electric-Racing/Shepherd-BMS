@@ -28,6 +28,8 @@ nertimer_t variance_timer;
 int voltage_error = FAULTS_CLEAR;
 int therm_error = FAULTS_CLEAR;
 
+bool cell_comm_fault_status = false;
+
 uint16_t therm_settle_time_ = 0;
 
 const uint32_t VOLT_TEMP_CONV[91] = { 44260, 43970, 43670, 43450, 43030, 42690, 42340, 41980, 41620,

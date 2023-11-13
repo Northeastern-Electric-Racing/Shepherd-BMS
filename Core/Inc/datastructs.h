@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "bmsConfig.h"
 #include "timer.h"
+#include "sht30.h"
 
 /**
  * @brief Individual chip data
@@ -121,6 +122,8 @@ typedef struct {
 	uint16_t boost_setting;
 
 	bool is_charger_connected;
+
+	sht30_t* sht30_data;
 } acc_data_t;
 
 /**

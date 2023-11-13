@@ -1,9 +1,12 @@
 #include "analyzer.h"
 #include <stdlib.h>
+#include "stm32f4xx_hal.h"
 
 acc_data_t* bmsdata;
-
 acc_data_t* prevbmsdata;
+
+extern I2C_HandleTypeDef hi2c1;
+
 
 // clang-format off
 /**
@@ -452,13 +455,13 @@ uint8_t analyzer_calc_fan_pwm()
 		   / (2 * 5);
 }
 
-void analyzer_push(acc_data_t* data)
+void analyzer_push(acc_data_t* accdata)
 {
 	if (prevbmsdata != NULL)
 		free(bmsdata);
 
 	prevbmsdata = bmsdata;
-	bmsdata		= data;
+	bmsdata		= accdata;
 
 	disable_therms();
 
@@ -477,8 +480,14 @@ void analyzer_push(acc_data_t* data)
 	calc_cont_dcl();
 	calc_cont_ccl();
 	calc_state_of_charge();
+	sht30_get_temp_humid(accdata->sht30_data);
 
 	is_first_reading_ = false;
+}
+
+void analyzer_sht30_init(acc_data_t* accdata)
+{
+	accdata->sht30_data->i2c_handle = &hi2c1;
 }
 
 void disable_therms()
