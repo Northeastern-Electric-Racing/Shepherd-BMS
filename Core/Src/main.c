@@ -75,6 +75,9 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
+void watchdog_init(void);
+void watchdog_pet(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -196,6 +199,8 @@ int main(void)
   compute_set_fault(0);
   segment_init();
   analyzer_sht30_init();
+  watchdog_init();
+  
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -244,7 +249,9 @@ int main(void)
     #ifdef DEBUG_STATS
     print_bms_stats(analyzer.bmsdata);
     #endif
-    //delay(10); // not sure if we need this in, it was in before
+    
+    /* pet the watchdog */
+    watchdog_pet();
   }
     /* USER CODE END WHILE */
 
@@ -693,6 +700,18 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void watchdog_init(void)
+{
+   HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+}
+void watchdog_pet(void)
+{
+   //second iteration maybe redundant, datasheet unclear so we pet twice
+    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+}
 /* USER CODE END 4 */
 
 /**
