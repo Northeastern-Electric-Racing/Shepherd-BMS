@@ -33,6 +33,13 @@ void can_receive_callback(CAN_HandleTypeDef *hcan)
     new_msg.len = rx_header.DLC;
 	new_msg.id = rx_header.StdId;
 
-    enqueue(can_receive_queue, new_msg.data);
+    ringbuffer_enqueue(can_receive_queue, new_msg);
 }
 
+uint8_t get_can_msg(can_msg_t* msg)
+{
+    /* no messages to read */
+    if (ringbuffer_is_empty(&can_receive_queue)) return -1;
+
+    ringbuffer_dequeue(&can_receive_queue, msg);
+}

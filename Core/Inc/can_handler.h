@@ -9,6 +9,6 @@ can_t can2;
 /* Shepherd hanbdles both can busses the same way */
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 
-void get_can_msg();
+uint8_t get_can_msg(can_msg_t* msg);
 
 #endif // CAN_HANDLER_H
