@@ -14,6 +14,8 @@
 #define MC_BAUD				 1000000U
 #define MAX_ADC_RESOLUTION	 1023 // 13 bit ADC
 
+
+
 /**
  * @brief inits the compute interface
  */

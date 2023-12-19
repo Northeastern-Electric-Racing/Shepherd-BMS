@@ -193,7 +193,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  compute_set_fault(0);
   segment_init();
   /* USER CODE END Init */
 

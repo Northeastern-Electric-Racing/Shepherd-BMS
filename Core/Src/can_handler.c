@@ -1,22 +1,8 @@
 #include "can_handler.h"
-#include "can.h"
 #include "ringbuffer.h"
 #include "analyzer.h"
 
-#define NUM_INBOUND_CAN1_IDS 1
-#define NUM_INBOUND_CAN2_IDS 1
-
 ringbuffer_t can_receive_queue;
-
-static const uint16_t i can1_id_list[NUM_INBOUND_CAN1_IDS] = {
-	//CANID_X,
-	NULL
-};
-
-static const uint16_t i can2_id_list[NUM_INBOUND_CAN2_IDS] = {
-	//CANID_X,
-	NULL
-};
 
 void can_receive_callback(CAN_HandleTypeDef *hcan)
 {
@@ -45,13 +31,13 @@ uint8_t get_can_msg(can_msg_t* msg)
     // TODO list : 
     // 1. Charger connection flag -  have Charger set up with following logic, add correct CAN ID
     switch (msg->id) {
-        case CANID_X:
+        case NULL:
             if (msg->data[0] == 0x01) {
                 bmsdata->is_charger_connected = true;
             } else {
                 bmsdata->is_charger_connected = false;
             }
             break;
-
+    }
     return 0;
 }
