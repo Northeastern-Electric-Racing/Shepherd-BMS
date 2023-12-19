@@ -71,8 +71,8 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 
 bool compute_charger_connected()
 {
-	//TODO update pin
-	//return !(digitalRead(CHARGE_DETECT) == 1);
+	//TODO need to set up CAN msg that actually toggles this bool
+	return bmsdata->is_charger_connected;
 }
 
 //TODO add this back
