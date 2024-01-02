@@ -3,6 +3,7 @@
 
 #include "datastructs.h"
 #include "stateMachine.h"
+#include "ringbuffer.h"
 
 #define CURRENT_SENSOR_PIN_L A1
 #define CURRENT_SENSOR_PIN_H A0
@@ -13,8 +14,6 @@
 #define CHARGER_BAUD		 250000U
 #define MC_BAUD				 1000000U
 #define MAX_ADC_RESOLUTION	 1023 // 13 bit ADC
-
-
 
 /**
  * @brief inits the compute interface

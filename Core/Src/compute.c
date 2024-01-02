@@ -4,6 +4,9 @@
 #include "main.h"
 #include <string.h>
 
+#define MAX_CAN1_STORAGE 10
+#define MAX_CAN2_STORAGE 10
+
 uint8_t fan_speed;
 bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
@@ -23,12 +26,14 @@ void compute_init()
 	can1.id_list = can1_id_list;
 	can1.id_list_len = sizeof(can1_id_list) / sizeof(can1_id_list[0]);
 	can1.callback = can_receive_callback;
+	can1_rx_queue = ringbuffer_create(MAX_CAN1_STORAGE, sizeof(can_msg_t));
 	can_init(&can1);
 
 	can2.hcan = &hcan2;
 	can2.id_list = can2_id_list;
 	can2.id_list_len = sizeof(can2_id_list) / sizeof(can2_id_list[0]);
 	can2.callback = can_receive_callback;
+	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 	can_init(&can2);
 }
 
@@ -54,7 +59,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 		charger_msg_data.charger_control = 0b101;
 
 		can_msg_t charger_msg;
-		charger_msg.id = NULL;
+		charger_msg.id = 0x00; // TODO replace with correct ID;
 		charger_msg.len = sizeof(charger_msg_data);
 		memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
 
@@ -73,7 +78,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 	charger_msg_data.reserved2_3		= 0xFFFF;
 
 	can_msg_t charger_msg;
-	charger_msg.id = NULL;
+	charger_msg.id = 0x00; // TODO replace with correct ID;
 	charger_msg.len = 8;
 	memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
 	can_send_msg(&can2, &charger_msg);
@@ -163,7 +168,7 @@ void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_dischar
 	mc_msg_data.maxDischarge = user_max_discharge;
 
 	can_msg_t mc_msg;
-	mc_msg.id = NULL;
+	mc_msg.id = 0x00; // TODO replace with correct ID;
 	mc_msg.len = sizeof(mc_msg_data);
 	memcpy(mc_msg.data, &mc_msg_data, sizeof(mc_msg_data));
 
@@ -188,7 +193,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 	acc_status_msg_data.pack_health  = 0;
 
 	can_msg_t acc_msg;
-	acc_msg.id = NULL;
+	acc_msg.id = 0x00; // TODO replace with correct ID;
 	acc_msg.len = sizeof(acc_status_msg_data);
 	memcpy(acc_msg.data, &acc_status_msg_data, sizeof(acc_status_msg_data));
 
@@ -212,7 +217,7 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
     bms_status_msg_data.balance = (uint8_t)(balance);
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(bms_status_msg_data);
     memcpy(acc_msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
@@ -228,7 +233,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
     shutdown_control_msg_data.mpeState = mpe_state;
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(shutdown_control_msg_data);
     memcpy(acc_msg.data, &shutdown_control_msg_data, sizeof(shutdown_control_msg_data));
 
@@ -252,7 +257,7 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
     cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(cell_data_msg_data);
     memcpy(acc_msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
@@ -278,7 +283,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
     cell_voltage_msg_data.openVoltage = __builtin_bswap16(open_voltage);
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(cell_voltage_msg_data);
     memcpy(acc_msg.data, &cell_voltage_msg_data, sizeof(cell_voltage_msg_data));
 
@@ -298,7 +303,7 @@ void compute_send_current_message(acc_data_t* bmsdata)
     current_status_msg_data.pack_curr = bmsdata->pack_current;
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(current_status_msg_data);
     memcpy(acc_msg.data, &current_status_msg_data, sizeof(current_status_msg_data));
 
@@ -328,7 +333,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
     cell_temp_msg_data.average_temp = bmsdata->avg_temp;
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(cell_temp_msg_data);
     memcpy(acc_msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
 
@@ -353,7 +358,7 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
     memcpy(buff, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
     can_msg_t acc_msg;
-    acc_msg.id = NULL;
+    acc_msg.id = 0x00; // TODO replace with correct ID;
     acc_msg.len = sizeof(segment_temp_msg_data);
     memcpy(acc_msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
