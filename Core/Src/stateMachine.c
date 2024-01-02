@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
-
+extern UART_HandleTypeDef huart4;
 
 acc_data_t* prevAccData;
 uint32_t bms_fault = FAULTS_CLEAR;
@@ -157,17 +157,21 @@ void sm_handle_state(acc_data_t* bmsdata)
 {
 	bmsdata->is_charger_connected = compute_charger_connected();
 	bmsdata->fault_code = sm_fault_return(bmsdata);
+	
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
+		HAL_UART_Transmit(&huart4, (char*) "faulted\n" ,9, 1000);
 		bmsdata->discharge_limit = 0;
 		request_transition(FAULTED_STATE);
+		HAL_UART_Transmit(&huart4, (char*) "trans_complete\n" ,16, 1000);
 	}
-
+	HAL_UART_Transmit(&huart4, (char*) "chililng\n" ,10, 1000);
 	// TODO needs testing
 	handler_LUT[current_state](bmsdata);
 
 	compute_set_fan_speed(analyzer_calc_fan_pwm());
 	sm_broadcast_current_limit(bmsdata);
+	HAL_UART_Transmit(&huart4, (char*) "next\n" ,6, 1000);
 
 	/* send relevant CAN msgs */
 	// clang-format off
@@ -229,8 +233,7 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	}
 	uint32_t fault_status = 0;
 	int incr = 0;
-
-	while (&fault_table[incr].id != NULL) {
+	while (fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(fault_table[incr]);
 		incr++;
 	}

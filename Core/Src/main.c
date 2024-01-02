@@ -193,7 +193,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  segment_init();
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -215,12 +215,18 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+   // segment_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   for(;;) {
     /* Create a dynamically allocated structure */
+
+    HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin);
+    HAL_Delay(500);
+    //HAL_UART_Transmit(&huart4, (char*)"hello", 5, 1000);
+
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
 
     //acc_data->faultCode = FAULTS_CLEAR;
@@ -234,8 +240,8 @@ int main(void)
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
-
     sm_handle_state(acc_data);
+    
 
     #ifdef DEBUG_STATS
     print_bms_stats(analyzer.bmsdata);
@@ -423,8 +429,8 @@ static void MX_SPI1_Init(void)
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;

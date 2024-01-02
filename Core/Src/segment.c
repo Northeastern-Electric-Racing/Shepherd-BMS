@@ -53,9 +53,8 @@ void push_chip_configuration() { LTC6804_wrcfg(ltc68041, NUM_CHIPS, local_config
 
 void segment_init()
 {
-	printf("Initializing Segments...");
+	//printf("Initializing Segments...");
 
-	//TODO again, ensure spi 1 is right (spi1 cs is PA04)
 	ltc68041 = LTC6804_initialize(&hspi1, GPIOA, 4);
 
 	// pull_chip_configuration();
