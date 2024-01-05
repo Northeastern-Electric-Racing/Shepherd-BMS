@@ -3,6 +3,7 @@
 
 #include "datastructs.h"
 #include "stateMachine.h"
+#include "ringbuffer.h"
 
 #define CURRENT_SENSOR_PIN_L A1
 #define CURRENT_SENSOR_PIN_H A0
