@@ -42,6 +42,7 @@ Core/Src/compute.c \
 Core/Src/eepromdirectory.c \
 Core/Src/segment.c \
 Core/Src/stateMachine.c \
+Core/Src/can_handler.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \
@@ -49,6 +50,7 @@ Drivers/Embedded-Base/general/src/m24c32.c \
 Drivers/Embedded-Base/general/src/ltc68041.c \
 Drivers/Embedded-Base/general/src/sht30.c \
 Drivers/Embedded-Base/middleware/src/timer.c \
+Drivers/Embedded-Base/middleware/src/ringbuffer.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_can.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_rcc_ex.c \

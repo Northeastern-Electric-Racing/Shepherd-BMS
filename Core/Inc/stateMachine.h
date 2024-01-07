@@ -43,7 +43,7 @@ uint32_t sm_fault_return(acc_data_t *accData);
  * @param index
  * @return fault_code
  */
-uint32_t sm_fault_eval(fault_eval_t index);
+uint32_t sm_fault_eval(fault_eval_t* index);
 
 /**
  * @brief handles the state machine, calls the appropriate handler function and runs every loop functions

@@ -56,6 +56,7 @@ void handle_boot(acc_data_t* bmsdata)
 	prevAccData = NULL;
 	segment_enable_balancing(false);
 	compute_enable_charging(false);
+	
 
 	// bmsdata->fault_code = FAULTS_CLEAR;
 
@@ -156,22 +157,24 @@ void handle_faulted(acc_data_t* bmsdata)
 void sm_handle_state(acc_data_t* bmsdata)
 {
 	bmsdata->is_charger_connected = compute_charger_connected();
+	bmsdata->max_temp.val = 75;
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 	
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
-		HAL_UART_Transmit(&huart4, (char*) "faulted\n" ,9, 1000);
 		bmsdata->discharge_limit = 0;
 		request_transition(FAULTED_STATE);
-		HAL_UART_Transmit(&huart4, (char*) "trans_complete\n" ,16, 1000);
 	}
-	HAL_UART_Transmit(&huart4, (char*) "chililng\n" ,10, 1000);
-	// TODO needs testing
+	// TODO needs testing - (update, seems to work fine)
 	handler_LUT[current_state](bmsdata);
 
 	compute_set_fan_speed(analyzer_calc_fan_pwm());
 	sm_broadcast_current_limit(bmsdata);
-	HAL_UART_Transmit(&huart4, (char*) "next\n" ,6, 1000);
+	char state_test[1] = "0";
+	state_test[0] = current_state + '0';
+
+
+	HAL_UART_Transmit(&huart4, (char*)state_test, 1, 1000);
 
 	/* send relevant CAN msgs */
 	// clang-format off
@@ -186,6 +189,7 @@ void sm_handle_state(acc_data_t* bmsdata)
 		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
 	}
 	// clang-format on
+	
 }
 
 void request_transition(BMSState_t next_state)
@@ -220,7 +224,7 @@ uint32_t sm_fault_return(acc_data_t* accData)
 		/* Note that we are only allocating this table once at runtime, so there is no need to free it */
 		fault_table = (fault_eval_t*) malloc(NUM_FAULTS * sizeof(fault_eval_t));
 		// clang-format off
-    	// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ _______________DATA 2______________     __THRESHOLD 2__
+    											// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ _______________DATA 2______________     __THRESHOLD 2__
         fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10*1.04, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ---------------------------UNUSED------------------- */ };
         fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 =                             (fault_data->charge_limit)*10, .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =    0  };
         fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                       MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
@@ -231,58 +235,58 @@ uint32_t sm_fault_return(acc_data_t* accData)
 		fault_table[7]  = (fault_eval_t) {.id = NULL};
 		// clang-format on
 	}
-	uint32_t fault_status = 0;
+	static uint32_t fault_status = 0;
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
-		fault_status |= sm_fault_eval(fault_table[incr]);
+		fault_status |= sm_fault_eval(&fault_table[incr]);
 		incr++;
 	}
 
 	return fault_status;
 }
 
-uint32_t sm_fault_eval(fault_eval_t index)
+uint32_t sm_fault_eval(fault_eval_t* index)
 {
 	bool condition1;
 	bool condition2;
 
 	// clang-format off
-    switch (index.optype_1)
+    switch (index->optype_1)
     {
-        case GT: condition1 = index.data_1 > index.lim_1; break;
-        case LT: condition1 = index.data_1 < index.lim_1; break;
-        case GE: condition1 = index.data_1 >= index.lim_1; break;
-        case LE: condition1 = index.data_1 <= index.lim_1; break;
-        case EQ: condition1 = index.data_1 == index.lim_1; break;
-		case NEQ: condition1 = index.data_1 != index.lim_1; break;
+        case GT: condition1 = index->data_1 > index->lim_1; break;
+        case LT: condition1 = index->data_1 < index->lim_1; break;
+        case GE: condition1 = index->data_1 >= index->lim_1; break;
+        case LE: condition1 = index->data_1 <= index->lim_1; break;
+        case EQ: condition1 = index->data_1 == index->lim_1; break;
+		case NEQ: condition1 = index->data_1 != index->lim_1; break;
         case NOP:
 		default: condition1 = true;
     }
 
-    switch (index.optype_2)
+    switch (index->optype_2)
     {
-        case GT: condition2 = index.data_2 > index.lim_2; break;
-        case LT: condition2 = index.data_2 < index.lim_2; break;
-        case GE: condition2 = index.data_2 >= index.lim_2; break;
-        case LE: condition2 = index.data_2 <= index.lim_2; break;
-        case EQ: condition2 = index.data_2 == index.lim_2; break;
-		case NEQ: condition2 = index.data_2 != index.lim_2; break;
+        case GT: condition2 = index->data_2 > index->lim_2; break;
+        case LT: condition2 = index->data_2 < index->lim_2; break;
+        case GE: condition2 = index->data_2 >= index->lim_2; break;
+        case LE: condition2 = index->data_2 <= index->lim_2; break;
+        case EQ: condition2 = index->data_2 == index->lim_2; break;
+		case NEQ: condition2 = index->data_2 != index->lim_2; break;
         case NOP: 
 		default: condition2 = true;
     }
 	// clang-format on
 
-	if (!is_timer_active(&index.timer) && condition1 && condition2) 
+	if (!is_timer_active(&index->timer) && condition1 && condition2) 
 	{
-		start_timer(&index.timer, index.timeout);
+		start_timer(&index->timer, index->timeout);
 	}
 
-	else if (is_timer_active(&index.timer) && condition1 && condition2) {
-		if (is_timer_expired(&index.timer)) {
-			return index.code;
+	else if (is_timer_active(&index->timer) && condition1 && condition2) {
+		if (is_timer_expired(&index->timer)) {
+			return index->code;
 		}
 		if (!(condition1 && condition2)) {
-			cancel_timer(&index.timer);
+			cancel_timer(&index->timer);
 		}
 	}
 

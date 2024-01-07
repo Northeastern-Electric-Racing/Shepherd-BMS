@@ -21,6 +21,7 @@
 #include "datastructs.h"
 #include "analyzer.h"
 #include "stateMachine.h"
+#include "can_handler.h"
 
 /* USER CODE END Includes */
 
@@ -241,6 +242,10 @@ int main(void)
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
     sm_handle_state(acc_data);
+
+    /* check for inbound CAN */
+    get_can1_msg();
+    get_can2_msg();
     
 
     #ifdef DEBUG_STATS

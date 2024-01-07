@@ -331,13 +331,13 @@ void segment_enable_balancing(bool balance_enable)
 			configure_discharge(c, DICHARGE_ALL_COMMAND);
 			discharge_commands[c] = DICHARGE_ALL_COMMAND;
 		}
-		push_chip_configuration();
+		//push_chip_configuration();
 	} else {
 		for (int c = 0; c < NUM_CHIPS; c++) {
 			configure_discharge(c, 0);
 			discharge_commands[c] = 0;
 		}
-		push_chip_configuration();
+		//push_chip_configuration();
 	}
 }
 
