@@ -7,6 +7,9 @@
 #include "analyzer.h"
 #include "timer.h"
 
+/* global that can be read for debugging in main */
+extern BMSState_t current_state;
+
 #define NUM_FAULTS 8
 
 /**
