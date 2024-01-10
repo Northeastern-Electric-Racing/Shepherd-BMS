@@ -113,7 +113,7 @@ void handle_charging(acc_data_t* bmsdata)
 		}
 
 		/* Send CAN message, but not too often */
-		if (is_timer_expired(&charger_message_timer)) {
+		if (is_timer_expired(&charger_message_timer) || !is_timer_active(&charger_message_timer)) {
 			compute_send_charging_message(
 				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), bmsdata);
 			start_timer(&charger_message_timer, CHARGE_MESSAGE_WAIT);
@@ -174,11 +174,9 @@ void sm_handle_state(acc_data_t* bmsdata)
 	state_test[0] = current_state + '0';
 
 
-	HAL_UART_Transmit(&huart4, (char*)state_test, 1, 1000);
-
 	/* send relevant CAN msgs */
 	// clang-format off
-	if (is_timer_expired(&can_msg_timer))
+	if (is_timer_expired(&can_msg_timer) || !is_timer_active(&can_msg_timer))
 	{
 		compute_send_acc_status_message(bmsdata);
 		compute_send_current_message(bmsdata);
@@ -297,7 +295,7 @@ bool sm_charging_check(acc_data_t* bmsdata)
 {
 	if (!compute_charger_connected())
 		return false;
-	if (!is_timer_expired(&charge_timeout))
+	if (!is_timer_expired(&charge_timeout) && is_timer_active(&charge_timeout))
 		return false;
 
 	if (bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000)

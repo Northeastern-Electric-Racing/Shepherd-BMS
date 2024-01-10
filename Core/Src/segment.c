@@ -53,11 +53,12 @@ void push_chip_configuration() { LTC6804_wrcfg(ltc68041, NUM_CHIPS, local_config
 
 void segment_init()
 {
-	//printf("Initializing Segments...");
+	printf("Initializing Segments...");
 
-	ltc68041 = LTC6804_initialize(&hspi1, GPIOA, 4);
+	ltc68041 = malloc(sizeof(ltc_config));
+	LTC6804_initialize(ltc68041, &hspi1, GPIOA, 4);
 
-	// pull_chip_configuration();
+	 pull_chip_configuration();
 
 	for (int c = 0; c < NUM_CHIPS; c++) {
 		local_config[c][0] = 0xF8;
@@ -176,7 +177,7 @@ int pull_voltages()
 	 * just copy over the contents of the last good reading and the fault status
 	 * from the most recent attempt
 	 */
-	if (!is_timer_expired(&voltage_reading_timer)) {
+	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
 				sizeof(segment_data[i].voltage_reading));
@@ -331,13 +332,13 @@ void segment_enable_balancing(bool balance_enable)
 			configure_discharge(c, DICHARGE_ALL_COMMAND);
 			discharge_commands[c] = DICHARGE_ALL_COMMAND;
 		}
-		//push_chip_configuration();
+		push_chip_configuration();
 	} else {
 		for (int c = 0; c < NUM_CHIPS; c++) {
 			configure_discharge(c, 0);
 			discharge_commands[c] = 0;
 		}
-		//push_chip_configuration();
+		push_chip_configuration();
 	}
 }
 

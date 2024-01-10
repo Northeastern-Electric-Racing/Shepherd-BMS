@@ -108,34 +108,35 @@ int _write(int file, char* ptr, int len) {
 
 const void print_bms_stats(acc_data_t *acc_data)
 {
+
 	static nertimer_t debug_stat_timer;
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
-	if(!is_timer_expired(&debug_stat_timer)) return;
-
+	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
+  HAL_UART_Transmit(&huart4, (char*)"butts", 5, 1000);
   //TODO get this from eeprom once implemented 
   // question - should we read from eeprom here, or do that on loop and store locally?
 	//printf("Prev Fault: %#x", previousFault);
-  printf("Current: %f\n", (float)(acc_data->pack_current) / 10.0);
-  printf("Min, Max, Avg Temps: %ld, %ld, %d\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
+  printf("Current: %f\r\n", (float)(acc_data->pack_current) / 10.0);
+  printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
   printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
-  printf("DCL: %d\n", acc_data->discharge_limit);
-  printf("CCL: %d\n", acc_data->charge_limit);
-  printf("SoC: %d\n", acc_data->soc);
-  printf("Is Balancing?: %d\n", segment_is_balancing());
+  printf("DCL: %d\r\n", acc_data->discharge_limit);
+  printf("CCL: %d\r\n", acc_data->charge_limit);
+  printf("SoC: %d\r\n", acc_data->soc);
+  printf("Is Balancing?: %d\r\n", segment_is_balancing());
   printf("State: ");
-  if (current_state == 0) printf("BOOT\n");
-  else if (current_state == 1) printf("READY\n");
-  else if (current_state == 2) printf("CHARGING\n");
-  else if (current_state == 1) printf("FAULTED\n");
-  printf("Raw Cell Voltage:\n");
+  if (current_state == 0) printf("BOOT\r\n");
+  else if (current_state == 1) printf("READY\r\n");
+  else if (current_state == 2) printf("CHARGING\r\n");
+  else if (current_state == 1) printf("FAULTED\r\n");
+  printf("Raw Cell Voltage:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].voltage_reading[cell]);
     }
-    printf("\n");
+    printf("\r\n");
   }
 
   printf("Open Cell Voltage:\n");
@@ -145,27 +146,27 @@ const void print_bms_stats(acc_data_t *acc_data)
     {
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
     }
-    printf("\n");
+    printf("\r\n");
 }
 
-  printf("Cell Temps:\n");
+  printf("Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 17; cell < 28; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].thermistor_reading[cell]);
     }
-    printf("\n");
+    printf("\r\n");
   }
 
-  printf("Avg Cell Temps:\n");
+  printf("Avg Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 17; cell < 28; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].thermistor_value[cell]);
     }
-    printf("\n");
+    printf("\r\n");
   }
 
   start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
@@ -213,7 +214,7 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
-   // segment_init();
+   segment_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -241,8 +242,8 @@ int main(void)
     sm_handle_state(acc_data);
 
     /* check for inbound CAN */
-    get_can1_msg();
-    get_can2_msg();
+   // get_can1_msg();
+   // get_can2_msg();
     
 
     #ifdef DEBUG_STATS
