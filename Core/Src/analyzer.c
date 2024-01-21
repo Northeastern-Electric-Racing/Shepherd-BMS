@@ -400,7 +400,7 @@ void calc_open_cell_voltage()
 	/* If we are within the current threshold for open voltage measurments */
 	else if (bmsdata->pack_current < (OCV_CURR_THRESH * 10)
 			 && bmsdata->pack_current > (-OCV_CURR_THRESH * 10)) {
-		if (is_timer_expired(&ocvTimer)) {
+		if (is_timer_expired(&ocvTimer) || !is_timer_active(&ocvTimer)) {
 			for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 				for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 					/* Sets open cell voltage to a moving average of OCV_AVG values */

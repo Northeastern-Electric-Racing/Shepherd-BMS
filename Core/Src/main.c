@@ -21,6 +21,8 @@
 #include "datastructs.h"
 #include "analyzer.h"
 #include "stateMachine.h"
+#include "can_handler.h"
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
@@ -32,11 +34,11 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#ifdef DEBUG_EVERYTHING
-#define DEBUG_CHARGING
+//#ifdef DEBUG_EVERYTHING
+//#define DEBUG_CHARGING
 #define DEBUG_STATS
 // etc etc
-#endif
+//#endif
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -79,98 +81,95 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/* the following reroutes printf to uart */
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE
+{
+  HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
+
+int _write(int file, char* ptr, int len) {
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++) {
+    __io_putchar( *ptr++ );
+  }
+  return len;
+}
+
 #ifdef DEBUG_STATS
 
 const void print_bms_stats(acc_data_t *acc_data)
 {
-	static Timer debug_stat_timer;
+
+	static nertimer_t debug_stat_timer;
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
-	if(!debug_stat_timer.isTimerExpired()) return;
+	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
+  HAL_UART_Transmit(&huart4, (char*)"butts", 5, 1000);
+  //TODO get this from eeprom once implemented 
+  // question - should we read from eeprom here, or do that on loop and store locally?
+	//printf("Prev Fault: %#x", previousFault);
+  printf("Current: %f\r\n", (float)(acc_data->pack_current) / 10.0);
+  printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
+  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
+  printf("DCL: %d\r\n", acc_data->discharge_limit);
+  printf("CCL: %d\r\n", acc_data->charge_limit);
+  printf("SoC: %d\r\n", acc_data->soc);
+  printf("Is Balancing?: %d\r\n", segment_is_balancing());
+  printf("State: ");
+  if (current_state == 0) printf("BOOT\r\n");
+  else if (current_state == 1) printf("READY\r\n");
+  else if (current_state == 2) printf("CHARGING\r\n");
+  else if (current_state == 1) printf("FAULTED\r\n");
+  printf("Raw Cell Voltage:\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    {
+        printf("%d\t", acc_data->chip_data[c].voltage_reading[cell]);
+    }
+    printf("\r\n");
+  }
 
-	Serial.print("Prev Fault: 0x");
-	Serial.println(stateMachine.previousFault, HEX);
-	Serial.print("Current: ");
-	Serial.println((float)(acc_data->pack_current) / 10.0);
-	Serial.print("Min, Max, Avg Temps: ");
-	Serial.print(acc_data->min_temp.val);
-	Serial.print(",  ");
-	Serial.print(acc_data->max_temp.val);
-	Serial.print(",  ");
-	Serial.println(acc_data->avg_temp);
-	Serial.print("Min, Max, Avg, Delta Voltages: ");
-	Serial.print(acc_data->min_voltage.val);
-	Serial.print(",  ");
-	Serial.print(acc_data->max_voltage.val);
-	Serial.print(",  ");
-	Serial.print(acc_data->avg_voltage);
-	Serial.print(",  ");
-	Serial.println(acc_data->delt_voltage);
+  printf("Open Cell Voltage:\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    {
+        printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
+    }
+    printf("\r\n");
+}
 
-	Serial.print("DCL: ");
-	Serial.println(acc_data->discharge_limit);
+  printf("Cell Temps:\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t cell = 17; cell < 28; cell++)
+    {
+        printf("%d\t", acc_data->chip_data[c].thermistor_reading[cell]);
+    }
+    printf("\r\n");
+  }
 
-	Serial.print("CCL: ");
-	Serial.println(acc_data->charge_limit);
+  printf("Avg Cell Temps:\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t cell = 17; cell < 28; cell++)
+    {
+        printf("%d\t", acc_data->chip_data[c].thermistor_value[cell]);
+    }
+    printf("\r\n");
+  }
 
-	Serial.print("SoC: ");
-	Serial.println(acc_data->soc);
-
-	Serial.print("Is Balancing?: ");
-	Serial.println(segment.isBalancing());
-
-	Serial.print("State: ");
-	if (stateMachine.current_state == 0) Serial.println("BOOT");
-	else if (stateMachine.current_state == 1) Serial.println("READY");
-	else if (stateMachine.current_state == 2) Serial.println("CHARGING");
-	else if (stateMachine.current_state == 1) Serial.println("FAULTED");
-
-	Serial.println("Raw Cell Voltage:");
-	for(uint8_t c = 0; c < NUM_CHIPS; c++)
-	{
-		for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
-		{
-			Serial.print(acc_data->chip_data[c].voltage_reading[cell]);
-			Serial.print("\t");
-		}
-		Serial.println();
-	}
-
-	Serial.println("Open Cell Voltage:");
-	for(uint8_t c = 0; c < NUM_CHIPS; c++)
-	{
-		for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
-		{
-			Serial.print(acc_data->chip_data[c].open_cell_voltage[cell]);
-			Serial.print("\t");
-		}
-		Serial.println();
-	}
-
-	Serial.println("Cell Temps:");
-	for(uint8_t c = 0; c < NUM_CHIPS; c++)
-	{
-		for(uint8_t cell = 17; cell < 28; cell++)
-		{
-			Serial.print(acc_data->chip_data[c].thermistor_reading[cell]);
-			Serial.print("\t");
-		}
-		Serial.println();
-	}
-
-	Serial.println("Avg Cell Temps:");
-	for(uint8_t c = 0; c < NUM_CHIPS; c++)
-	{
-		for(uint8_t cell = 17; cell < 28; cell++)
-		{
-			Serial.print(acc_data->chip_data[c].thermistor_value[cell]);
-			Serial.print("\t");
-		}
-		Serial.println();
-	}
-
-
-	debug_stat_timer.startTimer(PRINT_STAT_WAIT);
+  start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
 }
 
 
@@ -193,7 +192,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-  segment_init();
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -215,12 +214,18 @@ int main(void)
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
+   segment_init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   for(;;) {
     /* Create a dynamically allocated structure */
+
+    HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin);
+    HAL_Delay(500);
+    //HAL_UART_Transmit(&huart4, (char*)"hello", 5, 1000);
+
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
 
     //acc_data->faultCode = FAULTS_CLEAR;
@@ -234,11 +239,15 @@ int main(void)
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
-
     sm_handle_state(acc_data);
 
+    /* check for inbound CAN */
+   // get_can1_msg();
+   // get_can2_msg();
+    
+
     #ifdef DEBUG_STATS
-    print_bms_stats(analyzer.bmsdata);
+    print_bms_stats(acc_data);
     #endif
     //delay(10); // not sure if we need this in, it was in before
   }
@@ -423,8 +432,8 @@ static void MX_SPI1_Init(void)
   hspi1.Init.Mode = SPI_MODE_MASTER;
   hspi1.Init.Direction = SPI_DIRECTION_2LINES;
   hspi1.Init.DataSize = SPI_DATASIZE_8BIT;
-  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;
-  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
+  hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
   hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
