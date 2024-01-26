@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "main.h"
 #include <math.h>
 
 #define THERM_WAIT_TIME		 500 /* ms */
@@ -56,7 +57,7 @@ void segment_init()
 	printf("Initializing Segments...");
 
 	ltc68041 = malloc(sizeof(ltc_config));
-	LTC6804_initialize(ltc68041, &hspi1, GPIOA, 4);
+	LTC6804_initialize(ltc68041, &hspi1, GPIOA, SPI_1_CS_Pin);
 
 	 pull_chip_configuration();
 
