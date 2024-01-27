@@ -1,4 +1,6 @@
 #include "analyzer.h"
+#include "eepromdirectory.h"
+#include <stdint.h>
 #include <stdlib.h>
 
 acc_data_t* bmsdata;
@@ -53,7 +55,7 @@ const uint8_t TEMP_TO_CCL[14] =
 	20, 15, 10, 5, 1, 1
 };
 
-/**
+/** 
  * @brief Lookup table for State of Charge
  *
  * @note each index covers 0.1V increase (voltage range is 2.9V - 4.2V, deltaV = 1.3V, 
@@ -499,28 +501,32 @@ void disable_therms()
 	}
 }
 
-void calc_state_of_charge()
+bms_fault_t calc_state_of_charge()
 {
-	/* Spltting the delta voltage into 18 increments */
-	const uint16_t increments
-		= ((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) / ((MAX_VOLT - MIN_VOLT) * 10));
 
-	/* Retrieving a index of 0-18 */
-	uint8_t index = ((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
+	int32_t prev_voltage;
 
-	bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
-
-	if (bmsdata->soc != 100) {
-		float interpolation
-			= (float)(STATE_OF_CHARGE_CURVE[index + 1] - STATE_OF_CHARGE_CURVE[index]) / increments;
-		bmsdata->soc
-			+= (uint8_t)(interpolation
-						 * (((bmsdata->min_ocv.val) - (int32_t)(MIN_VOLT * 10000)) % increments));
+	//The last SoC is stored in EEPROM to be loaded on startup
+	if (is_first_reading_){ 
+		if(!eeprom_read_data_key("CHARGE", *prev_voltage, 4)) {
+			return EEPROM_FAULT;
+		}
+	} else {
+		prev_voltage = bmsdata->min_ocv.val;
 	}
 
+	int32_t new_voltage = prev_voltage + delta_time * (bmsdata->pack_current * 1000);
+
+	//State of charge as a percentage of max charge
+	uint8_t soc = (uint8_t) ((new_voltage - MIN_VOLT * 10000) / MAX_VOLT * 10000);
+
+	bmsdata->soc = soc;
+	
 	if (bmsdata->soc < 0) {
 		bmsdata->soc = 0;
 	}
+
+	
 }
 
 void high_curr_therm_check()

@@ -6,7 +6,7 @@
 #include <stdbool.h>
 
 #define NUM_EEPROM_FAULTS 5
-#define NUM_EEPROM_ITEMS  2
+#define NUM_EEPROM_ITEMS  3
 #define EEPROM_ROOT_ADDR  0
 
 /* index 0 = newest, index 4 = oldest */
