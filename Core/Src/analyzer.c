@@ -126,7 +126,7 @@ bool is_first_reading_ = true;
 void disable_therms();
 void high_curr_therm_check();
 void diff_curr_therm_check();
-void calc_state_of_charge();
+bms_fault_t calc_state_of_charge();
 
 void calc_cell_temps()
 {
@@ -508,13 +508,16 @@ bms_fault_t calc_state_of_charge()
 
 	//The last SoC is stored in EEPROM to be loaded on startup
 	if (is_first_reading_){ 
-		if(!eeprom_read_data_key("CHARGE", *prev_voltage, 4)) {
+		if(!eeprom_read_data_key("CHARGE", &prev_voltage, 4)) {
 			return EEPROM_FAULT;
 		}
 	} else {
 		prev_voltage = bmsdata->min_ocv.val;
 	}
 
+	//TODO: Get delta time for how long the pack current was its value
+	//Basically, the delta time between each reading
+	int32_t delta_time = 0;
 	int32_t new_voltage = prev_voltage + delta_time * (bmsdata->pack_current * 1000);
 
 	//State of charge as a percentage of max charge
