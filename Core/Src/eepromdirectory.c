@@ -165,3 +165,50 @@ void get_faults()
         }
     }
 }
+
+bool test_EEPROM(){
+    //TODO: Write code for and verify this first, and then move onto fault log test after verification
+    // Data read/write test
+    // Check if data in memory address
+        // If there is, store it so can re-write later
+    // Write data to set address
+    // Read data from set address
+    // Compare written and read data and make sure they're identical
+    // printf whether the written and read data values were identical
+    // If there was previously data in the EEPROM chip, rewrite it
+
+    // Define the root index of the EEPROM chip
+    uint8_t reg_to_write;
+    uint8_t root_address = eeprom_get_index((char*)("ROOT"));
+
+    // Grab the initial data in the given address
+    uint8_t initial_data = eeprom_read_data_address(root_address, &reg_to_write, 1);
+    
+    if (initial_data != 0){
+        printf("Initial data read from EEPROM", initial_data);
+    }
+
+    // Write a known data value to a certain address in EEPROM and read it back
+    uint8_t known_data = 22;
+    eeprom_write_data_address(root_address, &reg_to_write, 1);
+    uint8_t data_read = eeprom_read_data_address(root_address, &reg_to_write, 1);
+
+    // Check whether the written/read data from the EEPROM matches
+    if (data_read == known_data){
+        printf("Data was successfully written and read from EEPROM");
+    }
+    else{
+        printf("Data was not successfully written/read from EEPROM");
+    }
+
+    // Write data previously stored in EEPROM address back to EEPROM
+    eeprom_write_data_address(root_address, &reg_to_write, 1);
+
+    //TODO: Verify that simple read/write test code works before moving onto testing this
+    // Fault read/write test
+    // Check if there are faults currently stored
+    // If there are, read the 5 faults and save them so can re-write later
+    // Write a fault to the fault log and check that the fault was written
+    // printf whether the fault was correctly written/read
+    // If there was previously data in the fault log, rewrite it to the log
+}
