@@ -272,97 +272,26 @@ void ConfigureCOMMRegisters(uint8_t numChips, uint8_t dataToWrite[][3], uint8_t 
  */
 void SelectTherm(uint8_t therm) {
   // Exit if out of range values
-  if (therm < 0 || therm > 32) {
+  if (therm < 0 || therm > 15) {
     return;
   }
-  if (therm <= 8) {
-    // Turn off competing multiplexor (therms 9-16)
+    // select 0-16 on GPIO expander
     for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x92;
-      i2cWriteData[chip][1] = 0x00;
-      i2cWriteData[chip][2] = 0x00;
+      i2cWriteData[chip][0] = 0x20; // GPIO expander addr
+      i2cWriteData[chip][1] = 0x09; // GPIO state addr
+      i2cWriteData[chip][2] = therm; // 0-15, will change multiplexor to select thermistor
     }
     ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
     LTC6804_wrcomm(CHIPS, commRegData);
     LTC6804_stcomm(3);
-
-    // Turn on desired thermistor
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x90;
-      i2cWriteData[chip][1] = 0x08 + (therm - 1);
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-  } else if (therm <= 16) {
-    // Turn off competing multiplexor (therms 1-8)
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x90;
-      i2cWriteData[chip][1] = 0x00;
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-
-    // Turn on desired thermistor
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x92;
-      i2cWriteData[chip][1] = 0x08 + (therm - 9);
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-  } else if (therm <= 24) {
-    // Turn off competing multiplexor (therms 25-32)
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x96;
-      i2cWriteData[chip][1] = 0x00;
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-
-    // Turn on desired thermistor
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x94;
-      i2cWriteData[chip][1] = 0x08 + (therm - 17);
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-  } else {
-    // Turn off competing multiplexor (therms 17-24)
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x94;
-      i2cWriteData[chip][1] = 0x00;
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-
-    // Turn on desired thermistor
-    for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x96;
-      i2cWriteData[chip][1] = 0x08 + (therm - 25);
-      i2cWriteData[chip][2] = 0x00;
-    }
-    ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
-    LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
-  }
+  
 }
 
 void updateAllTherms(uint8_t numChips, int out[][32]) {
-  for (int therm = 1; therm <= 16; therm++) {
+  for (int therm = 1; therm < 16; therm++) {
     SelectTherm(therm);
     delay(5);
-    SelectTherm(therm + 16);
+    //SelectTherm(therm + 16); not needed, setting GPIO exapnder will read both
     delay(10);
     LTC6804_adax(); // Run ADC for AUX (GPIOs and refs)
     delay(10);
@@ -391,4 +320,16 @@ int voltToTemp(uint32_t V) {
   int i = 0;
   while (V < VOLT_TEMP_CONV[i]) i++;
   return i - 5;
+}
+
+// should be default, so may not need to call this
+int gpioExanderInit(){
+  // Set GPIO expander to output
+  for(int chip = 0; chip < CHIPS; chip++) {
+    i2cWriteData[chip][0] = 0x20; // GPIO expander addr
+    i2cWriteData[chip][1] = 0x00; // GPIO direction addr
+    i2cWriteData[chip][2] = 0x00; // Set all to output
+  }
+  ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
+  LTC6804_wrcomm(CHIPS, commRegData);
 }
