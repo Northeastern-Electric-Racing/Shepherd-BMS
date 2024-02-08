@@ -288,7 +288,7 @@ void SelectTherm(uint8_t therm) {
 }
 
 void updateAllTherms(uint8_t numChips, int out[][32]) {
-  for (int therm = 1; therm < 16; therm++) {
+  for (int therm = 0; therm < 15; therm++) {
     SelectTherm(therm);
     delay(5);
     //SelectTherm(therm + 16); not needed, setting GPIO exapnder will read both
