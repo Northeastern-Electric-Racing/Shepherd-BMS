@@ -124,7 +124,7 @@ bool is_first_reading_ = true;
 void disable_therms();
 void high_curr_therm_check();
 void diff_curr_therm_check();
-bms_fault_t calc_state_of_charge();
+void calc_state_of_charge();
 
 void calc_cell_temps()
 {
@@ -500,13 +500,12 @@ void disable_therms()
 }
 
 uint32_t last_tick = 0;
-uint16_t last_voltage;
 
 void calc_state_of_charge()
 {
 
 	if (bmsdata->pack_current) {
-		
+
 		int32_t delta_time = HAL_GetTick() - last_tick;
 		int32_t new_voltage = bmsdata->pack_voltage + delta_time * (bmsdata->pack_current * 100);
 
@@ -521,9 +520,9 @@ void calc_state_of_charge()
 			= ((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) / ((MAX_VOLT - MIN_VOLT) * 10));
 
 		/* Retrieving a index of 0-18 */
-		bmsdata->soc = ((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
+		uint8_t index = ((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
 
-		interpolated_soc = STATE_OF_CHARGE_CURVE[index];
+		bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
 
 		if (bmsdata->soc != 100) {
 			float interpolation
