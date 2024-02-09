@@ -1,6 +1,4 @@
 #include "analyzer.h"
-#include "eepromdirectory.h"
-#include <stdint.h>
 #include <stdlib.h>
 
 acc_data_t* bmsdata;
@@ -501,29 +499,42 @@ void disable_therms()
 	}
 }
 
-bms_fault_t calc_state_of_charge()
+uint32_t last_tick = 0;
+uint16_t last_voltage;
+
+void calc_state_of_charge()
 {
 
-	int32_t prev_voltage;
+	if (bmsdata->pack_current) {
+		
+		int32_t delta_time = HAL_GetTick() - last_tick;
+		int32_t new_voltage = bmsdata->pack_voltage + delta_time * (bmsdata->pack_current * 100);
 
-	//The last SoC is stored in EEPROM to be loaded on startup
-	if (is_first_reading_){ 
-		if(!eeprom_read_data_key("CHARGE", &prev_voltage, 4)) {
-			return EEPROM_FAULT;
-		}
+		//State of charge as a percentage of max charge
+		uint8_t soc = (uint8_t) ((new_voltage - MIN_VOLT * 10000) / MAX_VOLT * 10000);
+
+		bmsdata->soc = soc;
+
 	} else {
-		prev_voltage = bmsdata->min_ocv.val;
+		/* Spltting the delta voltage into 18 increments */
+		const uint16_t increments
+			= ((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) / ((MAX_VOLT - MIN_VOLT) * 10));
+
+		/* Retrieving a index of 0-18 */
+		bmsdata->soc = ((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
+
+		interpolated_soc = STATE_OF_CHARGE_CURVE[index];
+
+		if (bmsdata->soc != 100) {
+			float interpolation
+				= (float)(STATE_OF_CHARGE_CURVE[index + 1] - STATE_OF_CHARGE_CURVE[index]) / increments;
+			bmsdata->soc
+				+= (uint8_t)(interpolation
+							* (((bmsdata->min_ocv.val) - (int32_t)(MIN_VOLT * 10000)) % increments));
+		}
 	}
 
-	//TODO: Get delta time for how long the pack current was its value
-	//Basically, the delta time between each reading
-	int32_t delta_time = 0;
-	int32_t new_voltage = prev_voltage + delta_time * (bmsdata->pack_current * 1000);
-
-	//State of charge as a percentage of max charge
-	uint8_t soc = (uint8_t) ((new_voltage - MIN_VOLT * 10000) / MAX_VOLT * 10000);
-
-	bmsdata->soc = soc;
+	last_tick = HAL_GetTick();
 	
 	if (bmsdata->soc < 0) {
 		bmsdata->soc = 0;

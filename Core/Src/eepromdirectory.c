@@ -9,9 +9,6 @@ void eepromInit()
     eeprom_data[1].id = (char*)("FAULTS");
     eeprom_data[1].size = 21;
 
-	eeprom_data[2].id = (char*)("CHARGE");
-	eeprom_data[2].size = 4;
-
     // Initialize EEPROM addresses given data and length
 
     int i = 1;
