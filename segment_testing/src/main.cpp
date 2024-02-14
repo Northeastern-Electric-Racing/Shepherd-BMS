@@ -90,7 +90,7 @@ void loop() {
     }
     SetChipConfigurations(chipConfigurations);
 
-    updateAllTherms(2, temps);
+    updateAllTherms(1, temps);
   }
 
   // PRINT VOLTAGES AND TEMPS
@@ -154,22 +154,25 @@ void loop() {
     Serial.print("Temperature:\n");
     for (int c = 0; c < 1; c++)
     {
-      for (int i = 16; i < 27; i++)
+      for (int i = 0; i < 31; i++)
       {
+        if (i == 15) {
+          Serial.println();
+        }
         Serial.print(temps[c][i]);
         Serial.print("\t");
       }
       // Serial.println();
     }
-    for (int c = 1; c < 2; c++)
-    {
-      for (int i = 0; i < THERMISTORS; i++)
-      {
-        Serial.print(temps[c][i]);
-        Serial.print("\t");
-      }
-      Serial.println();
-    }
+    // for (int c = 1; c < 2; c++)
+    // {
+    //   for (int i = 0; i < THERMISTORS; i++)
+    //   {
+    //     Serial.print(temps[c][i]);
+    //     Serial.print("\t");
+    //   }
+    //   Serial.println();
+    
     Serial.println();
   }
 
@@ -277,7 +280,7 @@ void SelectTherm(uint8_t therm) {
   }
     // select 0-16 on GPIO expander
     for(int chip = 0; chip < CHIPS; chip++) {
-      i2cWriteData[chip][0] = 0x20; // GPIO expander addr
+      i2cWriteData[chip][0] = 0x40; // GPIO expander addr
       i2cWriteData[chip][1] = 0x09; // GPIO state addr
       i2cWriteData[chip][2] = therm; // 0-15, will change multiplexor to select thermistor
     }
@@ -297,8 +300,8 @@ void updateAllTherms(uint8_t numChips, int out[][32]) {
     delay(10);
     LTC6804_rdaux(0, numChips, rawTempVoltages); // Fetch ADC results from AUX registers
     for (int c = 0; c < numChips; c++) {
-      out[c][therm - 1] = voltToTemp(uint32_t(rawTempVoltages[c][0] * (float(rawTempVoltages[c][2]) / 50000)));
-      out[c][therm + 15] = voltToTemp(uint32_t(rawTempVoltages[c][1] * (float(rawTempVoltages[c][2]) / 50000)));
+      out[c][therm] = voltToTemp(uint32_t(rawTempVoltages[c][0] * (float(rawTempVoltages[c][2]) / 50000)));
+      out[c][therm + 16] = voltToTemp(uint32_t(rawTempVoltages[c][1] * (float(rawTempVoltages[c][2]) / 50000)));
     }
   }
 }

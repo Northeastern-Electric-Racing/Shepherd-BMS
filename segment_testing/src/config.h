@@ -2,7 +2,7 @@
 #define CONFIG_H
 
 // PACK SETUP
-#define CELLS_S 9
+#define CELLS_S 10
 #define CELLS_P 7
 #define THERMISTORS 11
 #define CHIPS 2
