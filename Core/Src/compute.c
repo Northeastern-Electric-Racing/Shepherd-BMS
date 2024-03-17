@@ -102,21 +102,6 @@ bool compute_charger_connected()
 // 	return;
 // }
 
-uint8_t pwm_set_value(uint16_t value, TIM_HandleTypeDef *htim, uint32_t *channel){
-	TIM_OC_InitTypeDef *PWMConfig;
-
-	PWMConfig->OCMode = TIM_OCMODE_PWM1;
-	PWMConfig.Pulse = value;
-	PWMConfig->OCPolarity = TIM_OCPOLARITY_HIGH;
-	PWMConfig->OCFastMode = TIM_OCFAST_DISABLE;
-
-	if (HAL_TIM_PWM_ConfigChannel(&htim, &PWMConfig, channel) != HAL_OK){
-		return 1;
-	}
-
-	return 0;
-}
-
 //? Change timers to not 1 and 8 since they are advanced timers?
 uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 {
