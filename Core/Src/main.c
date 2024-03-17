@@ -77,6 +77,9 @@ static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_I2C1_Init(void);
 /* USER CODE BEGIN PFP */
 
+void watchdog_init(void);
+void watchdog_pet(void);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,7 +116,6 @@ const void print_bms_stats(acc_data_t *acc_data)
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
-  HAL_UART_Transmit(&huart4, (char*)"butts", 5, 1000);
   //TODO get this from eeprom once implemented 
   // question - should we read from eeprom here, or do that on loop and store locally?
 	//printf("Prev Fault: %#x", previousFault);
@@ -213,8 +215,23 @@ int main(void)
   MX_USB_OTG_FS_PCD_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+ for (int i = 0; i < 58; i++) 
+ {
+        HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_SET);
+        HAL_Delay(58-i);
+        HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_SET);
+        HAL_Delay(58-i);
+        HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_RESET);
+       
+}
+   
 
-   segment_init();
+  //watchdog_init();
+  segment_init();
+  compute_init();
+
+  
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -222,9 +239,7 @@ int main(void)
   for(;;) {
     /* Create a dynamically allocated structure */
 
-    HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin);
-    HAL_Delay(500);
-    //HAL_UART_Transmit(&huart4, (char*)"hello", 5, 1000);
+    //TODO add ISR/timer based debug LED toggle
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
 
@@ -245,11 +260,13 @@ int main(void)
    // get_can1_msg();
    // get_can2_msg();
     
-
     #ifdef DEBUG_STATS
     print_bms_stats(acc_data);
     #endif
-    //delay(10); // not sure if we need this in, it was in before
+
+    // TODO - possibly optimize timing, every loop might be excessive
+    watchdog_pet();
+  
   }
     /* USER CODE END WHILE */
 
@@ -697,6 +714,21 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+void watchdog_init(void)
+{
+  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+  //HAL_Delay(1); // shouldn't be needed but here in case
+}
+
+void watchdog_pet(void)
+{
+
+  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+  //HAL_Delay(1);
+  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
+
+}
 
 /* USER CODE END 4 */
 
