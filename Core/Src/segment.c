@@ -79,14 +79,15 @@ void select_therm(uint8_t therm){
 	if (therm < 0 || therm > 16){
 		return;
 	}
+
 	uint8_t i2c_write_data[NUM_CHIPS][3];
 	uint8_t comm_reg_data[NUM_CHIPS][6];
 
 	// select 0-16 on GPIO expander
     for(int chip = 0; chip < NUM_CHIPS; chip++) {
-		i2cWriteData[chip][0] = GPIO_EXPANDER_ADDR;
-		i2cWriteData[chip][1] = GPIO_REGISTER_ADDR;
-    	i2cWriteData[chip][2] = therm; // 0-15, will change multiplexer to select thermistor
+		i2c_write_data[chip][0] = GPIO_EXPANDER_ADDR;
+		i2c_write_data[chip][1] = GPIO_REGISTER_ADDR;
+    	i2c_write_data[chip][2] = therm; // 0-15, will change multiplexer to select thermistor
     }
     serialize_i2c_msg(i2c_write_data, comm_reg_data);
 	push_chip_configuration();
