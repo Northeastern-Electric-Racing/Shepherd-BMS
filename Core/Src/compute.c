@@ -2,10 +2,14 @@
 #include "can_handler.h"
 #include "can.h"
 #include "main.h"
+#include "stm32f405xx.h"
 #include <string.h>
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
+#define NUM_FANS_ON_TIM1 2
+#define NUM_FANS_ON_TIM8 4
+#define NUM_FANS_TOTAL NUM_FANS_ON_TIM1 + NUM_FANS_ON_TIM8
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -98,10 +102,49 @@ bool compute_charger_connected()
 // 	return;
 // }
 
-void compute_set_fan_speed(uint8_t new_fan_speed)
+uint8_t pwm_set_value(uint16_t value, TIM_HandleTypeDef *htim, uint32_t *channel){
+	TIM_OC_InitTypeDef *PWMConfig;
+
+	PWMConfig->OCMode = TIM_OCMODE_PWM1;
+	PWMConfig.Pulse = value;
+	PWMConfig->OCPolarity = TIM_OCPOLARITY_HIGH;
+	PWMConfig->OCFastMode = TIM_OCFAST_DISABLE;
+
+	if (HAL_TIM_PWM_ConfigChannel(&htim, &PWMConfig, channel) != HAL_OK){
+		return 1;
+	}
+
+	return 0;
+}
+
+//? Change timers to not 1 and 8 since they are advanced timers?
+void compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 {
-	fan_speed = new_fan_speed;
-	// NERduino.setAMCDutyCycle(new_fan_speed);  Replace
+	// Define variables
+	TIM_HandleTypeDef *htim;
+	uint16_t CCR_value;
+
+	// Index of array +1 corresponds to which fan the channel controls
+	uint32_t *channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
+	
+	// Select which timer to use based on fan being initialized
+	if (fan_select >= 1 && fan_select <= NUM_FANS_ON_TIM1){
+		htim->Instance = TIM1;
+		CCR_value = TIM1->ARR;
+	}
+	else if (fan_select > NUM_FANS_ON_TIM1 && fan_select <= NUM_FANS_TOTAL){
+		htim->instance = TIM8;
+		CCR_value = TIM8->ARR;
+	}
+
+	// Map input fan speed to nearest (floor?ceil?) value of fan speed possible based on # bits
+
+	// Based on timer parameters, determine what pulse width count would give the correct duty cycle
+	CCR_value = CCR_value * (new_fan_speed / 100)
+	pwm_set_value(CCR_value, htim, channels[fan_select]);
+
+	// Call PWM start function for specific fan
+	HAL_TIM_PWM_Start(&htim, channels[fan_select]);
 }
 
 void compute_set_fault(int fault_state)
