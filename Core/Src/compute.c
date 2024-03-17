@@ -121,10 +121,9 @@ uint8_t pwm_set_value(uint16_t value, TIM_HandleTypeDef *htim, uint32_t *channel
 uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 {
 	// Define variables
-	TIM_HandleTypeDef *htim;
+	TIM_HandleTypeDef htim;
 	TIM_OC_InitTypeDef *PWMConfig;
 	uint16_t CCR_value;
-
 
 	// Index of array +1 corresponds to which fan the channel controls
 	uint32_t channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
