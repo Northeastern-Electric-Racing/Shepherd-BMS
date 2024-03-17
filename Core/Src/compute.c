@@ -120,15 +120,15 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 		CCR_value = (TIM1->ARR * new_fan_speed) / 100;
 	}
 	else if (fan_select > NUM_FANS_ON_TIM1 && fan_select <= NUM_FANS_TOTAL){
-		htim.instance = TIM8;
+		htim.Instance = TIM8;
 		CCR_value = (TIM8->ARR * new_fan_speed) / 100;
 	}
 
 	// Set object to how PWM channel should be configured
-	PWMConfig->OCMode = TIM_OCMODE_PWM1;
-	PWMConfig->Pulse = CCR_value;
-	PWMConfig->OCPolarity = TIM_OCPOLARITY_HIGH;
-	PWMConfig->OCFastMode = TIM_OCFAST_DISABLE;
+	PWMConfig.OCMode = TIM_OCMODE_PWM1;
+	PWMConfig.Pulse = CCR_value;
+	PWMConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
+	PWMConfig.OCFastMode = TIM_OCFAST_DISABLE;
 
 	// Attempt to configure PWM channel
 	if (HAL_TIM_PWM_ConfigChannel(&htim, &PWMConfig, channels[fan_select]) != HAL_OK){

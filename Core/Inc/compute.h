@@ -56,10 +56,12 @@ bool compute_charger_connected();
 
 /**
  * @brief Sets the desired fan speed
- *
- * @param new_fan_speed
+ * 
+ * @param new_fan_speed 
+ * @param fan_select 
+ * @return uint8_t 
  */
-void compute_set_fan_speed(uint8_t new_fan_speed);
+uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select);
 
 /**
  * @brief Returns the pack current sensor reading
