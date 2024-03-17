@@ -59,7 +59,8 @@ bool compute_charger_connected();
  * 
  * @param new_fan_speed 
  * @param fan_select 
- * @return uint8_t 
+ * 
+ * @return uint8_t 0 = success, 1 = fan_select is out of range, 2 = PWM channel not able to be configured
  */
 uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select);
 

@@ -108,7 +108,7 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 	// Define variables
 	TIM_HandleTypeDef htim;
 	TIM_OC_InitTypeDef PWMConfig;
-	uint16_t CCR_value;
+	uint16_t CCR_value = 0;
 
 	// Index of array +1 corresponds to which fan the channel controls
 	uint32_t channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
@@ -123,6 +123,9 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 		htim.Instance = TIM8;
 		CCR_value = (TIM8->ARR * new_fan_speed) / 100;
 	}
+	else{
+		return 1;
+	}
 
 	// Set object to how PWM channel should be configured
 	PWMConfig.OCMode = TIM_OCMODE_PWM1;
@@ -132,7 +135,7 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 
 	// Attempt to configure PWM channel
 	if (HAL_TIM_PWM_ConfigChannel(&htim, &PWMConfig, channels[fan_select]) != HAL_OK){
-		return 1;
+		return 2;
 	}
 
 	return 0;
