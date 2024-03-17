@@ -122,7 +122,7 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 {
 	// Define variables
 	TIM_HandleTypeDef htim;
-	TIM_OC_InitTypeDef *PWMConfig;
+	TIM_OC_InitTypeDef PWMConfig;
 	uint16_t CCR_value;
 
 	// Index of array +1 corresponds to which fan the channel controls
@@ -131,17 +131,17 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 	// Select which timer to use based on fan being initialized
 	// Based on timer parameters, determine what pulse width count would give the correct duty cycle
 	if (fan_select > 0 && fan_select <= NUM_FANS_ON_TIM1){
-		htim->Instance = TIM1;
+		htim.Instance = TIM1;
 		CCR_value = (TIM1->ARR * new_fan_speed) / 100;
 	}
 	else if (fan_select > NUM_FANS_ON_TIM1 && fan_select <= NUM_FANS_TOTAL){
-		htim->instance = TIM8;
+		htim.instance = TIM8;
 		CCR_value = (TIM8->ARR * new_fan_speed) / 100;
 	}
 
 	// Set object to how PWM channel should be configured
 	PWMConfig->OCMode = TIM_OCMODE_PWM1;
-	PWMConfig.Pulse = CCR_value;
+	PWMConfig->Pulse = CCR_value;
 	PWMConfig->OCPolarity = TIM_OCPOLARITY_HIGH;
 	PWMConfig->OCFastMode = TIM_OCFAST_DISABLE;
 
