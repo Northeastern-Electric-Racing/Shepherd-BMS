@@ -102,6 +102,10 @@ bool compute_charger_connected()
 // 	return;
 // }
 
+void configure_pwm{
+	
+}
+
 //? Change timers to not 1 and 8 since they are advanced timers?
 uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 {
@@ -138,10 +142,10 @@ uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
 		return 2;
 	}
 
-	return 0;
-
 	// Call PWM start function for specific fan
 	HAL_TIM_PWM_Start(&htim, channels[fan_select]);
+
+	return 0;
 }
 
 void compute_set_fault(int fault_state)
