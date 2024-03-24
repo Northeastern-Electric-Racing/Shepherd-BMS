@@ -7,9 +7,13 @@
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
-#define NUM_FANS_ON_TIM1 2
-#define NUM_FANS_ON_TIM8 4
-#define NUM_FANS_TOTAL NUM_FANS_ON_TIM1 + NUM_FANS_ON_TIM8
+
+#define FAN1 TIM_CHANNEL_3
+#define FAN2 TIM_CHANNEL_1
+#define FAN3 TIM_CHANNEL_4
+#define FAN4 TIM_CHANNEL_3
+#define FAN5 TIM_CHANNEL_2
+#define FAN6 TIM_CHANNEL_1
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -18,14 +22,22 @@ enum { CHARGE_ENABLED, CHARGE_DISABLED };
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim8;
+
+TIM_OC_InitTypeDef pwm_config;
+
+const uint32_t fan_channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
+
 can_t can1; // main can bus, used by most peripherals
 can_t can2; // p2p can bus with charger
 
 /* private function defintions */
 uint8_t calc_charger_led_state();
 
-void compute_init()
+uint8_t compute_init()
 {
+	// TODO throw all of these objects into a compute struct
 	can1.hcan = &hcan1;
 	can1.id_list = can1_id_list;
 	can1.id_list_len = sizeof(can1_id_list) / sizeof(can1_id_list[0]);
@@ -39,6 +51,22 @@ void compute_init()
 	can2.callback = can_receive_callback;
 	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 	can_init(&can2);
+
+	pwm_config.OCMode = TIM_OCMODE_PWM1;
+	pwm_config.Pulse = 0;
+	pwm_config.OCPolarity = TIM_OCPOLARITY_HIGH;
+	pwm_config.OCFastMode = TIM_OCFAST_DISABLE;
+
+	if (HAL_TIM_PWM_ConfigChannel(&htim1, &pwm_config, fan_channels[FAN1]) != HAL_OK) return -1;
+	if (HAL_TIM_PWM_ConfigChannel(&htim8, &pwm_config, fan_channels[FAN2]) != HAL_OK) return -1;
+
+	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN1]);
+	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN2]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN3]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
+
 }
 
 void compute_enable_charging(bool enable_charging)
@@ -103,44 +131,18 @@ bool compute_charger_connected()
 // }
 
 //? Change timers to not 1 and 8 since they are advanced timers?
-uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select)
+uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_select, uint8_t duty_cycle)
 {
-	// Define variables
-	TIM_HandleTypeDef htim;
-	TIM_OC_InitTypeDef PWMConfig;
-	uint16_t CCR_value = 0;
+	assert(pwmhandle);
+	assert(fan_select < 6);
+	assert(duty_cycle <= 100);
+	uint32_t CCR_value = 0;
 
-	// Index of array +1 corresponds to which fan the channel controls
-	uint32_t channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
-	
-	// Select which timer to use based on fan being initialized
-	// Based on timer parameters, determine what pulse width count would give the correct duty cycle
-	if (fan_select > 0 && fan_select <= NUM_FANS_ON_TIM1){
-		htim.Instance = TIM1;
-		CCR_value = (TIM1->ARR * new_fan_speed) / 100;
-	}
-	else if (fan_select > NUM_FANS_ON_TIM1 && fan_select <= NUM_FANS_TOTAL){
-		htim.Instance = TIM8;
-		CCR_value = (TIM8->ARR * new_fan_speed) / 100;
-	}
-	else{
-		return 1;
-	}
+	uint32_t channel = fan_channels[fan_select];
 
-	// Set object to how PWM channel should be configured
-	PWMConfig.OCMode = TIM_OCMODE_PWM1;
-	PWMConfig.Pulse = CCR_value;
-	PWMConfig.OCPolarity = TIM_OCPOLARITY_HIGH;
-	PWMConfig.OCFastMode = TIM_OCFAST_DISABLE;
+	CCR_value = (pwmhandle->Instance->ARR * duty_cycle) / 100;
 
-	// Attempt to configure PWM channel
-	if (HAL_TIM_PWM_ConfigChannel(&htim, &PWMConfig, channels[fan_select]) != HAL_OK){
-		return 2;
-	}
-
-	// Call PWM start function for specific fan
-	HAL_TIM_PWM_Start(&htim, channels[fan_select]);
-
+	__HAL_TIM_SET_COMPARE(pwmhandle, channel, CCR_value); 
 	return 0;
 }
 

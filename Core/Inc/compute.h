@@ -15,10 +15,21 @@
 #define MC_BAUD				 1000000U
 #define MAX_ADC_RESOLUTION	 1023 // 13 bit ADC
 
+
+
+typedef enum {
+	FAN1,
+	FAN2,
+	FAN3,
+	FAN4,
+	FAN5,
+	FAN6,
+} fan_select_t;
+
 /**
  * @brief inits the compute interface
  */
-void compute_init();
+uint8_t compute_init();
 
 /**
  * @brief sets safeguard bool to check whether charging is enabled or disabled
@@ -62,7 +73,7 @@ bool compute_charger_connected();
  * 
  * @return uint8_t 0 = success, 1 = fan_select is out of range, 2 = PWM channel not able to be configured
  */
-uint8_t compute_set_fan_speed(uint8_t new_fan_speed, uint8_t fan_select);
+uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_select, uint8_t duty_cycle);
 
 /**
  * @brief Returns the pack current sensor reading

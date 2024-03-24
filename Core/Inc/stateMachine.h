@@ -64,4 +64,13 @@ void sm_handle_state(acc_data_t *bmsdata);
 void sm_balance_cells(acc_data_t *bms_data);
 void sm_broadcast_current_limit(acc_data_t *bmsdata);
 
+/**
+ * @brief algorithm to calculate and set fan speed based on temperature
+ * 
+ * @param bmsdata 
+ *
+*/
+void calculate_pwm(acc_data_t *bmsdata);
+
+
 #endif //BMS_STATES_H

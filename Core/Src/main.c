@@ -225,6 +225,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
    segment_init();
+   volatile uint8_t test = compute_init();
+   
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -232,8 +234,7 @@ int main(void)
   for(;;) {
     /* Create a dynamically allocated structure */
 
-    HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin);
-    HAL_Delay(500);
+
     //HAL_UART_Transmit(&huart4, (char*)"hello", 5, 1000);
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
@@ -254,6 +255,10 @@ int main(void)
     /* check for inbound CAN */
    // get_can1_msg();
    // get_can2_msg();
+
+    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+  //HAL_Delay(1);
+    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
     
 
     #ifdef DEBUG_STATS
