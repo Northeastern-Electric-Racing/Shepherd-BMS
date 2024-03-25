@@ -24,6 +24,7 @@ typedef enum {
 	FAN4,
 	FAN5,
 	FAN6,
+	FANMAX
 } fan_select_t;
 
 /**

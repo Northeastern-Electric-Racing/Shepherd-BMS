@@ -128,7 +128,7 @@ bool compute_charger_connected()
 uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_select, uint8_t duty_cycle)
 {
 	assert(pwmhandle);
-	assert(fan_select < 6);
+	assert(fan_select < FANMAX);
 	assert(duty_cycle <= 100);
 	uint32_t CCR_value = 0;
 
