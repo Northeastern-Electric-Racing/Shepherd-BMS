@@ -2,18 +2,12 @@
 #include "can_handler.h"
 #include "can.h"
 #include "main.h"
+#include <assert.h>
 #include "stm32f405xx.h"
 #include <string.h>
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
-
-#define FAN1 TIM_CHANNEL_3
-#define FAN2 TIM_CHANNEL_1
-#define FAN3 TIM_CHANNEL_4
-#define FAN4 TIM_CHANNEL_3
-#define FAN5 TIM_CHANNEL_2
-#define FAN6 TIM_CHANNEL_1
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -141,8 +135,8 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_sel
 	uint32_t channel = fan_channels[fan_select];
 
 	CCR_value = (pwmhandle->Instance->ARR * duty_cycle) / 100;
-
 	__HAL_TIM_SET_COMPARE(pwmhandle, channel, CCR_value); 
+	
 	return 0;
 }
 
