@@ -10,7 +10,7 @@
 #define THERM_AVG			 15	 /* Number of values to average */
 #define MAX_VOLT_DELTA		 2500
 #define MAX_VOLT_DELTA_COUNT 10
-#define GPIO_EXPANDER_ADDR   0x20
+#define GPIO_EXPANDER_ADDR   0x40
 #define GPIO_REGISTER_ADDR   0x09
 
 //TODO ensure spi 1 is correct for talking to segs
