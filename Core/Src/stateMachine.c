@@ -15,6 +15,9 @@ nertimer_t charge_cut_off_timer = { .active = false };
 
 nertimer_t can_msg_timer = { .active = false };
 
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim8;
+
 bool entered_faulted = false;
 
 nertimer_t charger_message_timer;
@@ -159,6 +162,8 @@ void sm_handle_state(acc_data_t* bmsdata)
 	bmsdata->is_charger_connected = compute_charger_connected();
 	bmsdata->max_temp.val = 75;
 	bmsdata->fault_code = sm_fault_return(bmsdata);
+
+	calculate_pwm(bmsdata);
 	
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
@@ -167,8 +172,7 @@ void sm_handle_state(acc_data_t* bmsdata)
 	}
 	// TODO needs testing - (update, seems to work fine)
 	handler_LUT[current_state](bmsdata);
-
-	compute_set_fan_speed(analyzer_calc_fan_pwm());
+	
 	sm_broadcast_current_limit(bmsdata);
 	char state_test[1] = "0";
 	state_test[0] = current_state + '0';
@@ -393,3 +397,21 @@ void sm_balance_cells(acc_data_t* bms_data)
 
 	segment_configure_balancing(balanceConfig);
 }
+
+void calculate_pwm(acc_data_t* bmsdata)
+{
+	// todo actually implement algorithm
+	// this should include: 
+		// 1. set PWM based on temp of "nearby" cells
+		// 2. automate seleciton of htim rather than hardcode
+
+	compute_set_fan_speed(&htim1, FAN1, 85);
+	compute_set_fan_speed(&htim1, FAN2, 85);
+	compute_set_fan_speed(&htim8, FAN3, 85);
+	compute_set_fan_speed(&htim8, FAN4, 85);
+	compute_set_fan_speed(&htim8, FAN5, 85);
+	compute_set_fan_speed(&htim8, FAN6, 85);
+	
+}
+
+

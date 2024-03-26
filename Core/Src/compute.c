@@ -2,6 +2,8 @@
 #include "can_handler.h"
 #include "can.h"
 #include "main.h"
+#include <assert.h>
+#include "stm32f405xx.h"
 #include <string.h>
 
 #define MAX_CAN1_STORAGE 10
@@ -14,14 +16,22 @@ enum { CHARGE_ENABLED, CHARGE_DISABLED };
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 
+extern TIM_HandleTypeDef htim1;
+extern TIM_HandleTypeDef htim8;
+
+TIM_OC_InitTypeDef pwm_config;
+
+const uint32_t fan_channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
+
 can_t can1; // main can bus, used by most peripherals
 can_t can2; // p2p can bus with charger
 
 /* private function defintions */
 uint8_t calc_charger_led_state();
 
-void compute_init()
+uint8_t compute_init()
 {
+	// TODO throw all of these objects into a compute struct
 	can1.hcan = &hcan1;
 	can1.id_list = can1_id_list;
 	can1.id_list_len = sizeof(can1_id_list) / sizeof(can1_id_list[0]);
@@ -35,6 +45,22 @@ void compute_init()
 	can2.callback = can_receive_callback;
 	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 	can_init(&can2);
+
+	pwm_config.OCMode = TIM_OCMODE_PWM1;
+	pwm_config.Pulse = 0;
+	pwm_config.OCPolarity = TIM_OCPOLARITY_HIGH;
+	pwm_config.OCFastMode = TIM_OCFAST_DISABLE;
+
+	if (HAL_TIM_PWM_ConfigChannel(&htim1, &pwm_config, fan_channels[FAN1]) != HAL_OK) return -1;
+	if (HAL_TIM_PWM_ConfigChannel(&htim8, &pwm_config, fan_channels[FAN2]) != HAL_OK) return -1;
+
+	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN1]);
+	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN2]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN3]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
+	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
+
 }
 
 void compute_enable_charging(bool enable_charging)
@@ -98,10 +124,19 @@ bool compute_charger_connected()
 // 	return;
 // }
 
-void compute_set_fan_speed(uint8_t new_fan_speed)
+uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_select, uint8_t duty_cycle)
 {
-	fan_speed = new_fan_speed;
-	// NERduino.setAMCDutyCycle(new_fan_speed);  Replace
+	if (!pwmhandle) return -1;
+	if (fan_select >= FANMAX) return -1;
+	if (duty_cycle > 100) return -1;
+
+	uint32_t CCR_value = 0;
+	uint32_t channel = fan_channels[fan_select];
+
+	CCR_value = (pwmhandle->Instance->ARR * duty_cycle) / 100;
+	__HAL_TIM_SET_COMPARE(pwmhandle, channel, CCR_value); 
+	
+	return 0;
 }
 
 void compute_set_fault(int fault_state)
