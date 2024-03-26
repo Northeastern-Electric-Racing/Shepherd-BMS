@@ -401,6 +401,9 @@ void sm_balance_cells(acc_data_t* bms_data)
 void calculate_pwm(acc_data_t* bmsdata)
 {
 	// todo actually implement algorithm
+	// this should include: 
+		// 1. set PWM based on temp of "nearby" cells
+		// 2. automate seleciton of htim rather than hardcode
 
 	compute_set_fan_speed(&htim1, FAN1, 85);
 	compute_set_fan_speed(&htim1, FAN2, 85);
