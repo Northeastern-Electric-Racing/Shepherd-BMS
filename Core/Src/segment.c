@@ -10,6 +10,8 @@
 #define THERM_AVG			 15	 /* Number of values to average */
 #define MAX_VOLT_DELTA		 2500
 #define MAX_VOLT_DELTA_COUNT 10
+#define GPIO_EXPANDER_ADDR   0x40
+#define GPIO_REGISTER_ADDR   0x09
 
 //TODO ensure spi 1 is correct for talking to segs
 extern SPI_HandleTypeDef hspi1;
@@ -72,103 +74,25 @@ void segment_init()
 	push_chip_configuration();
 }
 
-void select_therm(uint8_t therm)
-{
+void select_therm(uint8_t therm){
 	/* Exit if out of range values */
-	if (therm < 0 || therm > 32) {
+	if (therm < 0 || therm > 16){
 		return;
 	}
+
 	uint8_t i2c_write_data[NUM_CHIPS][3];
 	uint8_t comm_reg_data[NUM_CHIPS][6];
-	if (therm <= 8) {
-		/* Turn off competing multiplexor (therms 9-16) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x92;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 4);
 
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x90;
-			i2c_write_data[chip][1] = 0x08 + (therm - 1);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	} else if (therm <= 16) {
-		/* Turn off competing multiplexor (therms 1-8) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x90;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x92;
-			i2c_write_data[chip][1] = 0x08 + (therm - 9);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041,NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	} else if (therm <= 24) {
-		/* Turn off competing multiplexor (therms 25-32) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x96;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041,NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x94;
-			i2c_write_data[chip][1] = 0x08 + (therm - 17);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	} else {
-		/* Turn off competing multiplexor (therms 17-24) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x94;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x96;
-			i2c_write_data[chip][1] = 0x08 + (therm - 25);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	}
+	// select 0-16 on GPIO expander
+    for(int chip = 0; chip < NUM_CHIPS; chip++) {
+		i2c_write_data[chip][0] = GPIO_EXPANDER_ADDR;
+		i2c_write_data[chip][1] = GPIO_REGISTER_ADDR;
+    	i2c_write_data[chip][2] = therm; // 0-15, will change multiplexer to select thermistor
+    }
+    serialize_i2c_msg(i2c_write_data, comm_reg_data);
+	push_chip_configuration();
+	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+	LTC6804_stcomm(ltc68041, 24);
 }
 
 int pull_voltages()
