@@ -113,7 +113,7 @@ const void print_bms_stats(acc_data_t *acc_data)
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
-  HAL_UART_Transmit(&huart4, (char*)"butts", 5, 1000);
+  //HAL_UART_Transmit(&huart4, (char*)"butts", 5, 1000);
   //TODO get this from eeprom once implemented 
   // question - should we read from eeprom here, or do that on loop and store locally?
 	//printf("Prev Fault: %#x", previousFault);
@@ -222,8 +222,8 @@ int main(void)
   for(;;) {
     /* Create a dynamically allocated structure */
 
-    HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin);
-    HAL_Delay(500);
+    //HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin);
+    //HAL_Delay(500);
     //HAL_UART_Transmit(&huart4, (char*)"hello", 5, 1000);
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
@@ -320,11 +320,11 @@ static void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 16;
+  hcan1.Init.Prescaler = 2;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_3TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
@@ -435,7 +435,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
