@@ -136,18 +136,9 @@ typedef struct {
 
 typedef struct 
 {
-	nertimer_t timer;
-	int timeout;
+	bms_fault_t fault_code;
 
-	int can_receivals;
-	
-
-	/**
-	 * @brief Note that this is a 32 bit integer, so there are 32 max possible fault codes
-	 */
-	uint32_t fault_code;
-	uint32_t fault_status;
-
+	uint8_t can_fault;
 } nc_fault_collection_t;
 
 

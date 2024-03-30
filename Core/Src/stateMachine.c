@@ -293,25 +293,9 @@ uint32_t sm_fault_eval(fault_eval_t* index)
 }
 
 void sm_nc_fault_collect(nc_fault_collection_t *nc_fault_data) {
-
-	bool condition;
-
 	switch (nc_fault_data->fault_code) {
-		case FAILED_CAN_RECEIVAL: condition = nc_fault_data->can_receivals == 0; break;
-		default: true;
-	}
-
-	if (!is_timer_active(&nc_fault_data->timer) && condition)
-	{
-		start_timer(&nc_fault_data->timer, nc_fault_data->timeout);
-	}
-	else {
-		if (is_timer_expired(&nc_fault_data->timer)) {
-			nc_fault_data->fault_status |= nc_fault_data->fault_code;
-		}
-		if (!condition) {
-			cancel_timer(&nc_fault_data->timer);
-		}
+		case FAILED_CAN_RECEIVAL: nc_fault_data->can_fault += 1; break;
+		default: break;
 	}
 }
 

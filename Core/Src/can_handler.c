@@ -5,7 +5,7 @@
 
 ringbuffer_t* can1_rx_queue = NULL;
 ringbuffer_t* can2_rx_queue = NULL;
-nc_fault_collection_t* nc_fault_collection = NULL;
+nc_fault_collection_t nc_fault_collection;
 
 void can_receive_callback(CAN_HandleTypeDef* hcan)
 {
@@ -15,13 +15,11 @@ void can_receive_callback(CAN_HandleTypeDef* hcan)
 	/* Read in CAN message */
 	if (HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, new_msg.data) != HAL_OK) {
 		
-		nc_fault_collection->fault_code = FAILED_CAN_RECEIVAL;
-		sm_nc_fault_collect(nc_fault_collection);
+		nc_fault_collection.fault_code = FAILED_CAN_RECEIVAL;
+		sm_nc_fault_collect(&nc_fault_collection);
 		// TODO add non crtical fault capability - could create one for failed can receieve
 		return;
 	}
-	
-	nc_fault_collection->can_receivals += 1;
 	new_msg.len = rx_header.DLC;
 	new_msg.id	= rx_header.StdId;
 	if (hcan == &hcan1) {
