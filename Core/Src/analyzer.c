@@ -541,7 +541,6 @@ void calc_state_of_charge()
 		bmsdata->soc = 0;
 	}
 
-	
 }
 
 void calc_state_of_charge_old()
@@ -566,6 +565,7 @@ void calc_state_of_charge_old()
     if (bmsdata->soc < 0) {
         bmsdata->soc = 0;
 	}
+
 }
 
 void high_curr_therm_check()
