@@ -166,12 +166,6 @@ void get_faults()
     }
 }
 
-//TODO: Consolidate these into a single function after testing
-bool test_EEPROM(){
-    bool EEPROM_main_check test_main_EEPROM();
-    bool EEPROM_fault_check = test_fault_EEPROM();
-}
-
 //TODO: Verify that this code works as intended in hardware
 bool test_main_EEPROM(){
     uint8_t reg_to_write;
@@ -231,11 +225,8 @@ bool test_fault_EEPROM(){
         eeprom_read_data_address(curr_Address, &temp_Faults[curr_Iter], 4);
         curr_Iter++;
 
-        if (temp_Faults[curr_Iter] == sample_fault){
-            printf("Data successfully written and read from EEPROM fault register");
-        }
-        else{
-            printf("Data was not successfully written and read from EEPROM fault register");
+        if (temp_faults[curr_Iter] != sample_fault){
+            break;
         }
 
         if (curr_Address == size + start_Address - 3){
@@ -262,5 +253,16 @@ bool test_fault_EEPROM(){
         return false;
     }
 
+    return true;
+}
+
+//TODO: Consolidate these into a single function after testing
+bool test_EEPROM(){
+    bool EEPROM_main_check = test_main_EEPROM();
+    bool EEPROM_fault_check = test_fault_EEPROM();
+
+    if (!EEPROM_main_check || !EEPROM_fault_check){
+        return false;
+    }
     return true;
 }
