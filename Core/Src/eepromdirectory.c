@@ -168,8 +168,8 @@ void get_faults()
 
 //TODO: Consolidate these into a single function after testing
 bool test_EEPROM(){
-    test_main_EEPROM();
-    test_fault_EEPROM();
+    bool EEPROM_main_check test_main_EEPROM();
+    bool EEPROM_fault_check = test_fault_EEPROM();
 }
 
 //TODO: Verify that this code works as intended in hardware
@@ -184,15 +184,14 @@ bool test_main_EEPROM(){
     eeprom_write_data_address(root_address, &reg_to_write, 1);
     eeprom_read_data_address(root_address, &data_read, 1);
 
-    if (data_read == known_data){
-        printf("Data was successfully written and read from EEPROM");
-    }
-    else{
-        printf("Data was not successfully written/read from EEPROM");
-    }
-
     // Write data previously stored in EEPROM address back to EEPROM
     eeprom_write_data_address(root_address, &reg_to_write, 1);
+
+    if (data_read != known_data){
+        return false;
+    }
+
+    return true;
 }
 
 //TODO: Verify that this code works as intended in hardware
@@ -252,17 +251,16 @@ bool test_fault_EEPROM(){
     log_fault(test_fault);
     eeprom_read_data_address(curr_Address, &temp_Faults[index_reg], 4);
 
-    if (temp_Faults[index_reg] == test_fault){
-        printf("Old fault successfully overwritten");
-    }
-    else{
-        printf("Old fault was not overwritten");
-    }
-
     // Re-write old faults back into register
     curr_Iter = 0;
     while (curr_Iter < NUM_EEPROM_FAULTS){
         log_fault(read_Faults[curr_Iter]);
         curr_Iter++;
     }
+
+    if (temp_Faults[index_reg] != test_fault){
+        return false;
+    }
+
+    return true;
 }
