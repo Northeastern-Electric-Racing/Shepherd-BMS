@@ -179,7 +179,7 @@ bool test_main_EEPROM(){
     eeprom_read_data_address(root_address, &data_read, 1);
 
     // Write data previously stored in EEPROM address back to EEPROM
-    eeprom_write_data_address(root_address, &reg_to_write, 1);
+    eeprom_write_data_address(root_address, &initial_data, 1);
 
     if (data_read != known_data){
         return false;
@@ -225,7 +225,7 @@ bool test_fault_EEPROM(){
         eeprom_read_data_address(curr_Address, &temp_Faults[curr_Iter], 4);
         curr_Iter++;
 
-        if (temp_faults[curr_Iter] != sample_fault){
+        if (temp_Faults[curr_Iter] != sample_fault){
             break;
         }
 
