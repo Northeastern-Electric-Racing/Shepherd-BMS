@@ -174,8 +174,6 @@ void sm_handle_state(acc_data_t* bmsdata)
 	handler_LUT[current_state](bmsdata);
 	
 	sm_broadcast_current_limit(bmsdata);
-	char state_test[1] = "0";
-	state_test[0] = current_state + '0';
 
 
 	/* send relevant CAN msgs */
