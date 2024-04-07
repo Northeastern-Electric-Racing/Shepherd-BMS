@@ -19,7 +19,10 @@ extern CAN_HandleTypeDef hcan2;
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
+extern ADC_HandleTypeDef hadc1;
+
 TIM_OC_InitTypeDef pwm_config;
+ADC_ChannelConfTypeDef adc_config;
 
 const uint32_t fan_channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1};
 
@@ -28,6 +31,8 @@ can_t can2; // p2p can bus with charger
 
 /* private function defintions */
 uint8_t calc_charger_led_state();
+float read_ref_voltage();
+float read_vout();
 
 uint8_t compute_init()
 {
@@ -60,6 +65,8 @@ uint8_t compute_init()
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
+
+	return 0;
 
 }
 
@@ -148,46 +155,63 @@ void compute_set_fault(int fault_state)
 
 int16_t compute_get_pack_current()
 {
-	static const float CURRENT_LOWCHANNEL_MAX = 75.0;  // Amps
-	static const float CURRENT_LOWCHANNEL_MIN = -75.0; // Amps
-	// static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
-	static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
+	static const float GAIN = 6.250; // mV/A
+	static const OFFSET = 0.0; // mV
 
-	static const float CURRENT_LOWCHANNEL_OFFSET  = 2.517; // Calibrated with current = 0A
-	static const float CURRENT_HIGHCHANNEL_OFFSET = 2.520; // Calibrated with current = 0A
 
-	static const float HIGHCHANNEL_GAIN = 1 / 0.004; // Calibrated with  current = 5A, 10A, 20A
-	static const float LOWCHANNEL_GAIN	= 1 / 0.0267;
+	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
 
-	static const float REF5V_DIV  = 19.02 / (19.08 + 19.02); // Resistive divider in kOhm
-	static const float REF5V_CONV = 1 / REF5V_DIV; // Converting from reading to real value
+	float ref_voltage = read_ref_voltage();
+	float vout = read_current();
 
-	//TODO ADD BACK THE COMMENTED OUT ANALOG READS
-	float ref_5V = /*analogRead(MEAS_5VREF_PIN) * */(3.3 / MAX_ADC_RESOLUTION) * REF5V_CONV;
-	int16_t high_current
-		= 10
-		 /* * (((5 / ref_5V) * /analogRead(CURRENT_SENSOR_PIN_L) * CURRENT_ADC_RESOLUTION))
-			 - CURRENT_HIGHCHANNEL_OFFSET) */
-		  * HIGHCHANNEL_GAIN; // Channel has a large range with low resolution
-	int16_t low_current
-		= 10
-		  /* * (((5 / ref_5V) * (analogRead(CURRENT_SENSOR_PIN_H) * CURRENT_ADC_RESOLUTION))
-			 - CURRENT_LOWCHANNEL_OFFSET) */
-		  * LOWCHANNEL_GAIN; // Channel has a small range with high resolution
+	if (ref_voltage == -1 || vout == -1) return -1;
 
-	// Serial.print("High: ");
-	// Serial.println(-high_current);
-	// Serial.print("Low: ");
-	// Serial.println(-low_current);
-	// Serial.print("5V: ");
-	// Serial.println(ref_5V);
+	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN / 1000); // convert to V
 
-	// If the current is scoped within the range of the low channel, use the low channel
-	if (low_current < CURRENT_LOWCHANNEL_MAX - 5.0 || low_current > CURRENT_LOWCHANNEL_MIN + 5.0) {
-		return -low_current;
-	}
+	return -current;
 
-	return -high_current;
+	/* TEMP keep last years math until above is verified */
+
+	// static const float CURRENT_LOWCHANNEL_MAX = 75.0;  // Amps
+	// static const float CURRENT_LOWCHANNEL_MIN = -75.0; // Amps
+	// // static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
+	// static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
+
+	// static const float CURRENT_LOWCHANNEL_OFFSET  = 2.517; // Calibrated with current = 0A
+	// static const float CURRENT_HIGHCHANNEL_OFFSET = 2.520; // Calibrated with current = 0A
+
+	// static const float HIGHCHANNEL_GAIN = 1 / 0.004; // Calibrated with  current = 5A, 10A, 20A
+	// static const float LOWCHANNEL_GAIN	= 1 / 0.0267;
+
+	// static const float REF5V_DIV  = 19.02 / (19.08 + 19.02); // Resistive divider in kOhm
+	// static const float REF5V_CONV = 1 / REF5V_DIV; // Converting from reading to real value
+
+	// //TODO ADD BACK THE COMMENTED OUT ANALOG READS
+	// float ref_5V = /*analogRead(MEAS_5VREF_PIN) * */(3.3 / MAX_ADC_RESOLUTION) * REF5V_CONV;
+	// int16_t high_current
+	// 	= 10
+	// 	 /* * (((5 / ref_5V) * /analogRead(CURRENT_SENSOR_PIN_L) * CURRENT_ADC_RESOLUTION))
+	// 		 - CURRENT_HIGHCHANNEL_OFFSET) */
+	// 	  * HIGHCHANNEL_GAIN; // Channel has a large range with low resolution
+	// int16_t low_current
+	// 	= 10
+	// 	  /* * (((5 / ref_5V) * (analogRead(CURRENT_SENSOR_PIN_H) * CURRENT_ADC_RESOLUTION))
+	// 		 - CURRENT_LOWCHANNEL_OFFSET) */
+	// 	  * LOWCHANNEL_GAIN; // Channel has a small range with high resolution
+
+	// // Serial.print("High: ");
+	// // Serial.println(-high_current);
+	// // Serial.print("Low: ");
+	// // Serial.println(-low_current);
+	// // Serial.print("5V: ");
+	// // Serial.println(ref_5V);
+
+	// // If the current is scoped within the range of the low channel, use the low channel
+	// if (low_current < CURRENT_LOWCHANNEL_MAX - 5.0 || low_current > CURRENT_LOWCHANNEL_MIN + 5.0) {
+	// 	return -low_current;
+	// }
+
+	// return -high_current;
 }
 
 void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_discharge)
@@ -427,5 +451,33 @@ uint8_t calc_charger_led_state(acc_data_t* bms_data)
 	} else {
 		return RED_GREEN_BLINKING;
 	}
+}
+
+float read_ref_voltage()
+{
+	adc_config.Channel = ADC_CHANNEL_9;
+	if (HAL_ADC_ConfigChannel(&hadc1, &adc_config) != HAL_OK) return -1;
+
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+
+	/* scaled to 2.5 as per datasheet */
+	float ref_voltage = HAL_ADC_GetValue(&hadc1) * 2.5 / MAX_ADC_RESOLUTION;
+
+	return ref_voltage;
+}
+
+float read_vout()
+{
+	adc_config.Channel = ADC_CHANNEL_15;
+	if (HAL_ADC_ConfigChannel(&hadc1, &adc_config) != HAL_OK) return -1;
+
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+
+	/* scaled to 3.3 */
+	float vout = HAL_ADC_GetValue(&hadc1) * 3.3 / MAX_ADC_RESOLUTION;
+
+	return vout;
 }
 
