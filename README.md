@@ -10,5 +10,5 @@ Our from-scratch Battery Management System application, v2.
 docker compose pull
 
 # Run Container
-docker compose run --rm embedded-base
+docker compose run --rm ner-gcc-arm
 ```
