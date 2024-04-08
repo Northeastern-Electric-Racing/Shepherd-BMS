@@ -29,6 +29,8 @@ const uint32_t fan_channels[6] = {TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4, T
 can_t can1; // main can bus, used by most peripherals
 can_t can2; // p2p can bus with charger
 
+uint32_t adc_values[2] = {0};
+
 /* private function defintions */
 uint8_t calc_charger_led_state();
 float read_ref_voltage();
@@ -65,6 +67,8 @@ uint8_t compute_init()
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
+
+	HAL_ADC_Start_DMA(&hadc1, adc_values, 2);
 
 	return 0;
 
@@ -160,9 +164,12 @@ int16_t compute_get_pack_current()
 
 
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
+	
 
-	float ref_voltage = read_ref_voltage();
-	float vout = read_current();
+	// remove once DMA verified working, along with functions themselves 
+
+	// float ref_voltage = read_ref_voltage();
+	// float vout = read_current();
 
 	if (ref_voltage == -1 || vout == -1) return -1;
 
