@@ -20,6 +20,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
 extern ADC_HandleTypeDef hadc1;
+extern DMA_HandleTypeDef hdma_adc1;
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
@@ -164,7 +165,14 @@ int16_t compute_get_pack_current()
 
 
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	
+	float ref_voltage = -1;
+	float vout = -1;
+
+	if (!HAL_DMA_PollForTransfer(&hdma_adc1, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY))
+	{
+		ref_voltage = adc_values[1] * 2.5 / MAX_ADC_RESOLUTION;
+		vout = adc_values[0] * 3.3 / MAX_ADC_RESOLUTION;
+	}
 
 	// remove once DMA verified working, along with functions themselves 
 
