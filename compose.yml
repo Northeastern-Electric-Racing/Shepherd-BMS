@@ -2,7 +2,7 @@ name: shepherd
 
 services:
     ner-gcc-arm:
-        image: ghcr.io/northeastern-electric-racing/embedded-base:docker-compose
+        image: ghcr.io/northeastern-electric-racing/embedded-base:main
         build: .
         network_mode: host
         privileged: true
