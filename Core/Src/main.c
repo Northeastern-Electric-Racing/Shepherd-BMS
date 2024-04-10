@@ -267,7 +267,11 @@ int main(void)
      * Not state specific
      */
     segment_retrieve_data(acc_data->chip_data);
-    acc_data->pack_current = compute_get_pack_current();
+    acc_data->pack_current = (int16_t)compute_get_pack_current();
+    //volatile float temp = compute_get_pack_current();
+    printf("Pack Current: %d\r\n", acc_data->pack_current);
+    
+    
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
@@ -282,7 +286,7 @@ int main(void)
     HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
     
     #ifdef DEBUG_STATS
-    print_bms_stats(acc_data);
+    //print_bms_stats(acc_data);
     #endif
 
     // TODO - possibly optimize timing, every loop might be excessive

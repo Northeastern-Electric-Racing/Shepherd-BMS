@@ -69,7 +69,8 @@ uint8_t compute_init()
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
 	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
 
-	HAL_ADC_Start_DMA(&hadc1, adc_values, 2);
+	//HAL_ADC_Start(&hadc1);
+	//HAL_ADC_Start_DMA(&hadc1, adc_values, 2);
 
 	return 0;
 
@@ -165,25 +166,27 @@ int16_t compute_get_pack_current()
 
 
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	float ref_voltage = -1;
-	float vout = -1;
+	//float ref_voltage = -1;
+	//float vout = -1;
 
-	if (!HAL_DMA_PollForTransfer(&hdma_adc1, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY))
-	{
-		ref_voltage = adc_values[1] * 2.5 / MAX_ADC_RESOLUTION;
-		vout = adc_values[0] * 3.3 / MAX_ADC_RESOLUTION;
-	}
+	// if (!HAL_DMA_PollForTransfer(&hdma_adc1, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY))
+	// {
+	// 	ref_voltage = 2.5;//adc_values[1] * 2.5 / MAX_ADC_RESOLUTION;
+	// 	vout = adc_values[0] * 3.3 / MAX_ADC_RESOLUTION;
+	// }
 
+	
 	// remove once DMA verified working, along with functions themselves 
 
-	// float ref_voltage = read_ref_voltage();
-	// float vout = read_current();
+	float ref_voltage = read_ref_voltage();
+	float vout = read_vout();
+	vout *= 1000; // convert to mV
 
-	if (ref_voltage == -1 || vout == -1) return -1;
+	//if (ref_voltage == -1 || vout == -1) return -1;
 
 	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN / 1000); // convert to V
 
-	return -current;
+	return vout;
 
 	/* TEMP keep last years math until above is verified */
 
