@@ -13,7 +13,7 @@
 #define CHARGE_DETECT		 5
 #define CHARGER_BAUD		 250000U
 #define MC_BAUD				 1000000U
-#define MAX_ADC_RESOLUTION	 1023 // 13 bit ADC
+#define MAX_ADC_RESOLUTION	 4095 // 12 bit ADC
 
 
 

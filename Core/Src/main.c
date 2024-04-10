@@ -47,6 +47,9 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+ADC_HandleTypeDef hadc1;
+DMA_HandleTypeDef hdma_adc1;
+
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
@@ -71,6 +74,7 @@ acc_data_t *prev_acc_data = NULL;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_CAN1_Init(void);
 static void MX_CAN2_Init(void);
 static void MX_SPI1_Init(void);
@@ -82,6 +86,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM8_Init(void);
+static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
 void watchdog_init(void);
@@ -213,6 +218,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_CAN1_Init();
   MX_CAN2_Init();
   MX_SPI1_Init();
@@ -224,6 +230,7 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM8_Init();
+  MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
  for (int i = 0; i < 58; i++) 
  {
@@ -260,7 +267,11 @@ int main(void)
      * Not state specific
      */
     segment_retrieve_data(acc_data->chip_data);
-    acc_data->pack_current = compute_get_pack_current();
+    acc_data->pack_current = (int16_t)compute_get_pack_current();
+    //volatile float temp = compute_get_pack_current();
+    printf("Pack Current: %d\r\n", acc_data->pack_current);
+    
+    
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
@@ -275,7 +286,7 @@ int main(void)
     HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
     
     #ifdef DEBUG_STATS
-    print_bms_stats(acc_data);
+    //print_bms_stats(acc_data);
     #endif
 
     // TODO - possibly optimize timing, every loop might be excessive
@@ -333,6 +344,65 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief ADC1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC1_Init(void)
+{
+
+  /* USER CODE BEGIN ADC1_Init 0 */
+
+  /* USER CODE END ADC1_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC1_Init 1 */
+
+  /* USER CODE END ADC1_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ContinuousConvMode = DISABLE;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DMAContinuousRequests = ENABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_15;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC1_Init 2 */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = 2;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE END ADC1_Init 2 */
+
 }
 
 /**
@@ -837,6 +907,22 @@ static void MX_USB_OTG_FS_PCD_Init(void)
 }
 
 /**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA2_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA2_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -855,8 +941,8 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, FPGA_Reset_Pin|Communication_GPIO_Pin|Communication_GPIOC15_Pin|Communication_GPIOC0_Pin
-                          |SPI_2_CS_Pin|Debug_LED_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, FPGA_Reset_Pin|Communication_GPIO_Pin|Communication_GPIOC0_Pin|SPI_2_CS_Pin
+                          |Debug_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin|SPI_1_CS_Pin|SPI_3_CS_Pin, GPIO_PIN_RESET);
@@ -868,13 +954,19 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(External_GPIO_GPIO_Port, External_GPIO_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : FPGA_Reset_Pin Communication_GPIO_Pin Communication_GPIOC15_Pin Communication_GPIOC0_Pin
-                           SPI_2_CS_Pin Debug_LED_Pin */
-  GPIO_InitStruct.Pin = FPGA_Reset_Pin|Communication_GPIO_Pin|Communication_GPIOC15_Pin|Communication_GPIOC0_Pin
-                          |SPI_2_CS_Pin|Debug_LED_Pin;
+  /*Configure GPIO pins : FPGA_Reset_Pin Communication_GPIO_Pin Communication_GPIOC0_Pin SPI_2_CS_Pin
+                           Debug_LED_Pin */
+  GPIO_InitStruct.Pin = FPGA_Reset_Pin|Communication_GPIO_Pin|Communication_GPIOC0_Pin|SPI_2_CS_Pin
+                          |Debug_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Interlock_Read_Pin */
@@ -890,17 +982,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : I_Sense_Pin */
-  GPIO_InitStruct.Pin = I_Sense_Pin;
+  /*Configure GPIO pin : I_SenseB2_Pin */
+  GPIO_InitStruct.Pin = I_SenseB2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(I_Sense_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : I_SenseB0_Pin I_SenseB1_Pin I_SenseB2_Pin */
-  GPIO_InitStruct.Pin = I_SenseB0_Pin|I_SenseB1_Pin|I_SenseB2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(I_SenseB2_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Debug_LEDB11_Pin Watchdog_Out_Pin External_GPIOB3_Pin External_GPIOB4_Pin
                            External_GPIOB5_Pin */

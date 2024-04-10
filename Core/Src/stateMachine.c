@@ -403,13 +403,50 @@ void calculate_pwm(acc_data_t* bmsdata)
 		// 1. set PWM based on temp of "nearby" cells
 		// 2. automate seleciton of htim rather than hardcode
 
-	compute_set_fan_speed(&htim1, FAN1, 85);
-	compute_set_fan_speed(&htim1, FAN2, 85);
-	compute_set_fan_speed(&htim8, FAN3, 85);
-	compute_set_fan_speed(&htim8, FAN4, 85);
-	compute_set_fan_speed(&htim8, FAN5, 85);
-	compute_set_fan_speed(&htim8, FAN6, 85);
-	
+	if (bmsdata->max_temp.val > 50)
+	{
+		compute_set_fan_speed(&htim1, FAN1, 100);
+		compute_set_fan_speed(&htim1, FAN2, 100);
+		compute_set_fan_speed(&htim8, FAN3, 100);
+		compute_set_fan_speed(&htim8, FAN4, 100);
+		compute_set_fan_speed(&htim8, FAN5, 100);
+		compute_set_fan_speed(&htim8, FAN6, 100);
+		return;
+	}
+
+	else if (bmsdata->max_temp.val > 40)
+	{
+		compute_set_fan_speed(&htim1, FAN1, 50);
+		compute_set_fan_speed(&htim1, FAN2, 50);
+		compute_set_fan_speed(&htim8, FAN3, 50);
+		compute_set_fan_speed(&htim8, FAN4, 50);
+		compute_set_fan_speed(&htim8, FAN5, 50);
+		compute_set_fan_speed(&htim8, FAN6, 50);
+		return;
+	}
+
+	else if (bmsdata->max_temp.val > 30)
+	{
+		compute_set_fan_speed(&htim1, FAN1, 25);
+		compute_set_fan_speed(&htim1, FAN2, 25);
+		compute_set_fan_speed(&htim8, FAN3, 25);
+		compute_set_fan_speed(&htim8, FAN4, 25);
+		compute_set_fan_speed(&htim8, FAN5, 25);
+		compute_set_fan_speed(&htim8, FAN6, 25);
+		return;
+	}
+
+	else
+	{
+		compute_set_fan_speed(&htim1, FAN1, 0);
+		compute_set_fan_speed(&htim1, FAN2, 0);
+		compute_set_fan_speed(&htim8, FAN3, 0);
+		compute_set_fan_speed(&htim8, FAN4, 0);
+		compute_set_fan_speed(&htim8, FAN5, 0);
+		compute_set_fan_speed(&htim8, FAN6, 0);
+		return;
+	}
+
 }
 
 
