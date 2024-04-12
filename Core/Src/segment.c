@@ -102,6 +102,10 @@ int pull_voltages()
 	 * just copy over the contents of the last good reading and the fault status
 	 * from the most recent attempt
 	 */
+
+	/* our segments are mapped backwards and in pairs, so they are read in 1,0 then 3,2, etc*/
+	int mapping_correction[12] = {1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10};
+	
 	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
@@ -121,30 +125,45 @@ int pull_voltages()
 	 */
 	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, segment_voltages) == -1) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
-				sizeof(segment_data[i].voltage_reading));
+			int corrected_index = mapping_correction[i];
+			memcpy(segment_data[corrected_index].voltage_reading, previous_data[i].voltage_reading,
+				sizeof(segment_data[corrected_index].voltage_reading));
 		}
 		return 1;
 	}
 
 	/* If the read was successful, copy the voltage data */
 	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP; j++) {
-			if (abs(segment_voltages[i][j] - previous_data[i].voltage_reading[j])
-				> MAX_VOLT_DELTA) {
-				segment_data[i].voltage_reading[j] = previous_data[i].voltage_reading[j];
-				segment_data[i].bad_volt_diff_count[j]++;
+		int corrected_index = mapping_correction[i];
 
-				if (segment_data[i].bad_volt_diff_count[j] > MAX_VOLT_DELTA_COUNT) {
-					segment_data[i].bad_volt_diff_count[j] = 0;
-					segment_data[i].voltage_reading[j] = segment_voltages[i][j];
+		/* correction to account for missing index, see more info below */
+		int dest_index = 0;
+
+		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP + 1; j++) {
+
+			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
+			if (j == 5) continue;
+			
+			if (abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
+				> MAX_VOLT_DELTA) {
+				segment_data[corrected_index].voltage_reading[dest_index] = previous_data[i].voltage_reading[dest_index];
+				segment_data[corrected_index].bad_volt_diff_count[dest_index]++;
+
+				if (segment_data[corrected_index].bad_volt_diff_count[dest_index] > MAX_VOLT_DELTA_COUNT) {
+					segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
+					segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
 				}
 			} else {
-				segment_data[i].bad_volt_diff_count[j] = 0;
-				segment_data[i].voltage_reading[j] = segment_voltages[i][j];
+				segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
+				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
 			}
+
+			dest_index++;
 		}
+
+		
 	}
+
 
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
@@ -205,10 +224,12 @@ int pull_thermistors()
 		}
 	}
 	start_timer(&therm_timer, THERM_WAIT_TIME); /* Start timer for next reading */
-	variance_therm_check();
+
+	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
+	//variance_therm_check();
 	// standard_dev_therm_check();
 	// averaging_therm_check();
-	discard_neutrals();
+	//discard_neutrals();
 
 	return 0; /* Read successfully */
 }

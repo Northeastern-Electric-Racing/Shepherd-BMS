@@ -77,7 +77,7 @@ void init_ready()
 void handle_ready(acc_data_t* bmsdata)
 {
 	/* check for charger connection */
-	if (compute_charger_connected()) {
+	if (NULL/*compute_charger_connected()*/) { //TODO Fix once charger works
 		request_transition(CHARGING_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
@@ -163,7 +163,7 @@ void sm_handle_state(acc_data_t* bmsdata)
 	bmsdata->max_temp.val = 75;
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
-	calculate_pwm(bmsdata);
+	//calculate_pwm(bmsdata);
 	
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
