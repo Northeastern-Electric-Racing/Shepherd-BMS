@@ -135,10 +135,14 @@ int pull_voltages()
 	/* If the read was successful, copy the voltage data */
 	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 		int corrected_index = mapping_correction[i];
+
 		/* correction to account for missing index, see more info below */
 		int dest_index = 0;
+
 		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP + 1; j++) {
 
+			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
+			if (j == 5) continue;
 			
 			if (abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
 				> MAX_VOLT_DELTA) {
@@ -151,12 +155,13 @@ int pull_voltages()
 				}
 			} else {
 				segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][dest_index];
+				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
 			}
+
+			dest_index++;
 		}
 
-		/* cell 6 on every chip is not a real reading, we need to have the array skip this */
-		if (dest_index != 5) dest_index++;
+		
 	}
 
 
@@ -219,10 +224,12 @@ int pull_thermistors()
 		}
 	}
 	start_timer(&therm_timer, THERM_WAIT_TIME); /* Start timer for next reading */
-	variance_therm_check();
+
+	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
+	//variance_therm_check();
 	// standard_dev_therm_check();
 	// averaging_therm_check();
-	discard_neutrals();
+	//discard_neutrals();
 
 	return 0; /* Read successfully */
 }

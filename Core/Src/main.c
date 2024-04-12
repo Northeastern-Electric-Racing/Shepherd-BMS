@@ -142,7 +142,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 1) printf("FAULTED\r\n");
+  else if (current_state == 3) printf("FAULTED\r\n");
   printf("Raw Cell Voltage:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
@@ -153,7 +153,7 @@ const void print_bms_stats(acc_data_t *acc_data)
     printf("\r\n");
   }
 
-  printf("Open Cell Voltage:\n");
+  printf("Open Cell Voltage:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
