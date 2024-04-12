@@ -4,7 +4,7 @@ jobs:
   run-build:
     runs-on: ubuntu-latest
     container:
-        image: nwdepatie/ner-gcc-arm:latest
+        image: ghcr.io/northeastern-electric-racing/embedded-base:main
     timeout-minutes: 10
     steps:
       - name: Checkout code

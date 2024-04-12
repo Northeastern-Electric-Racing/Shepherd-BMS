@@ -1,0 +1,22 @@
+name: shepherd
+
+services:
+    ner-gcc-arm:
+        image: ghcr.io/northeastern-electric-racing/embedded-base:main
+        build: .
+        network_mode: host
+        privileged: true
+        volumes:
+            - type: bind
+              source: .
+              target: /home/app
+        tty: true
+        expose:
+            - "3240"
+        environment:
+            - DEBUG_PORT=/dev/ttyACM0
+            - STM_TARGET_NAME=stm32f4
+            - USBIP_PORT=1-1.4        
+        devices:
+            - "/dev/ttyACM0:/dev/ttyACM0"
+        
