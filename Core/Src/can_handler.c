@@ -43,13 +43,24 @@ int8_t get_can1_msg()
 	return 0;
 }
 
+uint32_t last_tick;
+bool first_run = true;
+
 int8_t get_can2_msg()
 {
-	/* no messages to read */
-	if (ringbuffer_is_empty(can2_rx_queue)) {
-        bmsdata->is_charger_connected = false;
-		return -1;
+
+    if (first_run) {
+        last_tick = HAL_GetTick();
     }
+
+    /* Charger broadcasts a message every second */
+    if (HAL_GetTick() - last_tick > 2000) {
+        bmsdata->is_charger_connected = false;
+    }
+
+	/* no messages to read */
+	if (ringbuffer_is_empty(can2_rx_queue))
+		return -1;
 
 	can_msg_t msg;
 	ringbuffer_dequeue(can2_rx_queue, &msg);
@@ -57,8 +68,10 @@ int8_t get_can2_msg()
 	// TODO list :
 	// 1. Charger connection flag -  have Charger set up with following logic, add correct CAN ID
 	switch (msg.id) {
-	case 0x69:
+    /* CAN ID of message charger sends every second. */
+    case 0x18FF50E5:
         bmsdata->is_charger_connected = true;
+        last_tick = HAL_GetTick();
 		break;
 	default:
 		break;
