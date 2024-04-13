@@ -46,8 +46,10 @@ int8_t get_can1_msg()
 int8_t get_can2_msg()
 {
 	/* no messages to read */
-	if (ringbuffer_is_empty(can2_rx_queue))
+	if (ringbuffer_is_empty(can2_rx_queue)) {
+        bmsdata->is_charger_connected = false;
 		return -1;
+    }
 
 	can_msg_t msg;
 	ringbuffer_dequeue(can2_rx_queue, &msg);
@@ -55,12 +57,8 @@ int8_t get_can2_msg()
 	// TODO list :
 	// 1. Charger connection flag -  have Charger set up with following logic, add correct CAN ID
 	switch (msg.id) {
-	case 0x00:
-		if (msg.data[0] == 0x01) {
-			bmsdata->is_charger_connected = true;
-		} else {
-			bmsdata->is_charger_connected = false;
-		}
+	case 0x69:
+        bmsdata->is_charger_connected = true;
 		break;
 	default:
 		break;

@@ -72,3 +72,6 @@ ctrlp.root
 
 #html
 *.html
+
+#OS specific
+.DS_Store
