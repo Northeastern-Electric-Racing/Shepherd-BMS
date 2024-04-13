@@ -84,12 +84,18 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_sel
 int16_t compute_get_pack_current();
 
 /**
+ * @brief sends max discharge current to Motor Controller
+ *
+ * @param bmsdata
+ */
+void compute_send_mc_discharge_message(acc_data_t* bmsdata);
+
+/**
  * @brief sends max charge/discharge current to Motor Controller
  *
- * @param max_charge
- * @param max_discharge
+ * @param bmsdata
  */
-void compute_send_mc_message(uint16_t max_charge, uint16_t max_discharge);
+void compute_send_mc_charge_message(acc_data_t* bmsdata);
 
 /**
  * @brief updates fault relay

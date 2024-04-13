@@ -43,14 +43,14 @@ uint8_t compute_init()
 	can1.hcan = &hcan1;
 	can1.id_list = can1_id_list;
 	can1.id_list_len = sizeof(can1_id_list) / sizeof(can1_id_list[0]);
-	can1.callback = can_receive_callback;
+	//can1.callback = can_receive_callback;
 	can1_rx_queue = ringbuffer_create(MAX_CAN1_STORAGE, sizeof(can_msg_t));
 	can_init(&can1);
 
 	can2.hcan = &hcan2;
 	can2.id_list = can2_id_list;
 	can2.id_list_len = sizeof(can2_id_list) / sizeof(can2_id_list[0]);
-	can2.callback = can_receive_callback;
+	//can2.callback = can_receive_callback;
 	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 	can_init(&can2);
 
@@ -232,22 +232,38 @@ int16_t compute_get_pack_current()
 	// return -high_current;
 }
 
-void compute_send_mc_message(uint16_t user_max_charge, uint16_t user_max_discharge)
+void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((packed)) {
-		uint16_t maxDischarge;
-		uint16_t maxCharge;
+		uint16_t max_discharge;
+	} discharge_data;
 
-	} mc_msg_data;
+	/* scale to A * 10 */
+	discharge_data.max_discharge = 10 * bmsdata->discharge_limit;
 
-	mc_msg_data.maxCharge	   = user_max_charge;
-	mc_msg_data.maxDischarge = user_max_discharge;
+	can_msg_t mc_msg = {0};
+	mc_msg.id = 0x156;  // 0x0A is the dcl id, 0x22 is the device id set by us
+	mc_msg.len = 8;
+	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
-	can_msg_t mc_msg;
-	mc_msg.id = 0x00; // TODO replace with correct ID;
-	mc_msg.len = sizeof(mc_msg_data);
-	memcpy(mc_msg.data, &mc_msg_data, sizeof(mc_msg_data));
+	can_send_msg(&can1, &mc_msg);
+}
+
+void compute_send_mc_charge_message(acc_data_t* bmsdata)
+{
+
+	struct __attribute__((packed)) {
+		uint16_t max_charge;
+	} charge_data;
+
+	/* scale to A * 10 */
+	charge_data.max_charge = 10 * bmsdata->charge_limit;
+
+	can_msg_t mc_msg = {0};
+	mc_msg.id = 0x176;  // 0x0A is the dcl id, 0x157 is the device id set by us
+	mc_msg.len = 8;
+	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
 
 	can_send_msg(&can1, &mc_msg);
 }
