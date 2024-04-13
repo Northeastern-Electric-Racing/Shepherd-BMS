@@ -17,7 +17,7 @@ void can_receive_callback(CAN_HandleTypeDef* hcan)
 	}
 
 	new_msg.len = rx_header.DLC;
-	new_msg.id	= rx_header.StdId;
+	new_msg.id	= (rx_header.ExtId << 18) | rx_header.StdId;
 	if (hcan == &hcan1) {
 		ringbuffer_enqueue(can1_rx_queue, &new_msg);
 	} else {
@@ -48,19 +48,20 @@ bool first_run = true;
 
 int8_t get_can2_msg()
 {
-
     if (first_run) {
         last_tick = HAL_GetTick();
     }
 
+        
     /* Charger broadcasts a message every second */
     if (HAL_GetTick() - last_tick > 2000) {
         bmsdata->is_charger_connected = false;
     }
 
 	/* no messages to read */
-	if (ringbuffer_is_empty(can2_rx_queue))
+	if (ringbuffer_is_empty(can2_rx_queue)) {
 		return -1;
+    }
 
 	can_msg_t msg;
 	ringbuffer_dequeue(can2_rx_queue, &msg);
