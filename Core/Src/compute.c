@@ -243,7 +243,7 @@ void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 	discharge_data.max_discharge = 10 * bmsdata->discharge_limit;
 
 	can_msg_t mc_msg = {0};
-	mc_msg.id = 0x0A22;  // 0x0A is the dcl id, 0x22 is the device id set by us
+	mc_msg.id = 0x156;  // 0x0A is the dcl id, 0x22 is the device id set by us
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
@@ -261,7 +261,7 @@ void compute_send_mc_charge_message(acc_data_t* bmsdata)
 	charge_data.max_charge = 10 * bmsdata->charge_limit;
 
 	can_msg_t mc_msg = {0};
-	mc_msg.id = 0x0B22;  // 0x0A is the dcl id, 0x157 is the device id set by us
+	mc_msg.id = 0x176;  // 0x0A is the dcl id, 0x157 is the device id set by us
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
 
