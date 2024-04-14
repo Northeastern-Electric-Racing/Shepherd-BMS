@@ -31,6 +31,9 @@ nertimer_t variance_timer;
 int voltage_error = 0; //not faulted
 int therm_error = 0; //not faulted
 
+/* our segments are mapped backwards and in pairs, so they are read in 1,0 then 3,2, etc*/
+const int mapping_correction[12] = {1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10};
+
 uint16_t therm_settle_time_ = 0;
 
 const uint32_t VOLT_TEMP_CONV[91] = { 44260, 43970, 43670, 43450, 43030, 42690, 42340, 41980, 41620,
@@ -102,9 +105,6 @@ int pull_voltages()
 	 * just copy over the contents of the last good reading and the fault status
 	 * from the most recent attempt
 	 */
-
-	/* our segments are mapped backwards and in pairs, so they are read in 1,0 then 3,2, etc*/
-	int mapping_correction[12] = {1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10};
 	
 	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
@@ -196,30 +196,32 @@ int pull_thermistors()
 		LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
 
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+
+			int corrected_index = mapping_correction[c];
 			/*
 			 * Get current temperature LUT. Voltage is adjusted to account for 5V reg
 			 * fluctuations (index 2 is a reading of the ADC 5V ref)
 			 */
-			segment_data[c].thermistor_reading[therm - 1]
+			segment_data[corrected_index].thermistor_reading[therm - 1]
 				= steinhart_est(raw_temp_voltages[c][0] * ((float)(raw_temp_voltages[c][2]) / 50000)
 					+ VOLT_TEMP_CALIB_OFFSET);
-			segment_data[c].thermistor_reading[therm + 15]
+			segment_data[corrected_index].thermistor_reading[therm + 15]
 				= steinhart_est(raw_temp_voltages[c][1] * ((float)(raw_temp_voltages[c][2]) / 50000)
 					+ VOLT_TEMP_CALIB_OFFSET);
 
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
-			segment_data[c].thermistor_value[therm - 1]
-				= segment_data[c].thermistor_reading[therm - 1];
-			segment_data[c].thermistor_value[therm + 15]
-				= segment_data[c].thermistor_reading[therm + 15];
+			segment_data[corrected_index].thermistor_value[therm - 1]
+				= segment_data[corrected_index].thermistor_reading[therm - 1];
+			segment_data[corrected_index].thermistor_value[therm + 15]
+				= segment_data[corrected_index].thermistor_reading[therm + 15];
 
 			if (raw_temp_voltages[c][0] == LTC_BAD_READ
 				|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
-				memcpy(segment_data[c].thermistor_reading, previous_data[c].thermistor_reading,
-					sizeof(segment_data[c].thermistor_reading));
-				memcpy(segment_data[c].thermistor_value, previous_data[c].thermistor_value,
-					sizeof(segment_data[c].thermistor_value));
+				memcpy(segment_data[corrected_index].thermistor_reading, previous_data[c].thermistor_reading,
+					sizeof(segment_data[corrected_index].thermistor_reading));
+				memcpy(segment_data[corrected_index].thermistor_value, previous_data[c].thermistor_value,
+					sizeof(segment_data[corrected_index].thermistor_value));
 			}
 		}
 	}

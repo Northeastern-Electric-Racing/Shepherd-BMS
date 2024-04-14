@@ -66,21 +66,45 @@ const uint8_t STATE_OF_CHARGE_CURVE[18] =
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 15, 24, 56, 74, 85, 95, 98, 100
 };
 
+const uint8_t NO_THERM = 0xFF;
+const uint8_t MUX_OFFSET = 16;
+
 /**
  * @brief Mapping the Relevant Thermistors for each cell based on cell # 
  * @note 0xFF indicates the end of the relevant therms
+ * @note Low side
  */
-const uint8_t RelevantThermMap[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
+const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 {
-	{17, 18, 0xFF, 0xFF, 0xFF},
-	{17, 18, 0xFF, 0xFF, 0xFF},
-	{17, 18, 19, 20, 0xFF},
-	{19, 20, 0xFF, 0xFF, 0xFF},
-	{19, 20, 21, 22, 23},
-	{21, 22, 23, 24, 25},
-	{24, 25, 0xFF, 0xFF, 0xFF},
-	{24, 25, 26, 27, 0xFF},
-	{26, 27, 0xFF, 0xFF, 0xFF}
+	{5, 3, NO_THERM},
+	{12 + MUX_OFFSET, 14 + MUX_OFFSET, NO_THERM},
+	{2, 0, NO_THERM},
+	{9 + MUX_OFFSET, 10 + MUX_OFFSET, 11 + MUX_OFFSET},
+	{8, 6, NO_THERM},
+	{0 + MUX_OFFSET, 2 + MUX_OFFSET, NO_THERM},
+	{12, 14, NO_THERM},
+	{3 + MUX_OFFSET, 4 + MUX_OFFSET, 5 + MUX_OFFSET},
+	{11, 9, NO_THERM},
+	{6 + MUX_OFFSET, 8 + MUX_OFFSET, NO_THERM},
+};
+
+/**
+ * @brief Mapping the Relevant Thermistors for each cell based on cell # 
+ * @note 0xFF indicates the end of the relevant therms
+ * @note High side
+ */
+const uint8_t RELEVANT_THERM_MAP_H[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
+{
+	{5, 3, NO_THERM},
+	{12 + MUX_OFFSET, 14 + MUX_OFFSET, 13 + MUX_OFFSET},
+	{2, 0, NO_THERM},
+	{9 + MUX_OFFSET, 11 + MUX_OFFSET, NO_THERM},
+	{8, 6, NO_THERM},
+	{0 + MUX_OFFSET, 2 + MUX_OFFSET, 1 + MUX_OFFSET},
+	{12, 14, NO_THERM},
+	{3 + MUX_OFFSET, 5 + MUX_OFFSET, NO_THERM},
+	{11, 9, NO_THERM},
+	{6 + MUX_OFFSET, 8 + MUX_OFFSET, 7 + MUX_OFFSET},
 };
 
 /**
@@ -129,10 +153,12 @@ void calc_state_of_charge();
 void calc_cell_temps()
 {
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+		const uint8_t **therm_map = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			int temp_sum = 0;
 			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
-				uint8_t thermNum = RelevantThermMap[cell][therm];
+				uint8_t thermNum = therm_map[cell][therm];
 				temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
 			}
 
@@ -159,7 +185,7 @@ void calc_pack_temps()
 	int total_temp	   = 0;
 	int total_seg_temp = 0;
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 17; therm < 28; therm++) {
+		for (uint8_t therm = 0; therm < 31; therm++) {
 			/* finds out the maximum cell temp and location */
 			if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
 				bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
