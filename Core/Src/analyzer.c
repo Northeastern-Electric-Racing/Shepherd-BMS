@@ -153,13 +153,14 @@ void calc_state_of_charge();
 void calc_cell_temps()
 {
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		const uint8_t **therm_map = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+		const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
 
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			int temp_sum = 0;
 			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
 				uint8_t thermNum = therm_map[cell][therm];
-				temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
+				if (thermNum != THERM_DISABLE)
+					temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
 			}
 
 			/* Takes the average temperature of all the relevant thermistors */
@@ -486,7 +487,7 @@ void analyzer_push(acc_data_t* data)
 	prevbmsdata = bmsdata;
 	bmsdata		= data;
 
-	disable_therms();
+	//disable_therms();
 
 	high_curr_therm_check(); /* = prev if curr > 50 */
 	// diff_curr_therm_check();     /* = prev if curr - prevcurr > 10 */

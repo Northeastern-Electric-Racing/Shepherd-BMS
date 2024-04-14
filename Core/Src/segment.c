@@ -75,6 +75,9 @@ void segment_init()
 		local_config[c][5] = 0x00;
 	}
 	push_chip_configuration();
+
+	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
+	start_timer(&therm_timer, THERM_WAIT_TIME);
 }
 
 void select_therm(uint8_t therm){
@@ -161,7 +164,6 @@ int pull_voltages()
 			dest_index++;
 		}
 
-		
 	}
 
 

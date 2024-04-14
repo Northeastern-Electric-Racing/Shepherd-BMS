@@ -166,7 +166,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 17; cell < 28; cell++)
+    for(uint8_t cell = 0; cell < 15; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].thermistor_reading[cell]);
     }
@@ -176,7 +176,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("Avg Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 17; cell < 28; cell++)
+    for(uint8_t cell = 0; cell < 15; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].thermistor_value[cell]);
     }
@@ -232,16 +232,16 @@ int main(void)
   MX_TIM8_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
- for (int i = 0; i < 58; i++) 
- {
-        HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_SET);
-        HAL_Delay(58-i);
-        HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_SET);
-        HAL_Delay(58-i);
-        HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_RESET);
-       
-}
+ //for (int i = 0; i < 58; i++) 
+ //{
+ //       HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_SET);
+ //       HAL_Delay(58-i);
+ //       HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_RESET);
+ //       HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_SET);
+ //       HAL_Delay(58-i);
+ //       HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_RESET);
+ //      
+  //}
    
 
   //watchdog_init();
