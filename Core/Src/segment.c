@@ -36,13 +36,13 @@ const int mapping_correction[12] = {1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10};
 
 uint16_t therm_settle_time_ = 0;
 
-const uint32_t VOLT_TEMP_CONV[91] = { 44260, 43970, 43670, 43450, 43030, 42690, 42340, 41980, 41620,
-	41240, 40890, 40460, 40040, 39580, 39130, 38660, 38210, 37710, 37210, 36190, 35670, 35160,
-	34620, 34080, 33550, 32990, 32390, 31880, 31270, 30690, 30160, 29590, 28990, 28450, 27880,
-	27270, 26740, 26080, 25610, 25000, 24440, 23880, 23330, 22780, 22240, 21700, 21180, 20660,
-	20150, 19640, 19140, 18650, 18170, 17700, 17230, 16780, 16330, 15890, 15470, 15030, 14640,
-	14230, 13850, 13450, 13070, 12710, 11490, 11170, 10850, 10550, 10250, 9960, 9670, 9400, 9130,
-	8870, 8620, 8370, 8130, 7900, 0 };
+const uint32_t VOLT_TEMP_CONV[91] = {
+157300, 148800, 140300, 131800, 123300, 114800, 108772, 102744, 96716, 90688, 84660, 
+80328, 75996, 71664, 67332, 63000, 59860, 56720, 53580, 50440, 47300, 45004, 42708, 
+40412, 38116, 35820, 34124, 32428, 30732, 29036, 27340, 26076, 24812, 23548, 22284, 
+21020, 20074, 19128, 18182, 17236, 16290, 15576, 14862, 14148, 13434, 12720, 12176, 
+11632, 11088, 10544, 10000, 9584, 9168, 8753, 8337, 7921, 7600, 7279, 6957, 6636, 
+6315, 6065, 5816, 5566, 5317, 5067, 4872, 4676, 4481, 4285, 4090, 3936, 3782, 3627 };
 
 const int32_t VOLT_TEMP_CALIB_OFFSET = 0;
 
@@ -204,12 +204,13 @@ int pull_thermistors()
 			 * Get current temperature LUT. Voltage is adjusted to account for 5V reg
 			 * fluctuations (index 2 is a reading of the ADC 5V ref)
 			 */
-			segment_data[corrected_index].thermistor_reading[therm - 1]
-				= steinhart_est(raw_temp_voltages[c][0] * ((float)(raw_temp_voltages[c][2]) / 50000)
-					+ VOLT_TEMP_CALIB_OFFSET);
-			segment_data[corrected_index].thermistor_reading[therm + 15]
-				= steinhart_est(raw_temp_voltages[c][1] * ((float)(raw_temp_voltages[c][2]) / 50000)
-					+ VOLT_TEMP_CALIB_OFFSET);
+			
+			/* see "thermister decoding" in confluence in shepherd software 22A */
+			uint16_t steinhart_input_low = 10000 * ( (raw_temp_voltages[c][0] / ((float)(raw_temp_voltages[c][2]) / 50000)) - 1 );
+			uint16_t steinhart_input_high = 10000 * ( (raw_temp_voltages[c][1] / ((float)(raw_temp_voltages[c][2]) / 50000)) - 1 );
+
+			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
+			segment_data[corrected_index].thermistor_reading[therm + 15]= steinhart_est(steinhart_input_high);
 
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
@@ -369,12 +370,16 @@ void pull_chip_configuration()
 
 int8_t steinhart_est(uint16_t V)
 {
-	int i = 0;
-	while (V < VOLT_TEMP_CONV[i])
-		i++;
-	return i + MIN_TEMP;
-}
+	/* min temp - max temp with buffer on both */
+	for (int i = -25; i < 80; i++) {
+		if (V < VOLT_TEMP_CONV[i + 25]) {
+			return i;
+		}
+	}
 
+	return 80;
+	
+}
 void disable_gpio_pulldowns()
 {
 	HAL_Delay(1000);
