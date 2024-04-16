@@ -70,7 +70,7 @@ uint8_t compute_init()
 	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
 	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
 
-	HAL_ADC_Start(&hadc1);
+	
 	HAL_ADC_Start(&hadc2);
 
 	return 0;
@@ -493,18 +493,20 @@ uint8_t calc_charger_led_state(acc_data_t* bms_data)
 float read_ref_voltage()
 {
 
+	HAL_ADC_Start(&hadc2);
 	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+
 
 	/* scaled to 2.5 as per datasheet */
 	uint32_t ref_voltage = HAL_ADC_GetValue(&hadc2) ;//* 2.5 / MAX_ADC_RESOLUTION;
 	printf("\rRef Voltage: %u\n", ref_voltage);
 
-	return ref_voltage;
+	return 0;//	ref_voltage;
 }
 
 float read_vout()
 {
-	
+	HAL_ADC_Start(&hadc1);
 	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
 
 	/* scaled to 3.3 */

@@ -98,20 +98,13 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_ADC1_CLK_ENABLE();
 
     __HAL_RCC_GPIOC_CLK_ENABLE();
-    __HAL_RCC_GPIOB_CLK_ENABLE();
     /**ADC1 GPIO Configuration
     PC5     ------> ADC1_IN15
-    PB0     ------> ADC1_IN8
     */
     GPIO_InitStruct.Pin = I_Sense_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     HAL_GPIO_Init(I_Sense_GPIO_Port, &GPIO_InitStruct);
-
-    GPIO_InitStruct.Pin = I_SenseB0_Pin;
-    GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(I_SenseB0_GPIO_Port, &GPIO_InitStruct);
 
     /* ADC1 DMA Init */
     /* ADC1 Init */
@@ -146,12 +139,12 @@ void HAL_ADC_MspInit(ADC_HandleTypeDef* hadc)
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
     /**ADC2 GPIO Configuration
-    PB1     ------> ADC2_IN9
+    PB0     ------> ADC2_IN8
     */
-    GPIO_InitStruct.Pin = I_SenseB1_Pin;
+    GPIO_InitStruct.Pin = I_SenseB0_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(I_SenseB1_GPIO_Port, &GPIO_InitStruct);
+    HAL_GPIO_Init(I_SenseB0_GPIO_Port, &GPIO_InitStruct);
 
   /* USER CODE BEGIN ADC2_MspInit 1 */
 
@@ -178,11 +171,8 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
 
     /**ADC1 GPIO Configuration
     PC5     ------> ADC1_IN15
-    PB0     ------> ADC1_IN8
     */
     HAL_GPIO_DeInit(I_Sense_GPIO_Port, I_Sense_Pin);
-
-    HAL_GPIO_DeInit(I_SenseB0_GPIO_Port, I_SenseB0_Pin);
 
     /* ADC1 DMA DeInit */
     HAL_DMA_DeInit(hadc->DMA_Handle);
@@ -199,9 +189,9 @@ void HAL_ADC_MspDeInit(ADC_HandleTypeDef* hadc)
     __HAL_RCC_ADC2_CLK_DISABLE();
 
     /**ADC2 GPIO Configuration
-    PB1     ------> ADC2_IN9
+    PB0     ------> ADC2_IN8
     */
-    HAL_GPIO_DeInit(I_SenseB1_GPIO_Port, I_SenseB1_Pin);
+    HAL_GPIO_DeInit(I_SenseB0_GPIO_Port, I_SenseB0_Pin);
 
   /* USER CODE BEGIN ADC2_MspDeInit 1 */
 
