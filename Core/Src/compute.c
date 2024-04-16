@@ -162,8 +162,10 @@ void compute_set_fault(int fault_state)
 
 int16_t compute_get_pack_current()
 {
-	static const float GAIN = 6.250; // mV/A
+	static const float GAIN = 5.00; // mV/A
 	static const float OFFSET = 0.0; // mV
+	static const uint8_t num_samples = 10;
+	static int16_t current_accumulator = 0.0; // A
 
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
 	float ref_voltage = read_ref_voltage();
@@ -172,8 +174,13 @@ int16_t compute_get_pack_current()
 	ref_voltage *= 1000;// convert to mV
 	vout *= 1000;
 
-	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN / 1000); // convert to V
-	//printf("Current: %d\n", current);
+	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
+
+	/* Low Pass Filter of Current*/
+	current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
+	current_accumulator = current;
+
+	printf("Current: %d\r\n", current);
 
 	return current;
 
@@ -484,10 +491,10 @@ float read_ref_voltage()
 
 
 	/* scaled to 2.5 as per datasheet */
-	uint32_t ref_voltage = HAL_ADC_GetValue(&hadc2) ;//* 2.5 / MAX_ADC_RESOLUTION;
-	printf("\rRef Voltage: %u\n", ref_voltage);
+	float ref_voltage = HAL_ADC_GetValue(&hadc2) * 5.0 / MAX_ADC_RESOLUTION;
+	//printf("\rRef Voltage: %u\n", ref_voltage);
 
-	return 0;//	ref_voltage;
+	return ref_voltage;
 }
 
 float read_vout()
@@ -496,8 +503,8 @@ float read_vout()
 	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
 
 	/* scaled to 3.3 */
-	uint32_t vout = HAL_ADC_GetValue(&hadc1) ;//* 3.3 / MAX_ADC_RESOLUTION;
-	printf("\rVout: %u\n", vout);
+	float vout = HAL_ADC_GetValue(&hadc1) * 5.0 / MAX_ADC_RESOLUTION;
+	//printf("\rVout: %u\n", vout);
 
 	return vout;
 }
