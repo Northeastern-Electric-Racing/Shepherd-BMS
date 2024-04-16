@@ -60,7 +60,7 @@ void handle_boot(acc_data_t* bmsdata)
 	segment_enable_balancing(false);
 	compute_enable_charging(false);
 	
-
+	compute_set_fault(1);
 	// bmsdata->fault_code = FAULTS_CLEAR;
 
 	request_transition(READY_STATE);
@@ -143,13 +143,13 @@ void handle_faulted(acc_data_t* bmsdata)
 	}
 
 	if (bmsdata->fault_code == FAULTS_CLEAR) {
-		compute_set_fault(0);
+		compute_set_fault(1);
 		request_transition(BOOT_STATE);
 		return;
 	}
 
 	else {
-		compute_set_fault(1);
+		compute_set_fault(0);
 
 		//TODO update to HAL
 		//digitalWrite(CHARGE_SAFETY_RELAY, 0);
