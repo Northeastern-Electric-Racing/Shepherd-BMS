@@ -165,26 +165,12 @@ int16_t compute_get_pack_current()
 	static const float GAIN = 6.250; // mV/A
 	static const float OFFSET = 0.0; // mV
 
-
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	//float ref_voltage = -1;
-	//float vout = -1;
-
-	// if (!HAL_DMA_PollForTransfer(&hdma_adc1, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY))
-	// {
-	// 	ref_voltage = 2.5;//adc_values[1] * 2.5 / MAX_ADC_RESOLUTION;
-	// 	vout = adc_values[0] * 3.3 / MAX_ADC_RESOLUTION;
-	// }
-
-	
-	// remove once DMA verified working, along with functions themselves 
-
 	float ref_voltage = read_ref_voltage();
 	float vout = read_vout();
 
-	vout *= 1000; // convert to mV
-
-	//if (ref_voltage == -1 || vout == -1) return -1;
+	ref_voltage *= 1000;// convert to mV
+	vout *= 1000;
 
 	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN / 1000); // convert to V
 	//printf("Current: %d\n", current);
