@@ -10,7 +10,7 @@
 
 // Firmware limits
 #define MAX_TEMP            65 //degrees C
-#define MIN_TEMP            -15 // deg C
+#define MIN_TEMP            -25 // deg C
 #define MAX_VOLT_MEAS       65535
 #define MIN_VOLT_MEAS       0
 

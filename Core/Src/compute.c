@@ -5,6 +5,7 @@
 #include <assert.h>
 #include "stm32f405xx.h"
 #include <string.h>
+#include <stdio.h>
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
@@ -20,7 +21,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
 extern ADC_HandleTypeDef hadc1;
-extern DMA_HandleTypeDef hdma_adc1;
+extern ADC_HandleTypeDef hadc2;
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
@@ -62,15 +63,15 @@ uint8_t compute_init()
 	if (HAL_TIM_PWM_ConfigChannel(&htim1, &pwm_config, fan_channels[FAN1]) != HAL_OK) return -1;
 	if (HAL_TIM_PWM_ConfigChannel(&htim8, &pwm_config, fan_channels[FAN2]) != HAL_OK) return -1;
 
-	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN1]);
-	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN2]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN3]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
+	// HAL_TIM_PWM_Start(&htim1, fan_channels[FAN1]);
+	// HAL_TIM_PWM_Start(&htim1, fan_channels[FAN2]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN3]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
 
-	//HAL_ADC_Start(&hadc1);
-	//HAL_ADC_Start_DMA(&hadc1, adc_values, 2);
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_Start(&hadc2);
 
 	return 0;
 
@@ -162,7 +163,7 @@ void compute_set_fault(int fault_state)
 int16_t compute_get_pack_current()
 {
 	static const float GAIN = 6.250; // mV/A
-	static const OFFSET = 0.0; // mV
+	static const float OFFSET = 0.0; // mV
 
 
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
@@ -180,13 +181,15 @@ int16_t compute_get_pack_current()
 
 	float ref_voltage = read_ref_voltage();
 	float vout = read_vout();
+
 	vout *= 1000; // convert to mV
 
 	//if (ref_voltage == -1 || vout == -1) return -1;
 
 	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN / 1000); // convert to V
+	//printf("Current: %d\n", current);
 
-	return vout;
+	return current;
 
 	/* TEMP keep last years math until above is verified */
 
@@ -489,28 +492,24 @@ uint8_t calc_charger_led_state(acc_data_t* bms_data)
 
 float read_ref_voltage()
 {
-	adc_config.Channel = ADC_CHANNEL_9;
-	if (HAL_ADC_ConfigChannel(&hadc1, &adc_config) != HAL_OK) return -1;
 
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
 
 	/* scaled to 2.5 as per datasheet */
-	float ref_voltage = HAL_ADC_GetValue(&hadc1) * 2.5 / MAX_ADC_RESOLUTION;
+	uint32_t ref_voltage = HAL_ADC_GetValue(&hadc2) ;//* 2.5 / MAX_ADC_RESOLUTION;
+	printf("\rRef Voltage: %u\n", ref_voltage);
 
 	return ref_voltage;
 }
 
 float read_vout()
 {
-	adc_config.Channel = ADC_CHANNEL_15;
-	if (HAL_ADC_ConfigChannel(&hadc1, &adc_config) != HAL_OK) return -1;
-
-	HAL_ADC_Start(&hadc1);
+	
 	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
 
 	/* scaled to 3.3 */
-	float vout = HAL_ADC_GetValue(&hadc1) * 3.3 / MAX_ADC_RESOLUTION;
+	uint32_t vout = HAL_ADC_GetValue(&hadc1) ;//* 3.3 / MAX_ADC_RESOLUTION;
+	printf("\rVout: %u\n", vout);
 
 	return vout;
 }

@@ -156,15 +156,20 @@ void calc_cell_temps()
 		const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
 
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			uint8_t therm_count = 0;
 			int temp_sum = 0;
 			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
 				uint8_t thermNum = therm_map[cell][therm];
-				if (thermNum != THERM_DISABLE)
+				
+				if (thermNum != NO_THERM) {
 					temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
+					therm_count++;
+				}
 			}
 
 			/* Takes the average temperature of all the relevant thermistors */
-			bmsdata->chip_data[c].cell_temp[cell] = temp_sum / NUM_RELEVANT_THERMS;
+			bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
+			therm_count = 0;
 
 			/* Cleansing value */
 			if (bmsdata->chip_data[c].cell_temp[cell] > MAX_TEMP) {
@@ -186,7 +191,7 @@ void calc_pack_temps()
 	int total_temp	   = 0;
 	int total_seg_temp = 0;
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 0; therm < 31; therm++) {
+		for (uint8_t therm = 0; therm < 32; therm++) {
 			/* finds out the maximum cell temp and location */
 			if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
 				bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
@@ -211,7 +216,7 @@ void calc_pack_temps()
 	}
 
 	/* takes the average of all the cell temperatures */
-	bmsdata->avg_temp = total_temp / 88;
+	bmsdata->avg_temp = total_temp / (NUM_THERMS_PER_CHIP * NUM_CHIPS);
 }
 
 void calc_pack_voltage_stats()

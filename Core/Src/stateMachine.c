@@ -160,7 +160,6 @@ void handle_faulted(acc_data_t* bmsdata)
 void sm_handle_state(acc_data_t* bmsdata)
 {
 	bmsdata->is_charger_connected = compute_charger_connected();
-	bmsdata->max_temp.val = 75;
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	//calculate_pwm(bmsdata);
