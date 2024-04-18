@@ -110,6 +110,10 @@ void handle_charging(acc_data_t* bmsdata)
 
 		/* Check if we should balance */
 		if (sm_balancing_check(bmsdata)) {
+            compute_enable_charging(false);
+            // DEBUGGING: THIS SHOULD STOP CHARGER OUTPUT
+            compute_send_charging_message(
+				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), bmsdata);
 			sm_balance_cells(bmsdata);
 		} else {
 			segment_enable_balancing(false);

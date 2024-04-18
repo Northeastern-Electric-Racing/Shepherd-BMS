@@ -1,6 +1,7 @@
 #include "analyzer.h"
 #include "ringbuffer.h"
 #include "can_handler.h"
+#include "timer.h"
 
 ringbuffer_t* can1_rx_queue = NULL;
 ringbuffer_t* can2_rx_queue = NULL;
@@ -43,18 +44,17 @@ int8_t get_can1_msg()
 	return 0;
 }
 
-uint32_t last_tick;
-bool first_run = true;
-
 int8_t get_can2_msg()
 {
-    if (first_run) {
-        last_tick = HAL_GetTick();
-    }
 
+    static nertimer_t timer;
+
+    if (!is_timer_active(&timer)) {
+        start_timer(&timer, 2000);
+    }
         
     /* Charger broadcasts a message every second */
-    if (HAL_GetTick() - last_tick > 2000) {
+    if (is_timer_expired(&timer)) {
         bmsdata->is_charger_connected = false;
     }
 
@@ -72,7 +72,8 @@ int8_t get_can2_msg()
     /* CAN ID of message charger sends every second. */
     case 0x18FF50E5:
         bmsdata->is_charger_connected = true;
-        last_tick = HAL_GetTick();
+        cancel_timer(&timer);
+        start_timer(&timer, 2000);
 		break;
 	default:
 		break;
