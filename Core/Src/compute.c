@@ -85,40 +85,32 @@ void compute_enable_charging(bool enable_charging)
 int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 {
 	struct __attribute__((packed)) {
-		uint8_t charger_control;
 		uint16_t charger_voltage; // Note the charger voltage sent over should be 10*desired voltage
 		uint16_t charger_current; // Note the charge current sent over should be 10*desired current
-								  // + 3200
-		uint8_t charger_leds;
-		uint16_t reserved2_3;
+        uint8_t charger_control;
+        uint8_t reserved_1;
+        uint16_t reserved_23;
 	} charger_msg_data;
 
 	uint16_t current_to_set = bms_data->charge_limit;
-
-	if (!is_charging_enabled) {
-		charger_msg_data.charger_control = 0b101;
-
-		can_msg_t charger_msg;
-		charger_msg.id = 0x00; // TODO replace with correct ID;
-		charger_msg.len = sizeof(charger_msg_data);
-		memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
-
-		can_send_msg(&can2, &charger_msg);
-
-	}
-
-	// equations taken from TSM2500 CAN protocol datasheet
-	charger_msg_data.charger_control = 0xFC;
-	charger_msg_data.charger_voltage = voltage_to_set * 10;
-	if (current_to_set > 10) {
+    if (current_to_set > 10) {
 		current_to_set = 10;
 	}
-	charger_msg_data.charger_current = current_to_set * 10 + 3200;
-	charger_msg_data.charger_leds	= calc_charger_led_state(bms_data);
-	charger_msg_data.reserved2_3		= 0xFFFF;
+
+	charger_msg_data.charger_voltage = voltage_to_set * 10;
+	charger_msg_data.charger_current = current_to_set * 10;
+
+    if (is_charging_enabled) {
+        charger_msg_data.charger_control = 0x00;  //0：Start charging.
+    } else {
+        charger_msg_data.charger_control = 0xFF;  // 1：battery protection, stop charging
+    }
+
+    charger_msg_data.reserved_1 = 0x00;
+    charger_msg_data.reserved_23 = 0x0000;
 
 	can_msg_t charger_msg;
-	charger_msg.id = 0x00; // TODO replace with correct ID;
+	charger_msg.id = 0x1806E5F4;
 	charger_msg.len = 8;
 	memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
 	can_send_msg(&can2, &charger_msg);
