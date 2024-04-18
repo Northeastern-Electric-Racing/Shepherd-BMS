@@ -144,7 +144,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 3) printf("FAULTED\r\n");
+  else if (current_state == 3) printf("FAULTED: %X\r\n", acc_data->fault_code);
   printf("Raw Cell Voltage:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
@@ -288,12 +288,11 @@ int main(void)
     HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
     
     #ifdef DEBUG_STATS
-    //print_bms_stats(acc_data);
+    print_bms_stats(acc_data);
     #endif
 
     // TODO - possibly optimize timing, every loop might be excessive
     watchdog_pet();
-  
   }
     /* USER CODE END WHILE */
 

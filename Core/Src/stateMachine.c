@@ -1,5 +1,6 @@
 #include "stateMachine.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 extern UART_HandleTypeDef huart4;
@@ -226,11 +227,11 @@ uint32_t sm_fault_return(acc_data_t* accData)
     											// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ _______________DATA 2______________     __THRESHOLD 2__
         fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10*1.04, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ---------------------------UNUSED------------------- */ };
         fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 =                             (fault_data->charge_limit)*10, .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =    0  };
-        fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                       MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
+        //fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                       MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
         fault_table[3]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =    ovr_chgvolt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                MAX_CHARGE_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
         fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                       MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ,  .data_2 = fault_data->is_charger_connected,  .lim_2 = false };
-        fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =    fault_data->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP, .timeout =       LOW_CELL_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ----------------------------------------------------*/  };
-        fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      HIGH_TEMP_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* --------------------------UNUSED--------------------*/  };
+        fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =    fault_data->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ----------------------------------------------------*/  };
+    	//fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* --------------------------UNUSED--------------------*/  };
 		fault_table[7]  = (fault_eval_t) {.id = NULL};
 		// clang-format on
 	}
@@ -241,7 +242,7 @@ uint32_t sm_fault_return(acc_data_t* accData)
 		incr++;
 	}
 
-	return fault_status;
+	return 0;//fault_status;
 }
 
 uint32_t sm_fault_eval(fault_eval_t* index)
@@ -258,7 +259,7 @@ uint32_t sm_fault_eval(fault_eval_t* index)
         case LE: condition1 = index->data_1 <= index->lim_1; break;
         case EQ: condition1 = index->data_1 == index->lim_1; break;
 		case NEQ: condition1 = index->data_1 != index->lim_1; break;
-        case NOP:
+        case NOP: condition1 = false;
 		default: condition1 = true;
     }
 
@@ -270,23 +271,20 @@ uint32_t sm_fault_eval(fault_eval_t* index)
         case LE: condition2 = index->data_2 <= index->lim_2; break;
         case EQ: condition2 = index->data_2 == index->lim_2; break;
 		case NEQ: condition2 = index->data_2 != index->lim_2; break;
-        case NOP: 
+        case NOP: condition2 = false;
 		default: condition2 = true;
     }
 	// clang-format on
 
-	if (!is_timer_active(&index->timer) && condition1 && condition2) 
+	if (!(condition1 || condition2)) {
+		cancel_timer(&index->timer);
+	}
+	else if (is_timer_expired(&index->timer) && condition1 && condition2) {
+		return index->code;
+	}
+	else if (!is_timer_active(&index->timer) && condition1 && condition2)
 	{
 		start_timer(&index->timer, index->timeout);
-	}
-
-	else if (is_timer_active(&index->timer) && condition1 && condition2) {
-		if (is_timer_expired(&index->timer)) {
-			return index->code;
-		}
-		if (!(condition1 && condition2)) {
-			cancel_timer(&index->timer);
-		}
 	}
 
 	return 0;

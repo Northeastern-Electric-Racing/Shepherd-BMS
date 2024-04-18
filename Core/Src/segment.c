@@ -122,7 +122,7 @@ int pull_voltages()
 	 * just copy over the contents of the last good reading and the fault status
 	 * from the most recent attempt
 	 */
-	
+
 	//int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800};
 	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
@@ -163,7 +163,7 @@ int pull_voltages()
 
 			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
 			if (j == 5) continue;
-			
+
 			if (abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
 				> MAX_VOLT_DELTA) {
 				segment_data[corrected_index].voltage_reading[dest_index] = previous_data[i].voltage_reading[dest_index];
@@ -177,15 +177,14 @@ int pull_voltages()
 				segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
 				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
 			}
-
 			dest_index++;
 		}
-
 	}
 
 
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
+
 	return 0;
 }
 
@@ -216,24 +215,24 @@ int pull_thermistors()
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 
 			int corrected_index = mapping_correction[c];
-			/*	
+			/*
 			 * Get current temperature LUT. Voltage is adjusted to account for 5V reg
 			 * fluctuations (index 2 is a reading of the ADC 5V ref)
 			 */
-			
+
 			/* see "thermister decoding" in confluence in shepherd software 22A */
 			uint16_t steinhart_input_low = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
 			uint16_t steinhart_input_high = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
   
-			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
-			segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
+			segment_data[corrected_index].thermistor_reading[therm - 1] = 25;//steinhart_est(steinhart_input_low);
+			segment_data[corrected_index].thermistor_reading[therm + 15] = 25;//steinhart_est(steinhart_input_high);
 
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
 			segment_data[corrected_index].thermistor_value[therm - 1]
-				= segment_data[corrected_index].thermistor_reading[therm - 1];
+				= 25;//segment_data[corrected_index].thermistor_reading[therm - 1];
 			segment_data[corrected_index].thermistor_value[therm + 15]
-				= segment_data[corrected_index].thermistor_reading[therm + 15];
+				= 25;//segment_data[corrected_index].thermistor_reading[therm + 15];
 
 			if (raw_temp_voltages[c][0] == LTC_BAD_READ
 				|| raw_temp_voltages[c][1] == LTC_BAD_READ) {

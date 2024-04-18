@@ -26,9 +26,9 @@
 #define MAX_DELTA_V         0.015
 #define BAL_MIN_V           4.00
 #define MAX_CELL_TEMP       55
-#define MAX_CELL_CURR       700 // Amps per BMS cell
+#define MAX_CELL_CURR       500 // Amps per BMS cell
 #define MAX_CELL_TEMP_BAL   45
-#define MAX_CHG_CELL_CURR   20  
+#define MAX_CHG_CELL_CURR   20
 
 // Algorithm settings
 #define CHARGE_TIMEOUT      300000 // 5 minutes, may need adjustment
