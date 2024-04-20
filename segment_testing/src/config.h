@@ -5,7 +5,7 @@
 #define CELLS_S 10
 #define CELLS_P 7
 #define THERMISTORS 11
-#define CHIPS 2
+#define CHIPS 12
 
 // DATA COLLECTION RATES
 #define VOLT_DELAY 500
