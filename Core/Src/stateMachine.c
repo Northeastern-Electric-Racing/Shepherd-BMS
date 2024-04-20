@@ -191,6 +191,8 @@ void sm_handle_state(acc_data_t* bmsdata)
 		compute_send_cell_temp_message(bmsdata);
 		compute_send_cell_data_message(bmsdata);
 		compute_send_segment_temp_message(bmsdata);
+		compute_send_mc_discharge_message(bmsdata);
+		compute_send_mc_charge_message(bmsdata);
 		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
 	}
 	// clang-format on
