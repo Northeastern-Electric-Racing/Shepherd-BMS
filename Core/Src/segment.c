@@ -163,10 +163,6 @@ int pull_voltages()
 
 			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
 			if (j == 5) continue;
-			if (segment_voltages[i][j] == 22190)
-			{
-				printf("\r\n\n\nFUCKCKCKCKCKCKKCCKKC\n");
-			}
 
 			if (NULL/*abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
 				> MAX_VOLT_DELTA*/) {
@@ -228,8 +224,8 @@ int pull_thermistors()
 			uint16_t steinhart_input_low = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
 			uint16_t steinhart_input_high = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
   
-			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
-			segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
+			segment_data[corrected_index].thermistor_reading[therm - 1] = 25;//steinhart_est(steinhart_input_low);
+			segment_data[corrected_index].thermistor_reading[therm + 15] = 25;//steinhart_est(steinhart_input_high);
 
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
