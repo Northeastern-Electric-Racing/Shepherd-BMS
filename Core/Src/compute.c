@@ -280,7 +280,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 	acc_status_msg_data.pack_health  = 0;
 
 	can_msg_t acc_msg;
-	acc_msg.id = 0x00; // TODO replace with correct ID;
+	acc_msg.id = 0x80; // TODO replace with correct ID;
 	acc_msg.len = sizeof(acc_status_msg_data);
 	memcpy(acc_msg.data, &acc_status_msg_data, sizeof(acc_status_msg_data));
 
@@ -304,7 +304,7 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
     bms_status_msg_data.balance = (uint8_t)(balance);
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x81; // TODO replace with correct ID;
     acc_msg.len = sizeof(bms_status_msg_data);
     memcpy(acc_msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
@@ -320,7 +320,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
     shutdown_control_msg_data.mpeState = mpe_state;
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x82; // TODO replace with correct ID;
     acc_msg.len = sizeof(shutdown_control_msg_data);
     memcpy(acc_msg.data, &shutdown_control_msg_data, sizeof(shutdown_control_msg_data));
 
@@ -344,7 +344,7 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
     cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x83; // TODO replace with correct ID;
     acc_msg.len = sizeof(cell_data_msg_data);
     memcpy(acc_msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
@@ -370,7 +370,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
     cell_voltage_msg_data.openVoltage = __builtin_bswap16(open_voltage);
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x87; // TODO replace with correct ID;
     acc_msg.len = sizeof(cell_voltage_msg_data);
     memcpy(acc_msg.data, &cell_voltage_msg_data, sizeof(cell_voltage_msg_data));
 
@@ -390,7 +390,7 @@ void compute_send_current_message(acc_data_t* bmsdata)
     current_status_msg_data.pack_curr = bmsdata->pack_current;
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x86; // TODO replace with correct ID;
     acc_msg.len = sizeof(current_status_msg_data);
     memcpy(acc_msg.data, &current_status_msg_data, sizeof(current_status_msg_data));
 
@@ -420,7 +420,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
     cell_temp_msg_data.average_temp = bmsdata->avg_temp;
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x84; // TODO replace with correct ID;
     acc_msg.len = sizeof(cell_temp_msg_data);
     memcpy(acc_msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
 
@@ -445,7 +445,7 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
     memcpy(buff, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x85; // TODO replace with correct ID;
     acc_msg.len = sizeof(segment_temp_msg_data);
     memcpy(acc_msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
