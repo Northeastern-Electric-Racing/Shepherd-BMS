@@ -1,5 +1,6 @@
 #include "analyzer.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 acc_data_t* bmsdata;
 
@@ -327,10 +328,15 @@ void calc_dcl()
 				current_limit = tmpDCL;
 		}
 	}
-
+	
 	/* ceiling for current limit */
 	if (current_limit > MAX_CELL_CURR) {
 		bmsdata->discharge_limit = MAX_CELL_CURR;
+	}
+
+	/* protection against being init to a high value */
+	if (bmsdata->discharge_limit > MAX_CELL_CURR) {
+		bmsdata->discharge_limit = 0;
 	}
 
 	else if (!is_timer_active(&dcl_timer) && current_limit < 5) {
@@ -343,24 +349,32 @@ void calc_dcl()
 		start_timer(&dcl_timer, 500);
 	}
 
-	else if (is_timer_active(&dcl_timer)) {
-		if (is_timer_expired(&dcl_timer)) {
+	else if (is_timer_active(&dcl_timer)) 
+	{
+		if (is_timer_expired(&dcl_timer)) 
+		{
 			bmsdata->discharge_limit = current_limit;
 		}
-		if (current_limit > 5) {
+		if (current_limit > 5) 
+		{
 			bmsdata->discharge_limit = current_limit;
 			cancel_timer(&dcl_timer);
 		}
 
-		else {
+		else 
+		{
 			bmsdata->discharge_limit = prevbmsdata->discharge_limit;
 		}
-	} else {
+	} 
+	else 
+	{
 		bmsdata->discharge_limit = current_limit;
 	}
 
 	if (bmsdata->discharge_limit > DCDC_CURRENT_DRAW)
+	{
 		bmsdata->discharge_limit -= DCDC_CURRENT_DRAW;
+	}
 }
 
 void calc_cont_dcl()

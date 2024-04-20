@@ -143,9 +143,8 @@ int pull_voltages()
 	 */
 	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, segment_voltages) == -1) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			int corrected_index = mapping_correction[i];
-			memcpy(segment_data[corrected_index].voltage_reading, previous_data[i].voltage_reading,
-				sizeof(segment_data[corrected_index].voltage_reading));
+			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
+				sizeof(segment_data[i].voltage_reading));
 
 			printf("Bad voltage read\n");
 		}
@@ -154,6 +153,7 @@ int pull_voltages()
 
 	/* If the read was successful, copy the voltage data */
 	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
+
 		int corrected_index = mapping_correction[i];
 
 		/* correction to account for missing index, see more info below */
@@ -163,19 +163,23 @@ int pull_voltages()
 
 			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
 			if (j == 5) continue;
+			if (segment_voltages[i][j] == 22190)
+			{
+				printf("\r\n\n\nFUCKCKCKCKCKCKKCCKKC\n");
+			}
 
-			if (abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
-				> MAX_VOLT_DELTA) {
+			if (NULL/*abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
+				> MAX_VOLT_DELTA*/) {
 				segment_data[corrected_index].voltage_reading[dest_index] = previous_data[i].voltage_reading[dest_index];
 				segment_data[corrected_index].bad_volt_diff_count[dest_index]++;
 
 				if (segment_data[corrected_index].bad_volt_diff_count[dest_index] > MAX_VOLT_DELTA_COUNT) {
 					segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-					segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
+					segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[corrected_index][j];
 				}
 			} else {
 				segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
+				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[corrected_index][j];
 			}
 			dest_index++;
 		}

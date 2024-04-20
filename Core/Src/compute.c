@@ -180,8 +180,6 @@ int16_t compute_get_pack_current()
 	current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
 	current_accumulator = current;
 
-	printf("Current: %d\r\n", current);
-
 	return current;
 
 	/* TEMP keep last years math until above is verified */
