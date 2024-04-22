@@ -125,17 +125,17 @@ int _write(int file, char* ptr, int len) {
 
 const void print_bms_stats(acc_data_t *acc_data)
 {
-
 	static nertimer_t debug_stat_timer;
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
-  //TODO get this from eeprom once implemented 
+  //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
 	//printf("Prev Fault: %#x", previousFault);
-  printf("Current: %f\r\n", (float)(acc_data->pack_current) / 10.0);
+  printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
+  printf("Current * 10: %d\r\n", (float)(acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
+  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
   printf("DCL: %d\r\n", acc_data->discharge_limit);
   printf("CCL: %d\r\n", acc_data->charge_limit);
   printf("SoC: %d\r\n", acc_data->soc);

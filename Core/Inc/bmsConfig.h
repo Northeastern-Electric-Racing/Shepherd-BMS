@@ -52,6 +52,6 @@
 
 #define DCDC_CURRENT_DRAW   2 // in A, this is generous
 
-#define CAN_MESSAGE_WAIT    10
+#define CAN_MESSAGE_WAIT    5
 
 #endif

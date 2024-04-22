@@ -160,16 +160,14 @@ void handle_faulted(acc_data_t* bmsdata)
 
 void sm_handle_state(acc_data_t* bmsdata)
 {
+	static uint8_t can_msg_to_send = 0;
+	enum {ACC_STATUS, CURRENT, BMS_STATUS, CELL_TEMP, CELL_DATA, SEGMENT_TEMP, MC_DISCHARGE, MC_CHARGE, MAX_MSGS};
+
 	bmsdata->is_charger_connected = compute_charger_connected();
-	bool test = true;
-	if (test)
-	{
-		
-	}
+
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	//calculate_pwm(bmsdata);
-	
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
@@ -177,26 +175,47 @@ void sm_handle_state(acc_data_t* bmsdata)
 	}
 	// TODO needs testing - (update, seems to work fine)
 	handler_LUT[current_state](bmsdata);
-	
-	sm_broadcast_current_limit(bmsdata);
 
+	sm_broadcast_current_limit(bmsdata);
 
 	/* send relevant CAN msgs */
 	// clang-format off
 	if (is_timer_expired(&can_msg_timer) || !is_timer_active(&can_msg_timer))
 	{
-		compute_send_acc_status_message(bmsdata);
-		compute_send_current_message(bmsdata);
-		compute_send_bms_status_message(bmsdata, current_state, segment_is_balancing());
-		compute_send_cell_temp_message(bmsdata);
-		compute_send_cell_data_message(bmsdata);
-		compute_send_segment_temp_message(bmsdata);
-		compute_send_mc_discharge_message(bmsdata);
-		compute_send_mc_charge_message(bmsdata);
+		switch (can_msg_to_send) {
+			case ACC_STATUS:
+				compute_send_acc_status_message(bmsdata);
+				break;
+			case CURRENT:
+				compute_send_current_message(bmsdata);
+				break;
+			case BMS_STATUS:
+				compute_send_bms_status_message(bmsdata, current_state, segment_is_balancing());
+				break;
+			case CELL_TEMP:
+				compute_send_cell_temp_message(bmsdata);
+				break;
+			case CELL_DATA:
+				compute_send_cell_data_message(bmsdata);
+				break;
+			case SEGMENT_TEMP:
+				compute_send_segment_temp_message(bmsdata);
+				break;
+			case MC_DISCHARGE:
+				//compute_send_mc_discharge_message(bmsdata);
+				break;
+			case MC_CHARGE:
+				compute_send_mc_charge_message(bmsdata);
+				break;
+
+			default:
+				break;
+		}
+
 		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
+		can_msg_to_send = (can_msg_to_send + 1) % MAX_MSGS;
 	}
 	// clang-format on
-	
 }
 
 void request_transition(BMSState_t next_state)
@@ -240,10 +259,18 @@ uint32_t sm_fault_return(acc_data_t* accData)
         fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =    fault_data->max_temp.val, .optype_1 = GT, .lim_1 =                                          MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ----------------------------------------------------*/  };
     	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                    900, .timeout =      LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* --------------------------UNUSED--------------------*/  };
 		fault_table[7]  = (fault_eval_t) {.id = NULL};
+
+		cancel_timer(&ovr_curr_timer);
+		cancel_timer(&ovr_chgcurr_timer);
+		cancel_timer(&undr_volt_timer);
+		cancel_timer(&ovr_chgvolt_timer);
+		cancel_timer(&ovr_volt_timer);
+		cancel_timer(&low_cell_timer);
+		cancel_timer(&high_temp_timer);
 		// clang-format on
 	}
 
-	else 
+	else
 	{
 		fault_table[0].data_1 = fault_data->pack_current;
 		fault_table[1].data_1 = fault_data->pack_current;
@@ -279,7 +306,7 @@ uint32_t sm_fault_eval(fault_eval_t* index)
         case EQ: condition1 = index->data_1 == index->lim_1; break;
 		case NEQ: condition1 = index->data_1 != index->lim_1; break;
         case NOP: condition1 = false;
-		default: condition1 = true;
+		default: condition1 = false;
     }
 
     switch (index->optype_2)
@@ -291,20 +318,26 @@ uint32_t sm_fault_eval(fault_eval_t* index)
         case EQ: condition2 = index->data_2 == index->lim_2; break;
 		case NEQ: condition2 = index->data_2 != index->lim_2; break;
         case NOP: condition2 = false;
-		default: condition2 = true;
+		default: condition2 = false;
     }
 	// clang-format on
 
 	if (!(condition1 || condition2)) {
 		cancel_timer(&index->timer);
+		return 0;
 	}
-	else if (is_timer_expired(&index->timer) && condition1 && condition2) {
+	else if (is_timer_expired(&index->timer) && ((condition1 && condition2) || (condition1 && index->optype_2 == NOP))) {
 		return index->code;
 	}
-	else if (!is_timer_active(&index->timer) && condition1 && condition2)
-	{
+	else if (!is_timer_active(&index->timer) && ((condition1 && condition2) || (condition1 && index->optype_2 == NOP))) {
+		//printf("\t\t\t*******Starting faulting......\r\n");
 		start_timer(&index->timer, index->timeout);
 	}
+
+	/* if (index->code == CELL_VOLTAGE_TOO_LOW) {
+		printf("\t\t\t*******Not fautled!!!!!\t%d\r\n", !is_timer_active(&index->timer) && condition1 && condition2);
+		printf("More stats...\t:%d\t%d\r\n", is_timer_expired(&index->timer), index->timer.active);
+	} */
 
 	return 0;
 }
