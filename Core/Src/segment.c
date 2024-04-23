@@ -237,15 +237,15 @@ int pull_thermistors()
 			uint16_t steinhart_input_low = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
 			uint16_t steinhart_input_high = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
   
-			segment_data[corrected_index].thermistor_reading[therm - 1] = 25;//steinhart_est(steinhart_input_low);
-			segment_data[corrected_index].thermistor_reading[therm + 15] = 25;//steinhart_est(steinhart_input_high);
+			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
+			segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
 
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
 			segment_data[corrected_index].thermistor_value[therm - 1]
-				= 25;//segment_data[corrected_index].thermistor_reading[therm - 1];
+				= segment_data[corrected_index].thermistor_reading[therm - 1];
 			segment_data[corrected_index].thermistor_value[therm + 15]
-				= 25;//segment_data[corrected_index].thermistor_reading[therm + 15];
+				= segment_data[corrected_index].thermistor_reading[therm + 15];
 
 			if (raw_temp_voltages[c][0] == LTC_BAD_READ
 				|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
