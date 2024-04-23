@@ -203,6 +203,19 @@ int pull_thermistors()
 
 	uint16_t raw_temp_voltages[NUM_CHIPS][6];
 
+	// Set GPIO expander to output
+	uint8_t i2c_write_data[NUM_CHIPS][3];
+  	for(int chip = 0; chip < NUM_CHIPS; chip++) {
+		i2c_write_data[chip][0] = 0x40; // GPIO expander addr
+		i2c_write_data[chip][1] = 0x00; // GPIO direction addr
+		i2c_write_data[chip][2] = 0x00; // Set all to output
+	}
+	uint8_t comm_reg_data[NUM_CHIPS][6];
+
+	serialize_i2c_msg(i2c_write_data, comm_reg_data);
+	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+	LTC6804_stcomm(ltc68041, 24);
+
 	/* Rotate through all thermistor pairs (we can poll two at once) */
 	for (int therm = 1; therm <= 16; therm++) {
 		/* Sets multiplexors to select thermistors */
