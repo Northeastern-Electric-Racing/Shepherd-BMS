@@ -326,8 +326,13 @@ int main(void)
     print_bms_stats(acc_data);
     #endif
 
+<<<<<<< Updated upstream
     // TODO - possibly optimize timing, every loop might be excessive
     watchdog_pet();
+=======
+    HAL_IWDG_Refresh(&hiwdg);
+
+>>>>>>> Stashed changes
   }
     /* USER CODE END WHILE */
 
