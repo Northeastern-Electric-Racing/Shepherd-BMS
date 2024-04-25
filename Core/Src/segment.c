@@ -64,7 +64,7 @@ void segment_init()
 	ltc68041 = malloc(sizeof(ltc_config));
 	LTC6804_initialize(ltc68041, &hspi1, GPIOA, SPI_1_CS_Pin);
 
-	 pull_chip_configuration();
+	pull_chip_configuration();
 
 	for (int c = 0; c < NUM_CHIPS; c++) {
 		local_config[c][0] = 0xF8;
@@ -203,6 +203,19 @@ int pull_thermistors()
 
 	uint16_t raw_temp_voltages[NUM_CHIPS][6];
 
+	/* Set GPIO expander to output */
+	uint8_t i2c_write_data[NUM_CHIPS][3];
+  	for(int chip = 0; chip < NUM_CHIPS; chip++) {
+		i2c_write_data[chip][0] = 0x40; // GPIO expander addr
+		i2c_write_data[chip][1] = 0x00; // GPIO direction addr
+		i2c_write_data[chip][2] = 0x00; // Set all to output
+	}
+	uint8_t comm_reg_data[NUM_CHIPS][6];
+
+	serialize_i2c_msg(i2c_write_data, comm_reg_data);
+	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+	LTC6804_stcomm(ltc68041, 24);
+
 	/* Rotate through all thermistor pairs (we can poll two at once) */
 	for (int therm = 1; therm <= 16; therm++) {
 		/* Sets multiplexors to select thermistors */
@@ -210,6 +223,7 @@ int pull_thermistors()
 		HAL_Delay(5);
 		push_chip_configuration();
 		LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
+		//HAL_Delay(3);
 		LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
 
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
@@ -223,16 +237,16 @@ int pull_thermistors()
 			/* see "thermister decoding" in confluence in shepherd software 22A */
 			uint16_t steinhart_input_low = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
 			uint16_t steinhart_input_high = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
-  
-			segment_data[corrected_index].thermistor_reading[therm - 1] = 25;//steinhart_est(steinhart_input_low);
-			segment_data[corrected_index].thermistor_reading[therm + 15] = 25;//steinhart_est(steinhart_input_high);
+
+			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
+			segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
 
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
 			segment_data[corrected_index].thermistor_value[therm - 1]
-				= 25;//segment_data[corrected_index].thermistor_reading[therm - 1];
+				= segment_data[corrected_index].thermistor_reading[therm - 1];
 			segment_data[corrected_index].thermistor_value[therm + 15]
-				= 25;//segment_data[corrected_index].thermistor_reading[therm + 15];
+				= segment_data[corrected_index].thermistor_reading[therm + 15];
 
 			if (raw_temp_voltages[c][0] == LTC_BAD_READ
 				|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
@@ -247,8 +261,8 @@ int pull_thermistors()
 
 	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
 	//variance_therm_check();
-	// standard_dev_therm_check();
-	// averaging_therm_check();
+	//standard_dev_therm_check();
+	//averaging_therm_check();
 	//discard_neutrals();
 
 	return 0; /* Read successfully */

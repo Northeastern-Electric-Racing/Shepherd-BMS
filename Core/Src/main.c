@@ -163,14 +163,23 @@ const void print_bms_stats(acc_data_t *acc_data)
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
     }
     printf("\r\n");
-} 
+  }
 
   printf("Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++)
-    {
-        printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+    printf("Chip %d:  ", c);
+    const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+
+    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+      for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
+        uint8_t thermNum = therm_map[cell][therm];
+
+        if (thermNum != NO_THERM) {
+          printf("%d ", acc_data->chip_data[c].thermistor_reading[thermNum]);
+        }
+      }
+      printf(" | ");
     }
     printf("\r\n");
   }
@@ -178,9 +187,35 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("Avg Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < 15; cell++)
+    printf("Chip %d:  ", c);
+    const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+
+    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+      for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
+        uint8_t thermNum = therm_map[cell][therm];
+
+        if (thermNum != NO_THERM) {
+          printf("%d ", acc_data->chip_data[c].thermistor_value[thermNum]);
+        }
+      }
+      printf(" | ");
+    }
+    printf("\r\n");
+  }
+
+  printf("Raw Therm Readings (NOT Reordered by cell)\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    const uint8_t (*therm_list)[NUM_THERMS_PER_CHIP] = (c % 2 == 1) ? POPULATED_THERM_LIST_L : POPULATED_THERM_LIST_H;
+
+    for(uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++)
     {
-        printf("%d\t", acc_data->chip_data[c].thermistor_value[cell]);
+      if(POPULATED_THERM_LIST_L[therm]) {
+        printf("%d ", acc_data->chip_data[c].thermistor_reading[therm]);
+      }
+      else {
+        //printf("Bad: %d ", acc_data->chip_data[c].thermistor_reading[therm]);
+      }
     }
     printf("\r\n");
   }
