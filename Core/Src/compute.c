@@ -284,7 +284,9 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 	acc_msg.len = sizeof(acc_status_msg_data);
 	memcpy(acc_msg.data, &acc_status_msg_data, sizeof(acc_status_msg_data));
 
-	can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+
+	can_send_msg(can_line, &acc_msg);
 }
 
 void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
@@ -308,7 +310,8 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
     acc_msg.len = sizeof(bms_status_msg_data);
     memcpy(acc_msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
@@ -324,7 +327,8 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
     acc_msg.len = sizeof(shutdown_control_msg_data);
     memcpy(acc_msg.data, &shutdown_control_msg_data, sizeof(shutdown_control_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
@@ -348,7 +352,8 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
     acc_msg.len = sizeof(cell_data_msg_data);
     memcpy(acc_msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage,
@@ -374,7 +379,8 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
     acc_msg.len = sizeof(cell_voltage_msg_data);
     memcpy(acc_msg.data, &cell_voltage_msg_data, sizeof(cell_voltage_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 void compute_send_current_message(acc_data_t* bmsdata)
@@ -394,7 +400,8 @@ void compute_send_current_message(acc_data_t* bmsdata)
     acc_msg.len = sizeof(current_status_msg_data);
     memcpy(acc_msg.data, &current_status_msg_data, sizeof(current_status_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 // TODO ADD THIS BACK
@@ -424,7 +431,8 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
     acc_msg.len = sizeof(cell_temp_msg_data);
     memcpy(acc_msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 void compute_send_segment_temp_message(acc_data_t* bmsdata)
@@ -449,7 +457,8 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
     acc_msg.len = sizeof(segment_temp_msg_data);
     memcpy(acc_msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
+    can_send_msg(can_line, &acc_msg);
 }
 
 uint8_t calc_charger_led_state(acc_data_t* bms_data)

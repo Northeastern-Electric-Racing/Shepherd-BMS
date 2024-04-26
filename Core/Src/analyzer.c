@@ -159,24 +159,6 @@ const uint8_t POPULATED_THERM_LIST_L[NUM_THERMS_PER_CHIP] =
  * @note disabling both unpopulaed (see above) and populated but bad cells ( not great permanent solution)
  */
 
-// @NICK: the 1s right now on all chips but 1 refelct population map above. Chip 0 should be done
-// but the remaining chips are not completed
-const uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] = 	
-{
-	{1,0,1,0,1,1,0,1,1,1,1,1,0,0,1,1,0,1,1,0,1,0,0,1,1,1,1,0,0,1,1,1}, //DONE
-	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
-};
-
 // clang-format on
 
 nertimer_t analysisTimer;
@@ -190,32 +172,50 @@ void high_curr_therm_check();
 void diff_curr_therm_check();
 void calc_state_of_charge();
 
+/* we are not corrctly mapping each therm reading to the correct cell. So, we are taking the average of all good readings (not disabled) for a given chip, 
+ and assigning that to be the cell val for every cell in the chip*/
+
 void calc_cell_temps()
 {
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
-
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		//const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+			uint16_t therm_sum = 0;
 			uint8_t therm_count = 0;
-			int temp_sum = 0;
-			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
-				uint8_t thermNum = therm_map[cell][therm];
 
-				if (thermNum != NO_THERM) {
-					temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
-					therm_count++;
-				}
+			for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
+			
+				if (THERM_DISABLE[c][therm]) continue;
+
+				therm_sum += bmsdata->chip_data[c].thermistor_value[therm];
+				therm_count++;
 			}
+			
+			uint8_t temp_avg = therm_sum / therm_count;
+			for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 
-			/* Takes the average temperature of all the relevant thermistors */
-			bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
-			therm_count = 0;
+				/* Takes the average temperature of all the relevant thermistors */
+				bmsdata->chip_data[c].cell_temp[cell] = temp_avg;
+			}
+			// uint8_t therm_count = 0;
+			// int temp_sum = 0;
+			// for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
+			// 	uint8_t thermNum = therm_map[cell][therm];
+
+			// 	if (thermNum != NO_THERM) {
+			// 		temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
+			// 		therm_count++;
+			// 	}
+			// }
+
+			// /* Takes the average temperature of all the relevant thermistors */
+			// bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
+			// therm_count = 0;
 
 			/* Cleansing value */
 			if (bmsdata->chip_data[c].cell_temp[cell] > MAX_TEMP) {
 				bmsdata->chip_data[c].cell_temp[cell] = MAX_TEMP;
 			}
-		}
+		
 	}
 }
 
@@ -230,9 +230,13 @@ void calc_pack_temps()
 	bmsdata->min_temp.chipIndex = 0;
 	int total_temp	   = 0;
 	int total_seg_temp = 0;
+	int total_accepted  = 0;
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 0; therm < 32; therm++) {
+		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* finds out the maximum cell temp and location */
+
+			if (THERM_DISABLE[c][therm]) continue;
+			total_accepted++;
 			if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
 				bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
 				bmsdata->max_temp.cellNum = c;
@@ -249,6 +253,8 @@ void calc_pack_temps()
 			total_temp += bmsdata->chip_data[c].thermistor_value[therm];
 			total_seg_temp += bmsdata->chip_data[c].thermistor_value[therm];
 		}
+
+		/* only for NERO */
 		if (c % 2 == 0) {
 			bmsdata->segment_average_temps[c / 2] = total_seg_temp / 22;
 			total_seg_temp						  = 0;
@@ -256,7 +262,7 @@ void calc_pack_temps()
 	}
 
 	/* takes the average of all the cell temperatures */
-	bmsdata->avg_temp = total_temp / (NUM_THERMS_PER_CHIP * NUM_CHIPS);
+	bmsdata->avg_temp = total_temp / (total_accepted);
 }
 
 void calc_pack_voltage_stats()

@@ -171,20 +171,15 @@ const void print_bms_stats(acc_data_t *acc_data)
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
-    const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
 
     for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-      for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
-        uint8_t thermNum = therm_map[cell][therm];
 
-        if (thermNum != NO_THERM) {
-          printf("%d ", acc_data->chip_data[c].thermistor_reading[thermNum]);
+          if (THERM_DISABLE[c][cell]) continue;
+          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
         }
-      }
-      printf(" | ");
+      
     }
     printf("\r\n");
-  }
 
   printf("Avg Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
