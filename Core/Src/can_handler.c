@@ -2,12 +2,14 @@
 #include "ringbuffer.h"
 #include "can_handler.h"
 #include "timer.h"
+#include <stdio.h>
 
 ringbuffer_t* can1_rx_queue = NULL;
 ringbuffer_t* can2_rx_queue = NULL;
 
 void can_receive_callback(CAN_HandleTypeDef* hcan)
 {
+	msg_received = true;
 	CAN_RxHeaderTypeDef rx_header;
 	can_msg_t new_msg;
 	/* Read in CAN message */
@@ -43,26 +45,15 @@ int8_t get_can1_msg()
 	}
 	return 0;
 }
-
+bool msg_received = false;
+can_msg_t msg_from_charger;
 int8_t get_can2_msg()
 {
-
-    static nertimer_t timer;
-
-    if (!is_timer_active(&timer)) {
-        start_timer(&timer, 2000);
-    }
-        
-    /* Charger broadcasts a message every second */
-    if (is_timer_expired(&timer)) {
-        bmsdata->is_charger_connected = false;
-    }
 
 	/* no messages to read */
 	if (ringbuffer_is_empty(can2_rx_queue)) {
 		return -1;
     }
-
 	can_msg_t msg;
 	ringbuffer_dequeue(can2_rx_queue, &msg);
 
@@ -71,9 +62,9 @@ int8_t get_can2_msg()
 	switch (msg.id) {
     /* CAN ID of message charger sends every second. */
     case 0x18FF50E5:
+		msg_received = true;
         bmsdata->is_charger_connected = true;
-        cancel_timer(&timer);
-        start_timer(&timer, 2000);
+		msg_from_charger = msg;
 		break;
 	default:
 		break;

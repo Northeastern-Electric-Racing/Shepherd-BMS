@@ -311,19 +311,30 @@ int main(void)
     segment_retrieve_data(acc_data->chip_data);
     acc_data->pack_current = compute_get_pack_current();
     
-    
-    
+    if (msg_received) {
+      printf("charger can msg received\r\n");
+      printf("Data 1: %X\r\n", msg_from_charger.data[0]);
+      printf("Data 2: %X\r\n", msg_from_charger.data[1]);
+      printf("Data 3: %X\r\n", msg_from_charger.data[2]);
+      printf("Data 4: %X\r\n", msg_from_charger.data[3]);
+      printf("Error 1: %X\r\n", msg_from_charger.data[4] & 0b00000001);
+      printf("Error 2: %X\r\n", msg_from_charger.data[4] & 0b00000010);
+      printf("Error 3: %X\r\n", msg_from_charger.data[4] & 0b00000100);
+      printf("Error 4: %X\r\n", msg_from_charger.data[4] & 0b00001000);
+      printf("Error 5: %X\r\n", msg_from_charger.data[4] & 0b00010000);
+      msg_received = false;
+    }
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
     sm_handle_state(acc_data);
 
     /* check for inbound CAN */
-   // get_can1_msg();
-   // get_can2_msg();
+    // get_can1_msg();
+    get_can2_msg();
     
     #ifdef DEBUG_STATS
-    print_bms_stats(acc_data);
+    //print_bms_stats(acc_data);
     #endif
   
     HAL_IWDG_Refresh(&hiwdg);

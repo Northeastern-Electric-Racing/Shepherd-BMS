@@ -4,6 +4,7 @@
 #include "can.h"
 #include "stm32f4xx_hal.h"
 #include <stdint.h>
+#include "ringbuffer.h"
 
 
 #define NUM_INBOUND_CAN1_IDS 1
@@ -14,15 +15,16 @@ extern CAN_HandleTypeDef hcan2;
 
 extern ringbuffer_t* can1_rx_queue;
 extern ringbuffer_t* can2_rx_queue;
-
-static const uint16_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
+extern bool msg_received;
+extern 	can_msg_t msg_from_charger;
+static const uint32_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
 	//CANID_X,
 	0x0000
 };
 
-static const uint16_t can2_id_list[NUM_INBOUND_CAN2_IDS] = {
+static const uint32_t can2_id_list[NUM_INBOUND_CAN2_IDS] = {
 	//CANID_X,
-	0x0000
+	0x18FF50E5
 };
 
 

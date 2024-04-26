@@ -82,7 +82,7 @@ void compute_enable_charging(bool enable_charging)
 	is_charging_enabled = enable_charging;
 }
 
-int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
+int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set, acc_data_t* bms_data)
 {
 	struct __attribute__((packed)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be 10*desired voltage
@@ -91,11 +91,6 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
         uint8_t reserved_1;
         uint16_t reserved_23;
 	} charger_msg_data;
-
-	uint16_t current_to_set = bms_data->charge_limit;
-    if (current_to_set > 10) {
-		current_to_set = 10;
-	}
 
 	charger_msg_data.charger_voltage = voltage_to_set * 10;
 	charger_msg_data.charger_current = current_to_set * 10;
