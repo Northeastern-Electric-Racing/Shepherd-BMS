@@ -103,12 +103,22 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 
     charger_msg_data.reserved_1 = 0x00;
     charger_msg_data.reserved_23 = 0x0000;
-
+	printf("SENDING CHARGING MESSAGE!!!!!!!\r\n");
 	can_msg_t charger_msg;
 	charger_msg.id = 0x1806E5F4;
 	charger_msg.len = 8;
 	memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
-	can_send_msg(&can2, &charger_msg);
+	uint8_t temp = charger_msg.data[0];
+	charger_msg.data[0] = charger_msg.data[1];
+	charger_msg.data[1] = temp;
+	temp = charger_msg.data[2];
+	charger_msg.data[2] = charger_msg.data[3];
+	charger_msg.data[3] = temp;
+
+	HAL_StatusTypeDef res = can_send_msg(&can2, &charger_msg);
+	if(res != HAL_OK) {
+		printf("CAN ERROR CODE %X", res);
+	}
 
 	return 0;
 }

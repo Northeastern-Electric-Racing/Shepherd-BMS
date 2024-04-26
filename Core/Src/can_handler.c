@@ -44,7 +44,7 @@ int8_t get_can1_msg()
 	return 0;
 }
 bool msg_received = false;
-can_msg_t msg_from_charger;
+can_msg_t* msg_from_charger;
 int8_t get_can2_msg()
 {
 
@@ -62,7 +62,7 @@ int8_t get_can2_msg()
     case 0x18FF50E5:
 		msg_received = true;
         bmsdata->is_charger_connected = true;
-		msg_from_charger = msg;
+		msg_from_charger = &msg;
 		break;
 	default:
 		break;

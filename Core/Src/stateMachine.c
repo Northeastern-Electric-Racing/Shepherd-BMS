@@ -115,7 +115,7 @@ void handle_charging(acc_data_t* bmsdata)
             // DEBUGGING: THIS SHOULD STOP CHARGER OUTPUT
             compute_send_charging_message(
 				0, 0, bmsdata);
-			//sm_balance_cells(bmsdata);
+			sm_balance_cells(bmsdata);
 		} else {
 			segment_enable_balancing(false);
 		}
@@ -289,7 +289,13 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(&fault_table[incr]);
+		//if (incr == 5) { 
+		//	faul
+		//}
 		incr++;
+		// } else {
+		// 	fault_status |= 0;
+		// }
 	}
 
 	return fault_status;

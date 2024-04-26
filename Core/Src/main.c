@@ -131,9 +131,23 @@ const void print_bms_stats(acc_data_t *acc_data)
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
+    // printf("charger can msg received\r\n");
+    // printf("Data 1: %d\r\n", msg_from_charger->data[0]);
+    // printf("Data 2: %d\r\n", msg_from_charger->data[1]);
+    // printf("Data 3: %d\r\n", msg_from_charger->data[2]);
+    // printf("Data 4: %d\r\n", msg_from_charger->data[3]);
+    // printf("Error: %X (hex)\r\n\n", msg_from_charger->data[4]);
+    // printf("Reserved 1: %d\r\n", msg_from_charger->data[5]);
+    // printf("Reserved 2: %d\r\n", msg_from_charger->data[6]);
+    // printf("Reserved 3: %d\r\n", msg_from_charger->data[7]);
+  // printf("Error 1: %X\r\n", (msg_from_charger.data[4] & 0b00000001));
+  // printf("Error 2: %X\r\n", msg_from_charger.data[4] & 0b00000010);
+  // printf("Error 3: %X\r\n", msg_from_charger.data[4] & 0b00000100);
+  // printf("Error 4: %X\r\n", msg_from_charger.data[4] & 0b00001000);
+  // printf("Error 5: %X\r\n", msg_from_charger.data[4] & 0b00010000);
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
-	//printf("Prev Fault: %#x", previousFault);
+	// printf("Prev Fault: %#x", previousFault);
   printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
   printf("Current * 10: %d\r\n", (float)(acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
@@ -142,30 +156,31 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("CCL: %d\r\n", acc_data->charge_limit);
   printf("SoC: %d\r\n", acc_data->soc);
   printf("Is Balancing?: %d\r\n", segment_is_balancing());
+  printf("Faultcode: %d\r\n", acc_data->fault_code);
   printf("State: ");
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
   else if (current_state == 3) printf("FAULTED: %X\r\n", acc_data->fault_code);
-  printf("Raw Cell Voltage:\r\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
-    {
-        printf("%d\t", acc_data->chip_data[c].voltage_reading[cell]);
-    }
-    printf("\r\n");
-  }
+  // printf("Raw Cell Voltage:\r\n");
+  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+  //   {
+  //       printf("%d\t", acc_data->chip_data[c].voltage_reading[cell]);
+  //   }
+  //   printf("\r\n");
+  // }
 
-  printf("Open Cell Voltage:\r\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
-    {
-        printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
-    }
-    printf("\r\n");
-  }
+  // printf("Open Cell Voltage:\r\n");
+  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+  //   {
+  //       printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
+  //   }
+  //   printf("\r\n");
+  // }
 
   printf("Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
@@ -310,19 +325,19 @@ int main(void)
     segment_retrieve_data(acc_data->chip_data);
     acc_data->pack_current = compute_get_pack_current();
     
-    if (msg_received) {
-      printf("charger can msg received\r\n");
-      printf("Data 1: %X\r\n", msg_from_charger.data[0]);
-      printf("Data 2: %X\r\n", msg_from_charger.data[1]);
-      printf("Data 3: %X\r\n", msg_from_charger.data[2]);
-      printf("Data 4: %X\r\n", msg_from_charger.data[3]);
-      printf("Error 1: %X\r\n", msg_from_charger.data[4] & 0b00000001);
-      printf("Error 2: %X\r\n", msg_from_charger.data[4] & 0b00000010);
-      printf("Error 3: %X\r\n", msg_from_charger.data[4] & 0b00000100);
-      printf("Error 4: %X\r\n", msg_from_charger.data[4] & 0b00001000);
-      printf("Error 5: %X\r\n", msg_from_charger.data[4] & 0b00010000);
-      msg_received = false;
-    }
+    // if (msg_received) {
+    //   printf("charger can msg received\r\n");
+    //   printf("Data 1: %X\r\n", msg_from_charger.data[0]);
+    //   printf("Data 2: %X\r\n", msg_from_charger.data[1]);
+    //   printf("Data 3: %X\r\n", msg_from_charger.data[2]);
+    //   printf("Data 4: %X\r\n", msg_from_charger.data[3]);
+    //   printf("Error 1: %X\r\n", msg_from_charger.data[4] & 0b00000001);
+    //   printf("Error 2: %X\r\n", msg_from_charger.data[4] & 0b00000010);
+    //   printf("Error 3: %X\r\n", msg_from_charger.data[4] & 0b00000100);
+    //   printf("Error 4: %X\r\n", msg_from_charger.data[4] & 0b00001000);
+    //   printf("Error 5: %X\r\n", msg_from_charger.data[4] & 0b00010000);
+    //   msg_received = false;
+    // }
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
