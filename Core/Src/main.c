@@ -235,7 +235,6 @@ const void print_bms_stats(acc_data_t *acc_data)
   */
 int main(void)
 {
-
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -334,7 +333,7 @@ int main(void)
     get_can2_msg();
     
     #ifdef DEBUG_STATS
-    //print_bms_stats(acc_data);
+    print_bms_stats(acc_data);
     #endif
   
     HAL_IWDG_Refresh(&hiwdg);
