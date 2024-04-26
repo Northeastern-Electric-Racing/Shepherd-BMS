@@ -7,7 +7,6 @@ ringbuffer_t* can2_rx_queue = NULL;
 
 void can_receive_callback(CAN_HandleTypeDef* hcan)
 {
-	msg_received = true;
 	CAN_RxHeaderTypeDef rx_header;
 	can_msg_t new_msg;
 	/* Read in CAN message */
@@ -18,6 +17,7 @@ void can_receive_callback(CAN_HandleTypeDef* hcan)
 	}
 
 	new_msg.len = rx_header.DLC;
+	// TODO: Make receiving compatible with standard IDs
 	new_msg.id	= rx_header.ExtId;
 	if (hcan == &hcan1) {
 		ringbuffer_enqueue(can1_rx_queue, &new_msg);
@@ -43,8 +43,7 @@ int8_t get_can1_msg()
 	}
 	return 0;
 }
-bool msg_received = false;
-can_msg_t* msg_from_charger;
+
 int8_t get_can2_msg()
 {
 
@@ -60,9 +59,7 @@ int8_t get_can2_msg()
 	switch (msg.id) {
     /* CAN ID of message charger sends every second. */
     case 0x18FF50E5:
-		msg_received = true;
         bmsdata->is_charger_connected = true;
-		msg_from_charger = &msg;
 		break;
 	default:
 		break;
