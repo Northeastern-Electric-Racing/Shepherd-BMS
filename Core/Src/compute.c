@@ -90,6 +90,9 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
         uint8_t charger_control;
         uint8_t reserved_1;
         uint16_t reserved_23;
+        uint8_t charger_control;
+        uint8_t reserved_1;
+        uint16_t reserved_23;
 	} charger_msg_data;
 
 	charger_msg_data.charger_voltage = voltage_to_set * 10;

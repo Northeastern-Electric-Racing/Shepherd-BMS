@@ -1,8 +1,6 @@
 #include "analyzer.h"
 #include "ringbuffer.h"
 #include "can_handler.h"
-#include "timer.h"
-#include <stdio.h>
 
 ringbuffer_t* can1_rx_queue = NULL;
 ringbuffer_t* can2_rx_queue = NULL;
@@ -53,6 +51,7 @@ int8_t get_can2_msg()
 	/* no messages to read */
 	if (ringbuffer_is_empty(can2_rx_queue)) {
 		return -1;
+    }
     }
 	can_msg_t msg;
 	ringbuffer_dequeue(can2_rx_queue, &msg);
