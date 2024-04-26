@@ -202,7 +202,7 @@ void sm_handle_state(acc_data_t* bmsdata)
 				compute_send_segment_temp_message(bmsdata);
 				break;
 			case MC_DISCHARGE:
-				//compute_send_mc_discharge_message(bmsdata);
+				compute_send_mc_discharge_message(bmsdata);
 				break;
 			case MC_CHARGE:
 				compute_send_mc_charge_message(bmsdata);
