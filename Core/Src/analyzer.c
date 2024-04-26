@@ -156,17 +156,25 @@ const uint8_t POPULATED_THERM_LIST_L[NUM_THERMS_PER_CHIP] =
  * @brief Selecting thermistors to ignore
  *
  * @note True / 1 will disable the thermistor
+ * @note disabling both unpopulaed (see above) and populated but bad cells ( not great permanent solution)
  */
-const uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] =
+
+// @NICK: the 1s right now on all chips but 1 refelct population map above. Chip 0 should be done
+// but the remaining chips are not completed
+const uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] = 	
 {
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0},
-	{0,0,0,0,0,0,0,0,0,0,0}
+	{1,0,1,0,1,1,0,1,1,1,1,1,0,0,1,1,0,1,1,0,1,0,0,1,1,1,1,0,0,1,1,1}, //DONE
+	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,0,0,0,1,0,0,1,0,0,1,0,0,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
+	{0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1},
 };
 
 // clang-format on
@@ -566,9 +574,9 @@ void disable_therms()
 	// the pack */
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 17; therm < 28; therm++) {
+		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* If 2D LUT shows therm should be disable */
-			if (THERM_DISABLE[(c - 1) / 2][therm - 17]) {
+			if (THERM_DISABLE[c][therm]) {
 				/* Nullify thermistor by setting to pack average */
 				bmsdata->chip_data[c].thermistor_value[therm] = temp_rep_1;
 			}
