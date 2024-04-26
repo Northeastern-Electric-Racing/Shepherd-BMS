@@ -78,7 +78,7 @@ void init_ready()
 void handle_ready(acc_data_t* bmsdata)
 {
 	/* check for charger connection */
-	if (NULL/*compute_charger_connected()*/) { //TODO Fix once charger works
+	if (compute_charger_connected()) { //TODO Fix once charger works
 		request_transition(CHARGING_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
@@ -111,6 +111,10 @@ void handle_charging(acc_data_t* bmsdata)
 
 		/* Check if we should balance */
 		if (sm_balancing_check(bmsdata)) {
+            compute_enable_charging(false);
+            // DEBUGGING: THIS SHOULD STOP CHARGER OUTPUT
+            compute_send_charging_message(
+				0, 0, bmsdata);
 			sm_balance_cells(bmsdata);
 		} else {
 			segment_enable_balancing(false);
@@ -119,7 +123,7 @@ void handle_charging(acc_data_t* bmsdata)
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) || !is_timer_active(&charger_message_timer)) {
 			compute_send_charging_message(
-				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), bmsdata);
+				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), 5, bmsdata);
 			start_timer(&charger_message_timer, CHARGE_MESSAGE_WAIT);
 		} else {
 			//TODO update to HAL
@@ -285,7 +289,13 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(&fault_table[incr]);
+		//if (incr == 5) { 
+		//	faul
+		//}
 		incr++;
+		// } else {
+		// 	fault_status |= 0;
+		// }
 	}
 
 	return fault_status;

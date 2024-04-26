@@ -47,7 +47,7 @@ void compute_enable_charging(bool enable_charging);
  *
  * @return Returns a fault if we are not able to communicate with charger
  */
-int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data);
+int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set, acc_data_t* bms_data);
 
 /**
  * @brief Returns if charger interlock is engaged, indicating charger LV connector is plugged in

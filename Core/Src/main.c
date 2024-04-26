@@ -133,7 +133,7 @@ const void print_bms_stats(acc_data_t *acc_data)
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
-	//printf("Prev Fault: %#x", previousFault);
+	// printf("Prev Fault: %#x", previousFault);
   printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
   printf("Current * 10: %d\r\n", (float)(acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
@@ -142,6 +142,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("CCL: %d\r\n", acc_data->charge_limit);
   printf("SoC: %d\r\n", acc_data->soc);
   printf("Is Balancing?: %d\r\n", segment_is_balancing());
+  printf("Faultcode: %d\r\n", acc_data->fault_code);
   printf("State: ");
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
@@ -304,17 +305,14 @@ int main(void)
      */
     segment_retrieve_data(acc_data->chip_data);
     acc_data->pack_current = compute_get_pack_current();
-    
-    
-    
 
     /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
     sm_handle_state(acc_data);
 
     /* check for inbound CAN */
-   // get_can1_msg();
-   // get_can2_msg();
+    // get_can1_msg();
+    get_can2_msg();
     
     #ifdef DEBUG_STATS
     print_bms_stats(acc_data);
@@ -536,11 +534,11 @@ static void MX_CAN2_Init(void)
 
   /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 16;
+  hcan2.Init.Prescaler = 2;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
   hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan2.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan2.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan2.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan2.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
   hcan2.Init.AutoWakeUp = DISABLE;

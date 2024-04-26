@@ -17,7 +17,8 @@ void can_receive_callback(CAN_HandleTypeDef* hcan)
 	}
 
 	new_msg.len = rx_header.DLC;
-	new_msg.id	= rx_header.StdId;
+	// TODO: Make receiving compatible with standard IDs
+	new_msg.id	= rx_header.ExtId;
 	if (hcan == &hcan1) {
 		ringbuffer_enqueue(can1_rx_queue, &new_msg);
 	} else {
@@ -45,22 +46,20 @@ int8_t get_can1_msg()
 
 int8_t get_can2_msg()
 {
-	/* no messages to read */
-	if (ringbuffer_is_empty(can2_rx_queue))
-		return -1;
 
+	/* no messages to read */
+	if (ringbuffer_is_empty(can2_rx_queue)) {
+		return -1;
+    }
 	can_msg_t msg;
 	ringbuffer_dequeue(can2_rx_queue, &msg);
 
 	// TODO list :
 	// 1. Charger connection flag -  have Charger set up with following logic, add correct CAN ID
 	switch (msg.id) {
-	case 0x00:
-		if (msg.data[0] == 0x01) {
-			bmsdata->is_charger_connected = true;
-		} else {
-			bmsdata->is_charger_connected = false;
-		}
+    /* CAN ID of message charger sends every second. */
+    case 0x18FF50E5:
+        bmsdata->is_charger_connected = true;
 		break;
 	default:
 		break;
