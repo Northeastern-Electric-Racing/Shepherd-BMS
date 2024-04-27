@@ -127,7 +127,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance_state);
+void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance);
 
 /**
  * @brief sends shutdown control message
