@@ -167,7 +167,7 @@ void sm_handle_state(acc_data_t* bmsdata)
 	static uint8_t can_msg_to_send = 0;
 	enum {ACC_STATUS, CURRENT, BMS_STATUS, CELL_TEMP, CELL_DATA, SEGMENT_TEMP, MC_DISCHARGE, MC_CHARGE, MAX_MSGS};
 
-	bmsdata->is_charger_connected = compute_charger_connected();
+	bmsdata->is_charger_connected = false;//compute_charger_connected();
 
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
