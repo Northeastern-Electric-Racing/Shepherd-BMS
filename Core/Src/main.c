@@ -135,7 +135,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   // question - should we read from eeprom here, or do that on loop and store locally?
 	// printf("Prev Fault: %#x", previousFault);
   printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
-  printf("Current * 10: %d\r\n", (float)(acc_data->pack_current));
+  printf("Current * 10: %d\r\n", (acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
   printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
   printf("DCL: %d\r\n", acc_data->discharge_limit);
@@ -168,55 +168,33 @@ const void print_bms_stats(acc_data_t *acc_data)
     printf("\r\n");
   }
 
-  printf("Cell Temps:\r\n");
+  printf("Filtered Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
 
-    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
           if (THERM_DISABLE[c][cell]) continue;
           printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
         }
       
+        printf("\r\n");
     }
-    printf("\r\n");
+    
 
-  printf("Avg Cell Temps:\r\n");
+  printf("UnFiltered Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
-    const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
 
-    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-      for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
-        uint8_t thermNum = therm_map[cell][therm];
+    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
-        if (thermNum != NO_THERM) {
-          printf("%d ", acc_data->chip_data[c].thermistor_value[thermNum]);
+          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
         }
-      }
-      printf(" | ");
+      
+        printf("\r\n");
     }
-    printf("\r\n");
-  }
-
-  printf("Raw Therm Readings (NOT Reordered by cell)\r\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    const uint8_t (*therm_list)[NUM_THERMS_PER_CHIP] = (c % 2 == 1) ? POPULATED_THERM_LIST_L : POPULATED_THERM_LIST_H;
-
-    for(uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++)
-    {
-      if(POPULATED_THERM_LIST_L[therm]) {
-        printf("%d ", acc_data->chip_data[c].thermistor_reading[therm]);
-      }
-      else {
-        //printf("Bad: %d ", acc_data->chip_data[c].thermistor_reading[therm]);
-      }
-    }
-    printf("\r\n");
-  }
 
   start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
 }

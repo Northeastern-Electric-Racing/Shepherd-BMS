@@ -244,9 +244,9 @@ int pull_thermistors()
 			/* Directly update for a set time from start up due to therm voltages
 			 * needing to settle */
 			segment_data[corrected_index].thermistor_value[therm - 1]
-				= 25;//segment_data[corrected_index].thermistor_reading[therm - 1];
+				= segment_data[corrected_index].thermistor_reading[therm - 1];
 			segment_data[corrected_index].thermistor_value[therm + 15]
-				= 25;//segment_data[corrected_index].thermistor_reading[therm + 15];
+				= segment_data[corrected_index].thermistor_reading[therm + 15];
 
 			
 

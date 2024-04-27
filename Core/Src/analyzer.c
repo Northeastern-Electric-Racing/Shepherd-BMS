@@ -121,6 +121,22 @@ const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 	{6 + MUX_OFFSET, 8 + MUX_OFFSET, NO_THERM},
 };
 
+uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] = 	
+{
+	{1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0}, 
+	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1 ,1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1},
+	{0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1 ,1, 0, 0, 0, 0, 0, 0, 1 ,0},
+	{1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+	{0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0},
+	{1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0},
+	{1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 0}, // possible some wrong here
+	{1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+	{1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0},
+	{1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+	{1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1},
+};
+
 /*
  * List of therms that we actually read from, NOT reordered by cell
  */
@@ -195,6 +211,11 @@ void calc_cell_temps()
 
 				/* Takes the average temperature of all the relevant thermistors */
 				bmsdata->chip_data[c].cell_temp[cell] = temp_avg;
+
+				/* Cleansing value */
+				if (bmsdata->chip_data[c].cell_temp[cell] > MAX_TEMP) {
+					bmsdata->chip_data[c].cell_temp[cell] = MAX_TEMP;
+				}
 			}
 			// uint8_t therm_count = 0;
 			// int temp_sum = 0;
@@ -211,10 +232,7 @@ void calc_cell_temps()
 			// bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
 			// therm_count = 0;
 
-			/* Cleansing value */
-			if (bmsdata->chip_data[c].cell_temp[cell] > MAX_TEMP) {
-				bmsdata->chip_data[c].cell_temp[cell] = MAX_TEMP;
-			}
+			
 		
 	}
 }
