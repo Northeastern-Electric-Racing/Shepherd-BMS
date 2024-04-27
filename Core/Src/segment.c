@@ -343,13 +343,13 @@ void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_
 {
 	for (int c = 0; c < NUM_CHIPS; c++) {
 		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			if (discharge_config[c][cell])
-				discharge_commands[c] |= 1 << cell;
+			if (discharge_config[mapping_correction[c]][cell])
+				discharge_commands[mapping_correction[c]] |= 1 << cell;
 			else
-				discharge_commands[c] &= ~(1 << cell);
+				discharge_commands[mapping_correction[c]] &= ~(1 << cell);
 		}
 
-		configure_discharge(c, discharge_commands[c]);
+		configure_discharge(mapping_correction[c], discharge_commands[mapping_correction[c]]);
 	}
 	push_chip_configuration();
 }
