@@ -349,7 +349,7 @@ void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_
 				discharge_commands[mapping_correction[c]] &= ~(1 << cell);
 		}
 
-		configure_discharge(mapping_correction[c], discharge_commands[mapping_correction[c]]);
+		configure_discharge(c, discharge_commands[c]);
 	}
 	push_chip_configuration();
 }
