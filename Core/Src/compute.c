@@ -340,7 +340,7 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
     } cell_data_msg_data;
 
     cell_data_msg_data.high_cell_voltage = bmsdata->max_voltage.val;
-    cell_data_msg_data.high_cell_id = bmsdata->max_voltage.chipIndex;
+    cell_data_msg_data.high_cell_id = (bmsdata->max_voltage.chipIndex << 4) | bmsdata->max_voltage.cellNum;
     cell_data_msg_data.low_cell_voltage = bmsdata->min_voltage.val;
     cell_data_msg_data.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) | bmsdata->min_voltage.cellNum;
     cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
