@@ -116,7 +116,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 	charger_msg.data[2] = charger_msg.data[3];
 	charger_msg.data[3] = temp;
 
-	HAL_StatusTypeDef res = can_send_msg(&can2, &charger_msg);
+	HAL_StatusTypeDef res = can_send_extended_msg(&can2, &charger_msg);
 	if(res != HAL_OK) {
 		printf("CAN ERROR CODE %X", res);
 	}
