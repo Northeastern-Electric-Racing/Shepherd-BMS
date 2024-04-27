@@ -176,7 +176,7 @@ const void print_bms_stats(acc_data_t *acc_data)
     for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
           if (THERM_DISABLE[c][cell]) continue;
-          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+          printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
         }
       
         printf("\r\n");
