@@ -85,10 +85,10 @@ typedef struct {
 	uint16_t pack_ocv;
 	uint16_t pack_res;
 
-	uint16_t discharge_limit;
-	uint16_t charge_limit;
-	uint16_t cont_DCL;
-	uint16_t cont_CCL;
+	int16_t discharge_limit;
+	int16_t charge_limit;
+	int16_t cont_DCL;
+	int16_t cont_CCL;
 	uint8_t soc;
 
 	int8_t segment_average_temps[NUM_SEGMENTS];
