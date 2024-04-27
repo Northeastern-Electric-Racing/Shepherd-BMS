@@ -235,8 +235,8 @@ int pull_thermistors()
 			 */
 
 			/* see "thermister decoding" in confluence in shepherd software 22A */
-			uint16_t steinhart_input_low = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
-			uint16_t steinhart_input_high = 10000 * (float)( (raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
+			uint16_t steinhart_input_low = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
+			uint16_t steinhart_input_high = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
 
 			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
 			segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
