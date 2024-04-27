@@ -271,9 +271,9 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 		uint8_t pack_health;
 	} acc_status_msg_data;
 
-	acc_status_msg_data.packVolt	    = __builtin_bswap16(bmsdata->pack_voltage);
-	acc_status_msg_data.pack_current = __builtin_bswap16((uint16_t)(bmsdata->pack_current)); // convert with 2s complement
-	acc_status_msg_data.pack_ah	    = __builtin_bswap16(0);
+	acc_status_msg_data.packVolt	    = bmsdata->pack_voltage;
+	acc_status_msg_data.pack_current = (uint16_t) (bmsdata->pack_current); // convert with 2s complement
+	acc_status_msg_data.pack_ah	    = 0;
 	acc_status_msg_data.pack_soc	    = bmsdata->soc;
 	acc_status_msg_data.pack_health  = 0;
 
@@ -305,7 +305,7 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
 
     can_msg_t acc_msg;
     acc_msg.id = 0x81; // TODO replace with correct ID;
-    acc_msg.len = sizeof(bms_status_msg_data);
+    acc_msg.len = sizeof(bms_status_msg_data);	
     memcpy(acc_msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
 	can_t* can_line = (bmsdata->is_charger_connected) ? &can2 : &can1;
@@ -367,10 +367,10 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
     } cell_voltage_msg_data;
 
     cell_voltage_msg_data.cellID = cell_id;
-    cell_voltage_msg_data.instantVoltage = __builtin_bswap16(instant_voltage);
-    cell_voltage_msg_data.internalResistance = __builtin_bswap16(internal_Res);
+    cell_voltage_msg_data.instantVoltage = instant_voltage;
+    cell_voltage_msg_data.internalResistance = internal_Res;
     cell_voltage_msg_data.shunted = shunted;
-    cell_voltage_msg_data.openVoltage = __builtin_bswap16(open_voltage);
+    cell_voltage_msg_data.openVoltage = open_voltage;
 
     can_msg_t acc_msg;
     acc_msg.id = 0x87; // TODO replace with correct ID;
