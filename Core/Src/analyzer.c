@@ -193,7 +193,7 @@ void calc_state_of_charge();
 
 void calc_cell_temps()
 {
-	static uint8_t num_samples = 5; /* Samples for LPF */
+	static uint8_t num_samples = 7; /* Samples for LPF */
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		//const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
@@ -212,8 +212,8 @@ void calc_cell_temps()
 
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			bmsdata->chip_data[c].thermistor_value[therm] = temp_avg;
-			bmsdata->chip_data[c].thermistor_value[therm] = (int8_t)((((int64_t)prevbmsdata->chip_data[c].thermistor_value[therm] * (num_samples - 1))
-													 				 + bmsdata->chip_data[c].thermistor_value[therm]) / num_samples);
+			bmsdata->chip_data[c].thermistor_value[therm] = (int8_t)((((int64_t)prevbmsdata->chip_data[c].thermistor_value[therm] * (num_samples - 5))
+													 				 + bmsdata->chip_data[c].thermistor_value[therm] * 5) / num_samples);
 		}
 
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {

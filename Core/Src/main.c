@@ -142,7 +142,6 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("CCL: %d\r\n", acc_data->charge_limit);
   printf("SoC: %d\r\n", acc_data->soc);
   printf("Is Balancing?: %d\r\n", segment_is_balancing());
-  printf("Faultcode: %d\r\n", acc_data->fault_code);
   printf("State: ");
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
