@@ -11,8 +11,9 @@ uint32_t bms_fault = FAULTS_CLEAR;
 BMSState_t current_state = BOOT_STATE;
 uint32_t previousFault = 0;
 
-nertimer_t charge_timeout = { .active = false };
-nertimer_t charge_cut_off_timer = { .active = false };
+nertimer_t charger_settle_countup = { .active = false };
+nertimer_t charger_max_volt_timer = { .active = false };
+nertimer_t charger_settle_countdown = { .active = false };
 
 nertimer_t can_msg_timer = { .active = false };
 
@@ -88,7 +89,7 @@ void handle_ready(acc_data_t* bmsdata)
 
 void init_charging()
 {
-	cancel_timer(&charge_timeout);
+	cancel_timer(&charger_settle_countup);
 	return;
 }
 
@@ -97,37 +98,25 @@ void handle_charging(acc_data_t* bmsdata)
 	if (!compute_charger_connected()) {
 		request_transition(READY_STATE);
 		return;
-	} else {
+
+	} 
+	else {
+
 		/* Check if we should charge */
-		if (sm_charging_check(bmsdata)) {
-			//TODO update to HAL 
-			//digitalWrite(CHARGE_SAFETY_RELAY, 1);
-			compute_enable_charging(true);
-		} else {
-			//TODO update to HAL
-			//digitalWrite(CHARGE_SAFETY_RELAY, 0);
-			compute_enable_charging(false);
-		}
+		if (sm_charging_check(bmsdata)) compute_enable_charging(true);
+		else { compute_enable_charging(false); compute_send_charging_message(0, 0, bmsdata); }
 
 		/* Check if we should balance */
-		if (sm_balancing_check(bmsdata)) {
-            compute_enable_charging(false);
-            // DEBUGGING: THIS SHOULD STOP CHARGER OUTPUT
-            compute_send_charging_message(
-				0, 0, bmsdata);
-			sm_balance_cells(bmsdata);
-		} else {
-			segment_enable_balancing(false);
-		}
+		if (sm_balancing_check(bmsdata)) sm_balance_cells(bmsdata);
+		else segment_enable_balancing(false);
+		
 
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) || !is_timer_active(&charger_message_timer)) {
 			compute_send_charging_message(
 				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), 5, bmsdata);
 			start_timer(&charger_message_timer, CHARGE_MESSAGE_WAIT);
-		} else {
-			//TODO update to HAL
-			//digitalWrite(CHARGE_SAFETY_RELAY, 0);
+
 		}
 	}
 }
@@ -352,27 +341,39 @@ uint32_t sm_fault_eval(fault_eval_t* index)
 	return 0;
 }
 
+
+/* charger settle countup =  1 minute pause to let readings settle and get good OCV */
+/* charger settle countdown = 5 minute interval between 1 minute settle pauses */
+/*  charger_max_volt_timer  = interval of time when voltage is too high before trying to start again */
 bool sm_charging_check(acc_data_t* bmsdata)
 {
-	if (!compute_charger_connected())
+	if (!compute_charger_connected()) {
 		return false;
-	if (!is_timer_expired(&charge_timeout) && is_timer_active(&charge_timeout))
-		return false;
-
-	if (bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000)
-		&& !charge_cut_off_timer.active){
-		start_timer(&charge_cut_off_timer, 5000);
-	} else if (charge_cut_off_timer.active) {
-		if (is_timer_expired(&charge_cut_off_timer)) {
-			start_timer(&charge_timeout, CHARGE_TIMEOUT);
-			return false;
-		}
-		if (!(bmsdata->max_voltage.val >= (MAX_CHARGE_VOLT * 10000))) {
-			cancel_timer(&charge_cut_off_timer);
-		}
 	}
 
-	return true;
+	if (!is_timer_expired(&charger_settle_countup) && is_timer_active(&charger_settle_countup)) {
+		return false;
+	}
+	
+	if (!is_timer_expired(&charger_max_volt_timer) && is_timer_active(&charger_max_volt_timer)) {
+		return false;
+	}
+
+	if (bmsdata->max_voltage.val > MAX_CHARGE_VOLT) {
+		start_timer(&charger_max_volt_timer, CHARGE_VOLT_TIMEOUT);
+		return false;
+	}
+
+	if (is_timer_active(&charger_settle_countdown)) {
+
+		if (is_timer_expired(&charger_settle_countdown)) {
+			start_timer(&charger_settle_countup, CHARGE_SETL_TIMEOUT);
+			return false;
+		}
+
+		else return true;
+	}
+
 }
 
 bool sm_balancing_check(acc_data_t* bmsdata)
@@ -384,6 +385,9 @@ bool sm_balancing_check(acc_data_t* bmsdata)
 	if (bmsdata->max_voltage.val <= (BAL_MIN_V * 10000))
 		return false;
 	if (bmsdata->delt_voltage <= (MAX_DELTA_V * 10000))
+		return false;
+	
+	if (is_timer_active(&charger_settle_countup) && !is_timer_expired(&charger_settle_countup))
 		return false;
 
 	return true;
