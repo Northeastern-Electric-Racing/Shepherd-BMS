@@ -11,7 +11,7 @@
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
 
-#define CHARGING_ENABLED
+//#define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
