@@ -140,6 +140,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
   printf("DCL: %d\r\n", acc_data->discharge_limit);
   printf("CCL: %d\r\n", acc_data->charge_limit);
+  printf("Cont CCL %d\r\n", acc_data->cont_CCL);
   printf("SoC: %d\r\n", acc_data->soc);
   printf("Is Balancing?: %d\r\n", segment_is_balancing());
   printf("State: ");

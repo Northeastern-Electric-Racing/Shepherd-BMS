@@ -122,7 +122,7 @@ int pull_voltages()
 	 * just copy over the contents of the last good reading and the fault status
 	 * from the most recent attempt
 	 */
-
+	
 	//int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800};
 	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {

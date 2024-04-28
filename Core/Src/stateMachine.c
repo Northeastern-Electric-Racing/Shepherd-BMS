@@ -23,6 +23,8 @@ extern TIM_HandleTypeDef htim8;
 bool entered_faulted = false;
 
 nertimer_t charger_message_timer;
+
+nertimer_t bootup_timer;
 static const uint16_t CHARGE_MESSAGE_WAIT = 250; /* ms */
 
 const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
@@ -61,6 +63,8 @@ void handle_boot(acc_data_t* bmsdata)
 	prevAccData = NULL;
 	segment_enable_balancing(false);
 	compute_enable_charging(false);
+	start_timer(&bootup_timer, 10000);
+	printf("Bootup timer started\r\n");
 	
 	compute_set_fault(1);
 	// bmsdata->fault_code = FAULTS_CLEAR;
@@ -79,7 +83,7 @@ void init_ready()
 void handle_ready(acc_data_t* bmsdata)
 {
 	/* check for charger connection */
-	if (compute_charger_connected()) { //TODO Fix once charger works
+	if (compute_charger_connected() && is_timer_expired(&bootup_timer)) { //TODO Fix once charger works
 		request_transition(CHARGING_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
@@ -155,8 +159,7 @@ void sm_handle_state(acc_data_t* bmsdata)
 {
 	static uint8_t can_msg_to_send = 0;
 	enum {ACC_STATUS, CURRENT, BMS_STATUS, CELL_TEMP, CELL_DATA, SEGMENT_TEMP, MC_DISCHARGE, MC_CHARGE, MAX_MSGS};
-
-	bmsdata->is_charger_connected = compute_charger_connected();
+	
 
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
@@ -168,6 +171,8 @@ void sm_handle_state(acc_data_t* bmsdata)
 	}
 	// TODO needs testing - (update, seems to work fine)
 	handler_LUT[current_state](bmsdata);
+
+	bmsdata->is_charger_connected = compute_charger_connected();
 
 	sm_broadcast_current_limit(bmsdata);
 
@@ -346,21 +351,26 @@ uint32_t sm_fault_eval(fault_eval_t* index)
 /* charger settle countdown = 5 minute interval between 1 minute settle pauses */
 /*  charger_max_volt_timer  = interval of time when voltage is too high before trying to start again */
 bool sm_charging_check(acc_data_t* bmsdata)
-{
+{		
 	if (!compute_charger_connected()) {
+		printf("Charger not connected\r\n");
 		return false;
 	}
 
 	if (!is_timer_expired(&charger_settle_countup) && is_timer_active(&charger_settle_countup)) {
+		printf("Charger settle countup active\r\n");
 		return false;
 	}
 	
 	if (!is_timer_expired(&charger_max_volt_timer) && is_timer_active(&charger_max_volt_timer)) {
+		printf("Charger max volt timer active\r\n");
 		return false;
 	}
 
-	if (bmsdata->max_voltage.val > MAX_CHARGE_VOLT) {
+	if (bmsdata->max_voltage.val > MAX_CHARGE_VOLT*10000) {
 		start_timer(&charger_max_volt_timer, CHARGE_VOLT_TIMEOUT);
+		printf("Charger max volt timer started\r\n");
+		printf("Max voltage: %d\r\n", bmsdata->max_voltage.val);
 		return false;
 	}
 
