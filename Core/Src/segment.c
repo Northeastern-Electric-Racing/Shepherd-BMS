@@ -222,8 +222,9 @@ int pull_thermistors()
 		select_therm(therm);
 		HAL_Delay(5);
 		push_chip_configuration();
+		push_chip_configuration();
 		LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
-		//HAL_Delay(3);
+		HAL_Delay(2);	
 		LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
 
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
