@@ -359,7 +359,7 @@ bool sm_charging_check(acc_data_t* bmsdata)
 		return false;
 	}
 
-	if (bmsdata->max_temp.val > MAX_CHARGE_VOLT) {
+	if (bmsdata->max_voltage.val > MAX_CHARGE_VOLT) {
 		start_timer(&charger_max_volt_timer, CHARGE_VOLT_TIMEOUT);
 		return false;
 	}
