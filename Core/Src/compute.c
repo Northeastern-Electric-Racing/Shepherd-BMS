@@ -11,7 +11,7 @@
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
 
-//#define CHARGING_ENABLED
+#define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -86,7 +86,7 @@ void compute_enable_charging(bool enable_charging)
 
 int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set, acc_data_t* bms_data)
 {
-	struct {
+	struct __attribute__((__packed__)){
 		uint16_t charger_voltage; // Note the charger voltage sent over should be 10*desired voltage
 		uint16_t charger_current; // Note the charge current sent over should be 10*desired current
         uint8_t charger_control;
@@ -231,8 +231,8 @@ int16_t compute_get_pack_current()
 void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 {
 
-	struct {
-		int16_t max_discharge;
+	struct __attribute__((__packed__)){
+		uint16_t max_discharge;
 	} discharge_data;
 
 	/* scale to A * 10 */
@@ -253,8 +253,8 @@ void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 void compute_send_mc_charge_message(acc_data_t* bmsdata)
 {
 
-	struct {
-		int16_t max_charge;
+	struct __attribute__((__packed__)){
+		uint16_t max_charge;
 	} charge_data;
 
 	/* scale to A * 10 */
@@ -274,7 +274,7 @@ void compute_send_mc_charge_message(acc_data_t* bmsdata)
 void compute_send_acc_status_message(acc_data_t* bmsdata)
 {
 
-	struct {
+	struct __attribute__((__packed__)){
 		uint16_t packVolt;
 		uint16_t pack_current;
 		uint16_t pack_ah;
@@ -309,7 +309,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 
 void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
 {
-    struct  {
+    struct  __attribute__((__packed__)){
         uint8_t state;
         uint32_t fault;
         int8_t temp_avg;
@@ -341,7 +341,7 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 {
-    struct {
+    struct __attribute__((__packed__)){
         uint8_t mpeState;
     } shutdown_control_msg_data;
 
@@ -363,7 +363,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
 {
-    struct {
+    struct __attribute__((__packed__)){
         uint16_t high_cell_voltage;
         uint8_t high_cell_id;
         uint16_t low_cell_voltage;
@@ -400,7 +400,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
                                        uint16_t internal_Res, uint8_t shunted,
                                        uint16_t open_voltage)
 {
-    struct {
+    struct __attribute__((__packed__)){
         uint8_t cellID;
         uint16_t instantVoltage;
         uint16_t internalResistance;
@@ -435,7 +435,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
 
 void compute_send_current_message(acc_data_t* bmsdata)
 {
-    struct {
+    struct __attribute__((__packed__)){
         uint16_t dcl;
         uint16_t ccl;
         uint16_t pack_curr;
@@ -466,7 +466,7 @@ void compute_send_current_message(acc_data_t* bmsdata)
 
 void compute_send_cell_temp_message(acc_data_t* bmsdata)
 {
-    struct {
+    struct __attribute__((__packed__)){
         uint16_t max_cell_temp;
         uint8_t max_cell_id;
         uint16_t min_cell_temp;
@@ -501,7 +501,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
 
 void compute_send_segment_temp_message(acc_data_t* bmsdata)
 {
-    struct {
+    struct __attribute__((__packed__)){
         int8_t segment1_average_temp;
         int8_t segment2_average_temp;
         int8_t segment3_average_temp;

@@ -85,8 +85,8 @@ typedef struct {
 	uint16_t pack_ocv;
 	uint16_t pack_res;
 
-	int16_t discharge_limit;
-	int16_t charge_limit;
+	uint16_t discharge_limit;
+	uint16_t charge_limit;
 	uint16_t cont_DCL;
 	uint16_t cont_CCL;
 	uint8_t soc;
