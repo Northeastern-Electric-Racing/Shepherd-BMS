@@ -374,6 +374,12 @@ bool sm_charging_check(acc_data_t* bmsdata)
 		else return true;
 	}
 
+	else 
+	{
+		start_timer(&charger_settle_countdown, CHARGE_SETL_TIMEUP);
+		return true;
+	}
+
 }
 
 bool sm_balancing_check(acc_data_t* bmsdata)
