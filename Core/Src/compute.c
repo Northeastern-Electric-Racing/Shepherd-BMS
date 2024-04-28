@@ -108,7 +108,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 	charger_msg.id = 0x1806E5F4;
 	charger_msg.len = 8;
 	memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
-	
+
 	uint8_t temp = charger_msg.data[0];
 	charger_msg.data[0] = charger_msg.data[1];
 	charger_msg.data[1] = temp;
@@ -127,7 +127,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 bool compute_charger_connected()
 {
 	//TODO need to set up CAN msg that actually toggles this bool
-	return bmsdata->is_charger_connected;
+	return false;//bmsdata->is_charger_connected;
 }
 
 //TODO add this back
