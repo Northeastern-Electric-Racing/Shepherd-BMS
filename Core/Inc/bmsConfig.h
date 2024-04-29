@@ -47,7 +47,7 @@
 #define OVER_CHG_CURR_TIME  1000
 #define UNDER_VOLT_TIME     15000
 #define PRE_UNDER_VOLT_TIME 12000
-#define OVER_VOLT_TIME      15000
+#define OVER_VOLT_TIME      5000
 #define LOW_CELL_TIME       15000
 #define HIGH_TEMP_TIME      60000
 #define CURR_ERR_MARG       50       // in A * 10
