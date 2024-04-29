@@ -289,20 +289,20 @@ int main(void)
     sm_handle_state(acc_data);
 
     /* check for inbound CAN */
-    // get_can1_msg();
-    get_can2_msg();
-    
+    get_can1_msg();
+    //get_can2_msg();
+
     #ifdef DEBUG_STATS
     print_bms_stats(acc_data);
     #endif
-  
+
     HAL_IWDG_Refresh(&hiwdg);
 
   }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    
+
   /* USER CODE END 3 */
 }
 
