@@ -274,7 +274,7 @@ int main(void)
     //TODO add ISR/timer based debug LED toggle
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-
+    acc_data->is_charger_connected = false;
     //acc_data->faultCode = FAULTS_CLEAR;
 
     /*

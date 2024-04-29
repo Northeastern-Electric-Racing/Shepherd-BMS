@@ -59,7 +59,7 @@ int8_t get_can2_msg()
 	switch (msg.id) {
     /* CAN ID of message charger sends every second. */
     case 0x18FF50E5:
-        bmsdata->is_charger_connected = true;
+        bmsdata->is_charger_connected = false;
 		break;
 	default:
 		break;
