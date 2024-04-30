@@ -160,7 +160,6 @@ void sm_handle_state(acc_data_t* bmsdata)
 	static uint8_t can_msg_to_send = 0;
 	enum {ACC_STATUS, CURRENT, BMS_STATUS, CELL_TEMP, CELL_DATA, SEGMENT_TEMP, MC_DISCHARGE, MC_CHARGE, MAX_MSGS};
 	
-
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	//calculate_pwm(bmsdata);
@@ -249,7 +248,7 @@ uint32_t sm_fault_return(acc_data_t* accData)
 		fault_table = (fault_eval_t*) malloc(NUM_FAULTS * sizeof(fault_eval_t));
 		// clang-format off
     											// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   __________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ _______________DATA 2______________     __THRESHOLD 2__
-        fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10*1.04, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ---------------------------UNUSED------------------- */ };
+        fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10 * CURR_ERR_MARG, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ---------------------------UNUSED------------------- */ };
         fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 =                             (fault_data->charge_limit)*10, .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =    0  };
         fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                       MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
         fault_table[3]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =    ovr_chgvolt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                MAX_CHARGE_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ---------------------------UNUSED-------------------*/  };
@@ -283,13 +282,7 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(&fault_table[incr]);
-		//if (incr == 5) { 
-		//	faul
-		//}
 		incr++;
-		// } else {
-		// 	fault_status |= 0;
-		// }
 	}
 
 	return fault_status;
@@ -326,23 +319,42 @@ uint32_t sm_fault_eval(fault_eval_t* index)
     }
 	// clang-format on
 
-	if (!(condition1 || condition2)) {
-		cancel_timer(&index->timer);
+	bool fault_present = ( (condition1 && condition2) || (condition1 && (index->optype_2 == NOP)) );
+	if ((!(is_timer_active(&index->timer))) && !fault_present) 
+	{
 		return 0;
 	}
-	else if (is_timer_expired(&index->timer) && ((condition1 && condition2) || (condition1 && index->optype_2 == NOP))) {
-		return index->code;
-	}
-	else if (!is_timer_active(&index->timer) && ((condition1 && condition2) || (condition1 && index->optype_2 == NOP))) {
-		//printf("\t\t\t*******Starting faulting......\r\n");
-		start_timer(&index->timer, index->timeout);
-	}
 
+	if (is_timer_active(&index->timer)) 
+	{
+		if (!fault_present)
+		{
+			printf("\t\t\t*******Fault cleared: %s\r\n", index->id);
+			cancel_timer(&index->timer);
+			return 0;
+		}
+
+		if (is_timer_expired(&index->timer) && fault_present) 
+		{
+			printf("\t\t\t*******Faulted: %s\r\n", index->id);
+			return index->code;
+		}
+
+		else return 0;
+
+	}
+	
+	else if (!is_timer_active(&index->timer) && fault_present) 
+	{
+		printf("\t\t\t*******Starting fault timer: %s\r\n", index->id);
+		start_timer(&index->timer, index->timeout);
+		return 0;
+	}
 	/* if (index->code == CELL_VOLTAGE_TOO_LOW) {
 		printf("\t\t\t*******Not fautled!!!!!\t%d\r\n", !is_timer_active(&index->timer) && condition1 && condition2);
 		printf("More stats...\t:%d\t%d\r\n", is_timer_expired(&index->timer), index->timer.active);
 	} */
-
+	printf("err should not get here");
 	return 0;
 }
 

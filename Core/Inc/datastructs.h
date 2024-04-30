@@ -36,8 +36,8 @@ typedef enum {
 
 	/* Orion BMS faults */
 	CELLS_NOT_BALANCING		            = 0x1,
-	CELL_VOLTAGE_TOO_HIGH	            = 0x2,
-	CELL_VOLTAGE_TOO_LOW	            = 0x4,
+	CELL_VOLTAGE_TOO_HIGH	            = 0x4,
+	CELL_VOLTAGE_TOO_LOW	            = 0x2,
 	PACK_TOO_HOT			            = 0x8,
 	OPEN_WIRING_FAULT		            = 0x10, /* cell tap wire is either weakly connected or not connected */
 	INTERNAL_SOFTWARE_FAULT             = 0x20, /* general software fault */

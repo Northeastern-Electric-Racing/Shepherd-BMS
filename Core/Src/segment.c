@@ -220,11 +220,10 @@ int pull_thermistors()
 	for (int therm = 1; therm <= 16; therm++) {
 		/* Sets multiplexors to select thermistors */
 		select_therm(therm);
-		HAL_Delay(5);
-		push_chip_configuration();
+		//HAL_Delay(15);
 		push_chip_configuration();
 		LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
-		HAL_Delay(2);	
+		HAL_Delay(3);	
 		LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
 
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {

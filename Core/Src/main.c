@@ -284,12 +284,11 @@ int main(void)
     segment_retrieve_data(acc_data->chip_data);
     acc_data->pack_current = compute_get_pack_current();
 
-    /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
     sm_handle_state(acc_data);
 
     /* check for inbound CAN */
-    get_can1_msg();
+    //get_can1_msg();
     //get_can2_msg();
 
     #ifdef DEBUG_STATS
