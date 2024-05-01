@@ -171,11 +171,11 @@ int pull_voltages()
 
 				if (segment_data[corrected_index].bad_volt_diff_count[dest_index] > MAX_VOLT_DELTA_COUNT) {
 					segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-					segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[corrected_index][j];
+					segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
 				}
 			} else {
 				segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[corrected_index][j];
+				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[i][j];
 			}
 			dest_index++;
 		}
@@ -339,12 +339,21 @@ void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num, bool balance_enab
 
 void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP])
 {
+
+	
 	for (int c = 0; c < NUM_CHIPS; c++) {
-		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			if (discharge_config[mapping_correction[c]][cell])
-				discharge_commands[mapping_correction[c]] |= 1 << cell;
+		for (int cell = 0; cell < NUM_CELLS_PER_CHIP + 1; cell++) {
+			uint8_t corrected_index = (cell < 5) ? cell : cell - 1;
+			if (cell == 5) 
+			{
+				discharge_commands[c] &= ~(1 << cell);
+				continue;
+			}
+
+			if (discharge_config[mapping_correction[c]][corrected_index])
+				discharge_commands[c] |= 1 << corrected_index;
 			else
-				discharge_commands[mapping_correction[c]] &= ~(1 << cell);
+				discharge_commands[c] &= ~(1 << corrected_index);
 		}
 
 		configure_discharge(c, discharge_commands[c]);

@@ -11,7 +11,7 @@
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
 
-//#define CHARGING_ENABLED
+#define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -131,7 +131,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 bool compute_charger_connected()
 {
 	//TODO need to set up CAN msg that actually toggles this bool
-	return false; //bmsdata->is_charger_connected;
+	return true;//bmsdata->is_charger_connected;
 }
 
 //TODO add this back
@@ -247,7 +247,7 @@ void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
-	can_send_msg(&can1, &mc_msg);
+	//can_send_msg(&can1, &mc_msg);
 }
 
 void compute_send_mc_charge_message(acc_data_t* bmsdata)
@@ -268,7 +268,7 @@ void compute_send_mc_charge_message(acc_data_t* bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
 
-	can_send_msg(&can1, &mc_msg);
+	//can_send_msg(&can1, &mc_msg);
 }
 
 void compute_send_acc_status_message(acc_data_t* bmsdata)
@@ -304,7 +304,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-	can_send_msg(line, &acc_msg);
+	can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
@@ -336,7 +336,7 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
 	#else
 	can_t* line = &can1;
 	#endif
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
@@ -358,7 +358,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
@@ -393,7 +393,7 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage,
@@ -430,7 +430,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_current_message(acc_data_t* bmsdata)
@@ -461,7 +461,7 @@ void compute_send_current_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_cell_temp_message(acc_data_t* bmsdata)
@@ -496,7 +496,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 void compute_send_segment_temp_message(acc_data_t* bmsdata)
@@ -527,7 +527,7 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(line, &acc_msg);
+    can_send_msg(&can2, &acc_msg);
 }
 
 float read_ref_voltage()

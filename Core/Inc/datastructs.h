@@ -52,7 +52,7 @@ typedef enum {
 	CHARGER_SAFETY_RELAY			    = 0x4000,
 	BATTERY_THERMISTOR				    = 0x8000,
 	CHARGER_CAN_FAULT				    = 0x10000,
-	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
+	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x30000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
 } bms_fault_t;

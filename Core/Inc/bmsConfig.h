@@ -24,7 +24,7 @@
 #define MAX_VOLT            4.2
 #define MAX_CHARGE_VOLT     4.21
 #define MAX_DELTA_V         0.015
-#define BAL_MIN_V           4.00
+#define BAL_MIN_V           3.60
 #define MAX_CELL_TEMP       55
 #define MAX_CELL_CURR       500 // Amps per BMS cell
 #define MAX_CELL_TEMP_BAL   45
