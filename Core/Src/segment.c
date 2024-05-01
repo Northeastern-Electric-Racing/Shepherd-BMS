@@ -351,9 +351,9 @@ void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_
 			}
 
 			if (discharge_config[mapping_correction[c]][corrected_index])
-				discharge_commands[c] |= 1 << corrected_index;
+				discharge_commands[c] |= 1 << cell;
 			else
-				discharge_commands[c] &= ~(1 << corrected_index);
+				discharge_commands[c] &= ~(1 << cell);
 		}
 
 		configure_discharge(c, discharge_commands[c]);
