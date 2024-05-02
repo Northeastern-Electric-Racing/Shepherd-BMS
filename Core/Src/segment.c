@@ -398,7 +398,7 @@ void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_
 		}
 
 		configure_discharge(c, discharge_commands[c]);
-		print_bin(discharge_commands[c], c);
+		//print_bin(discharge_commands[c], c);
 	}
 	push_chip_configuration();
 }
