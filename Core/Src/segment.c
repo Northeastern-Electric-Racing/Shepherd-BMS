@@ -302,11 +302,6 @@ void print_bin(uint16_t val, uint8_t chip){
 
 	static uint16_t count = 0;
 	printf("\r\nDischarge Config: chip %d\t", chip);
-	if (val & 0x1000) printf("1 ");
-	else printf("0 ");
-
-	if (val & 0x0800) printf("1 ");
-	else printf("0 ");
 
 	if (val & 0x0400) printf("1 ");
 	else printf("0 ");
@@ -384,54 +379,28 @@ void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num, bool balance_enab
 void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP])
 {
 
-	static int i = 0;
-	// static int ref = 0;
-	// static int c = 0;
- 
-	// if (i == 12000) i = 0;
-	// if (i == ref + 1000) {c++; ref = i;}
-	
-	// 	discharge_commands[mapping_correction[c]] = 1111;
-	// 	configure_discharge(c, discharge_commands[c]);
-		
 	
 
-	// i++;
-	// printf("%d\r\n", i);
-	// push_chip_configuration();
+	
+	for (int c = 0; c < NUM_CHIPS; c++) {
+		for (int cell = 0; cell < NUM_CELLS_PER_CHIP + 1; cell++) {
+			uint8_t corrected_index = (cell < 5) ? cell : cell - 1;
+			if (cell == 5) 
+			{
+				discharge_commands[mapping_correction[c]] &= ~(1 << cell);
+				continue;
+			}
 
-	if (i==12000) i =0;
-	for (int c = 0; c < NUM_CHIPS; c++)
-	{
-		discharge_commands[mapping_correction[c]] = 1 << i/1000;
-	 	configure_discharge(c, discharge_commands[c]);
-		
+			if (discharge_config[mapping_correction[c]][corrected_index])
+				discharge_commands[c] |= 1 << cell;
+			else
+				discharge_commands[c] &= ~(1 << cell);
+		}
+
+		configure_discharge(c, discharge_commands[c]);
+		print_bin(discharge_commands[c], c);
 	}
-	i++;
-	printf("%d\r\n", i);
 	push_chip_configuration();
-	
-
-	
-	// for (int c = 0; c < NUM_CHIPS; c++) {
-	// 	for (int cell = 0; cell < NUM_CELLS_PER_CHIP + 1; cell++) {
-	// 		uint8_t corrected_index = (cell < 5) ? cell : cell - 1;
-	// 		if (cell == 5) 
-	// 		{
-	// 			discharge_commands[c] &= ~(1 << cell);
-	// 			continue;
-	// 		}
-
-	// 		if (discharge_config[mapping_correction[c]][corrected_index])
-	// 			discharge_commands[c] |= 1 << cell;
-	// 		else
-	// 			discharge_commands[c] &= ~(1 << cell);
-	// 	}
-
-	// 	configure_discharge(c, discharge_commands[c]);
-	// 	print_bin(discharge_commands[c], c);
-	// }
-	// push_chip_configuration();
 }
 
 bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num)
