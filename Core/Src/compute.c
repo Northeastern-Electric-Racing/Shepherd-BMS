@@ -1,13 +1,17 @@
 #include "compute.h"
 #include "can_handler.h"
 #include "can.h"
+#include "c_utils.h"
 #include "main.h"
 #include <assert.h>
 #include "stm32f405xx.h"
 #include <string.h>
+#include <stdio.h>
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
+
+//#define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -20,7 +24,7 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
 extern ADC_HandleTypeDef hadc1;
-extern DMA_HandleTypeDef hdma_adc1;
+extern ADC_HandleTypeDef hadc2;
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
@@ -33,7 +37,6 @@ can_t can2; // p2p can bus with charger
 uint32_t adc_values[2] = {0};
 
 /* private function defintions */
-uint8_t calc_charger_led_state();
 float read_ref_voltage();
 float read_vout();
 
@@ -62,15 +65,15 @@ uint8_t compute_init()
 	if (HAL_TIM_PWM_ConfigChannel(&htim1, &pwm_config, fan_channels[FAN1]) != HAL_OK) return -1;
 	if (HAL_TIM_PWM_ConfigChannel(&htim8, &pwm_config, fan_channels[FAN2]) != HAL_OK) return -1;
 
-	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN1]);
-	HAL_TIM_PWM_Start(&htim1, fan_channels[FAN2]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN3]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
-	HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
-
-	//HAL_ADC_Start(&hadc1);
-	//HAL_ADC_Start_DMA(&hadc1, adc_values, 2);
+	// HAL_TIM_PWM_Start(&htim1, fan_channels[FAN1]);
+	// HAL_TIM_PWM_Start(&htim1, fan_channels[FAN2]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN3]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN4]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN5]);
+	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
+	bmsdata->is_charger_connected = false;
+	
+	HAL_ADC_Start(&hadc2);
 
 	return 0;
 
@@ -81,46 +84,46 @@ void compute_enable_charging(bool enable_charging)
 	is_charging_enabled = enable_charging;
 }
 
-int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
+int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set, acc_data_t* bms_data)
 {
-	struct __attribute__((packed)) {
-		uint8_t charger_control;
+	struct __attribute__((__packed__)){
 		uint16_t charger_voltage; // Note the charger voltage sent over should be 10*desired voltage
 		uint16_t charger_current; // Note the charge current sent over should be 10*desired current
-								  // + 3200
-		uint8_t charger_leds;
-		uint16_t reserved2_3;
+        uint8_t charger_control;
+        uint8_t reserved_1;
+        uint16_t reserved_23;
 	} charger_msg_data;
 
-	uint16_t current_to_set = bms_data->charge_limit;
-
-	if (!is_charging_enabled) {
-		charger_msg_data.charger_control = 0b101;
-
-		can_msg_t charger_msg;
-		charger_msg.id = 0x00; // TODO replace with correct ID;
-		charger_msg.len = sizeof(charger_msg_data);
-		memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
-
-		can_send_msg(&can2, &charger_msg);
-
-	}
-
-	// equations taken from TSM2500 CAN protocol datasheet
-	charger_msg_data.charger_control = 0xFC;
 	charger_msg_data.charger_voltage = voltage_to_set * 10;
-	if (current_to_set > 10) {
-		current_to_set = 10;
-	}
-	charger_msg_data.charger_current = current_to_set * 10 + 3200;
-	charger_msg_data.charger_leds	= calc_charger_led_state(bms_data);
-	charger_msg_data.reserved2_3		= 0xFFFF;
+	charger_msg_data.charger_current = current_to_set * 10;
+
+    if (is_charging_enabled) {
+        charger_msg_data.charger_control = 0x00;  //0：Start charging.
+    } else {
+        charger_msg_data.charger_control = 0xFF;  // 1：battery protection, stop charging
+    }
+
+    charger_msg_data.reserved_1 = 0x00;
+    charger_msg_data.reserved_23 = 0x0000;
 
 	can_msg_t charger_msg;
-	charger_msg.id = 0x00; // TODO replace with correct ID;
+	charger_msg.id = 0x1806E5F4;
 	charger_msg.len = 8;
 	memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
-	can_send_msg(&can2, &charger_msg);
+
+	uint8_t temp = charger_msg.data[0];
+	charger_msg.data[0] = charger_msg.data[1];
+	charger_msg.data[1] = temp;
+	temp = charger_msg.data[2];
+	charger_msg.data[2] = charger_msg.data[3];
+	charger_msg.data[3] = temp;
+
+	#ifdef CHARGING_ENABLED
+	HAL_StatusTypeDef res = can_send_extended_msg(&can2, &charger_msg);
+	if(res != HAL_OK) {
+		printf("CAN ERROR CODE %X", res);
+	}
+	#endif
 
 	return 0;
 }
@@ -128,7 +131,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, acc_data_t* bms_data)
 bool compute_charger_connected()
 {
 	//TODO need to set up CAN msg that actually toggles this bool
-	return bmsdata->is_charger_connected;
+	return false; //bmsdata->is_charger_connected;
 }
 
 //TODO add this back
@@ -161,32 +164,25 @@ void compute_set_fault(int fault_state)
 
 int16_t compute_get_pack_current()
 {
-	static const float GAIN = 6.250; // mV/A
-	static const OFFSET = 0.0; // mV
-
+	static const float GAIN = 5.00; // mV/A
+	static const float OFFSET = 0.0; // mV
+	static const uint8_t num_samples = 10;
+	static int16_t current_accumulator = 0.0; // A
 
 	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	//float ref_voltage = -1;
-	//float vout = -1;
-
-	// if (!HAL_DMA_PollForTransfer(&hdma_adc1, HAL_DMA_FULL_TRANSFER, HAL_MAX_DELAY))
-	// {
-	// 	ref_voltage = 2.5;//adc_values[1] * 2.5 / MAX_ADC_RESOLUTION;
-	// 	vout = adc_values[0] * 3.3 / MAX_ADC_RESOLUTION;
-	// }
-
-	
-	// remove once DMA verified working, along with functions themselves 
-
 	float ref_voltage = read_ref_voltage();
 	float vout = read_vout();
-	vout *= 1000; // convert to mV
 
-	//if (ref_voltage == -1 || vout == -1) return -1;
+	ref_voltage *= 1000;// convert to mV
+	vout *= 1000;
 
-	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN / 1000); // convert to V
+	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
 
-	return vout;
+	/* Low Pass Filter of Current*/
+	current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
+	current_accumulator = current;
+
+	return current;
 
 	/* TEMP keep last years math until above is verified */
 
@@ -235,12 +231,16 @@ int16_t compute_get_pack_current()
 void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 {
 
-	struct __attribute__((packed)) {
+	struct __attribute__((__packed__)){
 		uint16_t max_discharge;
 	} discharge_data;
 
 	/* scale to A * 10 */
 	discharge_data.max_discharge = 10 * bmsdata->discharge_limit;
+
+	/* convert to big endian */
+	endian_swap(&discharge_data.max_discharge, sizeof(discharge_data.max_discharge));
+
 
 	can_msg_t mc_msg = {0};
 	mc_msg.id = 0x156;  // 0x0A is the dcl id, 0x22 is the device id set by us
@@ -253,12 +253,15 @@ void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 void compute_send_mc_charge_message(acc_data_t* bmsdata)
 {
 
-	struct __attribute__((packed)) {
+	struct __attribute__((__packed__)){
 		uint16_t max_charge;
 	} charge_data;
 
 	/* scale to A * 10 */
 	charge_data.max_charge = 10 * bmsdata->charge_limit;
+
+	/* convert to big endian */
+	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
 
 	can_msg_t mc_msg = {0};
 	mc_msg.id = 0x176;  // 0x0A is the dcl id, 0x157 is the device id set by us
@@ -271,7 +274,7 @@ void compute_send_mc_charge_message(acc_data_t* bmsdata)
 void compute_send_acc_status_message(acc_data_t* bmsdata)
 {
 
-	struct __attribute__((packed)) {
+	struct __attribute__((__packed__)){
 		uint16_t packVolt;
 		uint16_t pack_current;
 		uint16_t pack_ah;
@@ -279,23 +282,34 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 		uint8_t pack_health;
 	} acc_status_msg_data;
 
-	acc_status_msg_data.packVolt	    = __builtin_bswap16(bmsdata->pack_voltage);
-	acc_status_msg_data.pack_current = __builtin_bswap16((uint16_t)(bmsdata->pack_current)); // convert with 2s complement
-	acc_status_msg_data.pack_ah	    = __builtin_bswap16(0);
+	acc_status_msg_data.packVolt	    = bmsdata->pack_voltage;
+	acc_status_msg_data.pack_current = (uint16_t) (bmsdata->pack_current); // convert with 2s complement
+	acc_status_msg_data.pack_ah	    = 0;
 	acc_status_msg_data.pack_soc	    = bmsdata->soc;
 	acc_status_msg_data.pack_health  = 0;
 
+	/* convert to big endian */
+	endian_swap(&acc_status_msg_data.packVolt, sizeof(acc_status_msg_data.packVolt));
+	endian_swap(&acc_status_msg_data.pack_current, sizeof(acc_status_msg_data.pack_current));
+	endian_swap(&acc_status_msg_data.pack_ah, sizeof(acc_status_msg_data.pack_ah));
+
 	can_msg_t acc_msg;
-	acc_msg.id = 0x00; // TODO replace with correct ID;
+	acc_msg.id = 0x80;
 	acc_msg.len = sizeof(acc_status_msg_data);
 	memcpy(acc_msg.data, &acc_status_msg_data, sizeof(acc_status_msg_data));
 
-	can_send_msg(&can1, &acc_msg);
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+	can_send_msg(line, &acc_msg);
 }
 
 void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
 {
-    struct __attribute__((packed)) {
+    struct  __attribute__((__packed__)){
         uint8_t state;
         uint32_t fault;
         int8_t temp_avg;
@@ -309,33 +323,47 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
     bms_status_msg_data.temp_internal = (uint8_t)(0);
     bms_status_msg_data.balance = (uint8_t)(balance);
 
+	/* convert to big endian */
+	endian_swap(&bms_status_msg_data.fault, sizeof(bms_status_msg_data.fault));
+
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
-    acc_msg.len = sizeof(bms_status_msg_data);
+    acc_msg.id = 0x81; 
+    acc_msg.len = sizeof(bms_status_msg_data);	
     memcpy(acc_msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 {
-    struct __attribute__((packed)) {
+    struct __attribute__((__packed__)){
         uint8_t mpeState;
     } shutdown_control_msg_data;
 
     shutdown_control_msg_data.mpeState = mpe_state;
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x82; 
     acc_msg.len = sizeof(shutdown_control_msg_data);
     memcpy(acc_msg.data, &shutdown_control_msg_data, sizeof(shutdown_control_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
 {
-    struct __attribute__((packed)) {
+    struct __attribute__((__packed__)){
         uint16_t high_cell_voltage;
         uint8_t high_cell_id;
         uint16_t low_cell_voltage;
@@ -344,24 +372,35 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
     } cell_data_msg_data;
 
     cell_data_msg_data.high_cell_voltage = bmsdata->max_voltage.val;
-    cell_data_msg_data.high_cell_id = bmsdata->max_voltage.chipIndex;
+    cell_data_msg_data.high_cell_id = (bmsdata->max_voltage.chipIndex << 4) | bmsdata->max_voltage.cellNum;
     cell_data_msg_data.low_cell_voltage = bmsdata->min_voltage.val;
     cell_data_msg_data.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) | bmsdata->min_voltage.cellNum;
     cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
 
+	/* convert to big endian */
+	endian_swap(&cell_data_msg_data.high_cell_voltage, sizeof(cell_data_msg_data.high_cell_voltage));
+	endian_swap(&cell_data_msg_data.low_cell_voltage, sizeof(cell_data_msg_data.low_cell_voltage));
+	endian_swap(&cell_data_msg_data.volt_avg, sizeof(cell_data_msg_data.volt_avg));
+
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x83;
     acc_msg.len = sizeof(cell_data_msg_data);
     memcpy(acc_msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage,
                                        uint16_t internal_Res, uint8_t shunted,
                                        uint16_t open_voltage)
 {
-    struct __attribute__((packed)) {
+    struct __attribute__((__packed__)){
         uint8_t cellID;
         uint16_t instantVoltage;
         uint16_t internalResistance;
@@ -370,22 +409,33 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
     } cell_voltage_msg_data;
 
     cell_voltage_msg_data.cellID = cell_id;
-    cell_voltage_msg_data.instantVoltage = __builtin_bswap16(instant_voltage);
-    cell_voltage_msg_data.internalResistance = __builtin_bswap16(internal_Res);
+    cell_voltage_msg_data.instantVoltage = instant_voltage;
+    cell_voltage_msg_data.internalResistance = internal_Res;
     cell_voltage_msg_data.shunted = shunted;
-    cell_voltage_msg_data.openVoltage = __builtin_bswap16(open_voltage);
+    cell_voltage_msg_data.openVoltage = open_voltage;
+
+	/* convert to big endian */
+	endian_swap(&cell_voltage_msg_data.instantVoltage, sizeof(cell_voltage_msg_data.instantVoltage));
+	endian_swap(&cell_voltage_msg_data.internalResistance, sizeof(cell_voltage_msg_data.internalResistance));
+	endian_swap(&cell_voltage_msg_data.openVoltage, sizeof(cell_voltage_msg_data.openVoltage));
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x87;
     acc_msg.len = sizeof(cell_voltage_msg_data);
     memcpy(acc_msg.data, &cell_voltage_msg_data, sizeof(cell_voltage_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_current_message(acc_data_t* bmsdata)
 {
-    struct __attribute__((packed)) {
+    struct __attribute__((__packed__)){
         uint16_t dcl;
         uint16_t ccl;
         uint16_t pack_curr;
@@ -395,23 +445,28 @@ void compute_send_current_message(acc_data_t* bmsdata)
     current_status_msg_data.ccl = bmsdata->charge_limit;
     current_status_msg_data.pack_curr = bmsdata->pack_current;
 
+	/* convert to big endian */
+	endian_swap(&current_status_msg_data.dcl, sizeof(current_status_msg_data.dcl));
+	endian_swap(&current_status_msg_data.ccl, sizeof(current_status_msg_data.ccl));
+	endian_swap(&current_status_msg_data.pack_curr, sizeof(current_status_msg_data.pack_curr));
+
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x86; 
     acc_msg.len = sizeof(current_status_msg_data);
     memcpy(acc_msg.data, &current_status_msg_data, sizeof(current_status_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
-}
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
 
-// TODO ADD THIS BACK
-// void compute_mc_callback(const CAN_message_t& currentStatusMsg)
-// {
-// 	return;
-// }
+    can_send_msg(line, &acc_msg);
+}
 
 void compute_send_cell_temp_message(acc_data_t* bmsdata)
 {
-    struct __attribute__((packed)) {
+    struct __attribute__((__packed__)){
         uint16_t max_cell_temp;
         uint8_t max_cell_id;
         uint16_t min_cell_temp;
@@ -425,17 +480,28 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
     cell_temp_msg_data.min_cell_id = (bmsdata->min_temp.chipIndex << 4) | (bmsdata->min_temp.cellNum - 17);
     cell_temp_msg_data.average_temp = bmsdata->avg_temp;
 
+	/* convert to big endian */
+	endian_swap(&cell_temp_msg_data.max_cell_temp, sizeof(cell_temp_msg_data.max_cell_temp));
+	endian_swap(&cell_temp_msg_data.min_cell_temp, sizeof(cell_temp_msg_data.min_cell_temp));
+	endian_swap(&cell_temp_msg_data.average_temp, sizeof(cell_temp_msg_data.average_temp));
+
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x84; 
     acc_msg.len = sizeof(cell_temp_msg_data);
     memcpy(acc_msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_segment_temp_message(acc_data_t* bmsdata)
 {
-    struct __attribute__((packed)) {
+    struct __attribute__((__packed__)){
         int8_t segment1_average_temp;
         int8_t segment2_average_temp;
         int8_t segment3_average_temp;
@@ -451,66 +517,41 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
     memcpy(buff, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
     can_msg_t acc_msg;
-    acc_msg.id = 0x00; // TODO replace with correct ID;
+    acc_msg.id = 0x85; 
     acc_msg.len = sizeof(segment_temp_msg_data);
     memcpy(acc_msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
-    can_send_msg(&can1, &acc_msg);
-}
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
 
-uint8_t calc_charger_led_state(acc_data_t* bms_data)
-{
-	enum LED_state {
-		RED_BLINKING	   = 0x00,
-		RED_CONSTANT	   = 0x01,
-		YELLOW_BLINKING	   = 0x02,
-		YELLOW_CONSTANT	   = 0x03,
-		GREEN_BLINKING	   = 0x04,
-		GREEN_CONSTANT	   = 0x05,
-		RED_GREEN_BLINKING = 0x06
-	};
-
-	if ((bms_data->soc < 80) && (bms_data->pack_current > .5 * 10)) {
-		return RED_BLINKING;
-	} else if ((bms_data->soc < 80) && (bms_data->pack_current <= .5 * 10)) {
-		return RED_CONSTANT;
-	} else if ((bms_data->soc >= 80 && bms_data->soc < 95) && (bms_data->pack_current > .5 * 10)) {
-		return YELLOW_BLINKING;
-	} else if ((bms_data->soc >= 80 && bms_data->soc < 95) && (bms_data->pack_current <= .5 * 10)) {
-		return YELLOW_CONSTANT;
-	} else if ((bms_data->soc >= 95) && (bms_data->pack_current > .5 * 10)) {
-		return GREEN_BLINKING;
-	} else if ((bms_data->soc >= 95) && (bms_data->pack_current <= .5 * 10)) {
-		return GREEN_CONSTANT;
-	} else {
-		return RED_GREEN_BLINKING;
-	}
+    can_send_msg(line, &acc_msg);
 }
 
 float read_ref_voltage()
 {
-	adc_config.Channel = ADC_CHANNEL_9;
-	if (HAL_ADC_ConfigChannel(&hadc1, &adc_config) != HAL_OK) return -1;
 
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	HAL_ADC_Start(&hadc2);
+	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+
 
 	/* scaled to 2.5 as per datasheet */
-	float ref_voltage = HAL_ADC_GetValue(&hadc1) * 2.5 / MAX_ADC_RESOLUTION;
+	float ref_voltage = HAL_ADC_GetValue(&hadc2) * 5.0 / MAX_ADC_RESOLUTION;
+	//printf("\rRef Voltage: %u\n", ref_voltage);
 
 	return ref_voltage;
 }
 
 float read_vout()
 {
-	adc_config.Channel = ADC_CHANNEL_15;
-	if (HAL_ADC_ConfigChannel(&hadc1, &adc_config) != HAL_OK) return -1;
-
 	HAL_ADC_Start(&hadc1);
 	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
 
 	/* scaled to 3.3 */
-	float vout = HAL_ADC_GetValue(&hadc1) * 3.3 / MAX_ADC_RESOLUTION;
+	float vout = HAL_ADC_GetValue(&hadc1) * 5.0 / MAX_ADC_RESOLUTION;
+	//printf("\rVout: %u\n", vout);
 
 	return vout;
 }

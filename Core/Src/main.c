@@ -13,9 +13,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-// #include <nerduino.h>
-// TODO: import and replace new watchdog library
-//#include <Watchdog_t4.h>
+
 #include "segment.h"
 #include "compute.h"
 #include "datastructs.h"
@@ -48,12 +46,15 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
 
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
 
 I2C_HandleTypeDef hi2c1;
+
+IWDG_HandleTypeDef hiwdg;
 
 SPI_HandleTypeDef hspi1;
 SPI_HandleTypeDef hspi2;
@@ -87,10 +88,13 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_ADC2_Init(void);
+static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
 
-void watchdog_init(void);
-void watchdog_pet(void);
+/* this is for the hardware watchdog ic. Currently not activated  in hw */
+//void watchdog_init(void);
+//void watchdog_pet(void);
 
 /* USER CODE END PFP */
 
@@ -123,26 +127,27 @@ int _write(int file, char* ptr, int len) {
 
 const void print_bms_stats(acc_data_t *acc_data)
 {
-
 	static nertimer_t debug_stat_timer;
 	static const uint16_t PRINT_STAT_WAIT = 500; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
-  //TODO get this from eeprom once implemented 
+  //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
-	//printf("Prev Fault: %#x", previousFault);
-  printf("Current: %f\r\n", (float)(acc_data->pack_current) / 10.0);
+	// printf("Prev Fault: %#x", previousFault);
+  printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
+  printf("Current * 10: %d\r\n", (acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
+  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
   printf("DCL: %d\r\n", acc_data->discharge_limit);
   printf("CCL: %d\r\n", acc_data->charge_limit);
+  printf("Cont CCL %d\r\n", acc_data->cont_CCL);
   printf("SoC: %d\r\n", acc_data->soc);
   printf("Is Balancing?: %d\r\n", segment_is_balancing());
   printf("State: ");
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 3) printf("FAULTED\r\n");
+  else if (current_state == 3) printf("FAULTED: %X\r\n", acc_data->fault_code);
   printf("Raw Cell Voltage:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
@@ -161,27 +166,35 @@ const void print_bms_stats(acc_data_t *acc_data)
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
     }
     printf("\r\n");
-}
-
-  printf("Cell Temps:\r\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    for(uint8_t cell = 0; cell < 15; cell++)
-    {
-        printf("%d\t", acc_data->chip_data[c].thermistor_reading[cell]);
-    }
-    printf("\r\n");
   }
 
-  printf("Avg Cell Temps:\r\n");
+  printf("Filtered Cell Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < 15; cell++)
-    {
-        printf("%d\t", acc_data->chip_data[c].thermistor_value[cell]);
+    printf("Chip %d:  ", c);
+
+    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
+
+          if (THERM_DISABLE[c][cell]) continue;
+          printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
+        }
+      
+        printf("\r\n");
     }
-    printf("\r\n");
-  }
+    
+
+  printf("UnFiltered Cell Temps:\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    printf("Chip %d:  ", c);
+
+    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
+
+          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+        }
+      
+        printf("\r\n");
+    }
 
   start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
 }
@@ -231,6 +244,8 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM8_Init();
   MX_ADC1_Init();
+  MX_ADC2_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
  //for (int i = 0; i < 58; i++) 
  //{
@@ -259,7 +274,7 @@ int main(void)
     //TODO add ISR/timer based debug LED toggle
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-
+    acc_data->is_charger_connected = false;
     //acc_data->faultCode = FAULTS_CLEAR;
 
     /*
@@ -268,33 +283,25 @@ int main(void)
      */
     segment_retrieve_data(acc_data->chip_data);
     acc_data->pack_current = compute_get_pack_current();
-    
-    
-    
 
-    /* Perform calculations on the data in the frame */
     analyzer_push(acc_data);
     sm_handle_state(acc_data);
 
     /* check for inbound CAN */
-   // get_can1_msg();
-   // get_can2_msg();
+    //get_can1_msg();
+    //get_can2_msg();
 
-    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
-  //HAL_Delay(1);
-    HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
-    
     #ifdef DEBUG_STATS
     print_bms_stats(acc_data);
     #endif
 
-    // TODO - possibly optimize timing, every loop might be excessive
-    watchdog_pet();
-  
+    HAL_IWDG_Refresh(&hiwdg);
+
   }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
   /* USER CODE END 3 */
 }
 
@@ -315,10 +322,12 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI
+                              |RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 15;
@@ -392,15 +401,60 @@ static void MX_ADC1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN ADC1_Init 2 */
-  sConfig.Channel = ADC_CHANNEL_9;
-  sConfig.Rank = 2;
-  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+
+  /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief ADC2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_ADC2_Init(void)
+{
+
+  /* USER CODE BEGIN ADC2_Init 0 */
+
+  /* USER CODE END ADC2_Init 0 */
+
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  /* USER CODE BEGIN ADC2_Init 1 */
+
+  /* USER CODE END ADC2_Init 1 */
+
+  /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
+  */
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.ScanConvMode = DISABLE;
+  hadc2.Init.ContinuousConvMode = DISABLE;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK)
   {
     Error_Handler();
   }
 
-  /* USER CODE END ADC1_Init 2 */
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_8;
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN ADC2_Init 2 */
+
+  /* USER CODE END ADC2_Init 2 */
 
 }
 
@@ -423,10 +477,10 @@ static void MX_CAN1_Init(void)
   hcan1.Init.Prescaler = 2;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_3TQ;
-  hcan1.Init.TimeSeg2 = CAN_BS2_4TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan1.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
-  hcan1.Init.AutoBusOff = DISABLE;
+  hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
   hcan1.Init.AutoRetransmission = DISABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
@@ -457,11 +511,11 @@ static void MX_CAN2_Init(void)
 
   /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 16;
+  hcan2.Init.Prescaler = 2;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
   hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
-  hcan2.Init.TimeSeg1 = CAN_BS1_1TQ;
-  hcan2.Init.TimeSeg2 = CAN_BS2_1TQ;
+  hcan2.Init.TimeSeg1 = CAN_BS1_13TQ;
+  hcan2.Init.TimeSeg2 = CAN_BS2_2TQ;
   hcan2.Init.TimeTriggeredMode = DISABLE;
   hcan2.Init.AutoBusOff = DISABLE;
   hcan2.Init.AutoWakeUp = DISABLE;
@@ -509,6 +563,34 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_32;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
 
 }
 

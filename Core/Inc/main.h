@@ -41,7 +41,6 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -79,8 +78,6 @@ void Error_Handler(void);
 #define I_Sense_GPIO_Port GPIOC
 #define I_SenseB0_Pin GPIO_PIN_0
 #define I_SenseB0_GPIO_Port GPIOB
-#define I_SenseB1_Pin GPIO_PIN_1
-#define I_SenseB1_GPIO_Port GPIOB
 #define I_SenseB2_Pin GPIO_PIN_2
 #define I_SenseB2_GPIO_Port GPIOB
 #define Debug_LEDB11_Pin GPIO_PIN_11

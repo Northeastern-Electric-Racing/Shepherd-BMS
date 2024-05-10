@@ -28,12 +28,35 @@ uint64_t lastPrintTime = 0;
 uint64_t lastVoltTime = 0;
 uint64_t lastTempTime = 0;
 
+const uint32_t VOLT_TEMP_CONV[106] = {
+157300, 148800, 140300, 131800, 123300, 114800, 108772, 102744, 96716, 90688, 84660, 80328, 75996, 71664, 67332,
+63000, 59860, 56720, 53580, 50440, 47300, 45004, 42708, 40412, 38116, 35820, 34124, 32428, 30732, 29036, 27340,
+26076, 24812, 23548, 22284, 21020, 20074, 19128, 18182, 17236, 16290, 15576, 14862, 14148, 13434, 12720, 12176,
+11632, 11088, 10544, 10000, 9584, 9168, 8753, 8337, 7921, 7600, 7279, 6957, 6636, 6315, 6065, 5816, 5566, 5317,
+5067, 4872, 4676, 4481, 4285, 4090, 3936, 3782, 3627, 3473, 3319, 3197, 3075, 2953, 2831, 2709, 2612, 2514, 2417,
+2319, 2222, 2144, 2066, 1988, 1910, 1832, 1769, 1706, 1644, 1581, 1518, 1467, 1416, 1366, 1315, 1264, 1223, 1181, 1140, 1098, 1057};
+
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   delay(3000); // Allow time to connect and see boot up info
   Serial.println("Hello World!");
   LTC6804_initialize();
+
+  int8_t i2c_write_data[CHIPS][3];
+    // Set GPIO expander to output
+  	for(int chip = 0; chip < NUM_CHIPS; chip++) {
+    i2c_write_data[chip][0] = 0x40; // GPIO expander addr
+    i2c_write_data[chip][1] = 0x00; // GPIO direction addr
+    i2c_write_data[chip][2] = 0x00; // Set all to output
+  }
+  uint8_t comm_reg_data[CHIPS][6];
+
+  serialize_i2c_msg(i2c_write_data, comm_reg_data);
+  LTC6804_wrcomm(CHIPS, comm_reg_data);
+  LTC6804_stcomm(24);
+}
 
   // Turn OFF GPIO 1 & 2 pull downs
   GetChipConfigurations(chipConfigurations);
@@ -152,7 +175,7 @@ void loop() {
     Serial.println();
     
     Serial.print("Temperature:\n");
-    for (int c = 0; c < 1; c++)
+    for (int c = 0; c < 2; c++)
     {
       for (int i = 0; i < 31; i++)
       {
@@ -275,7 +298,7 @@ void ConfigureCOMMRegisters(uint8_t numChips, uint8_t dataToWrite[][3], uint8_t 
  */
 void SelectTherm(uint8_t therm) {
   // Exit if out of range values
-  if (therm < 0 || therm > 15) {
+  if (therm < 1 || therm > 16) {
     return;
   }
     // select 0-16 on GPIO expander
@@ -286,12 +309,12 @@ void SelectTherm(uint8_t therm) {
     }
     ConfigureCOMMRegisters(CHIPS, i2cWriteData, commRegData);
     LTC6804_wrcomm(CHIPS, commRegData);
-    LTC6804_stcomm(3);
+    LTC6804_stcomm(24);
   
 }
 
 void updateAllTherms(uint8_t numChips, int out[][32]) {
-  for (int therm = 0; therm < 15; therm++) {
+  for (int therm = 1; therm <= 16; therm++) {
     SelectTherm(therm);
     delay(5);
     //SelectTherm(therm + 16); not needed, setting GPIO exapnder will read both
@@ -300,10 +323,26 @@ void updateAllTherms(uint8_t numChips, int out[][32]) {
     delay(10);
     LTC6804_rdaux(0, numChips, rawTempVoltages); // Fetch ADC results from AUX registers
     for (int c = 0; c < numChips; c++) {
-      out[c][therm] = voltToTemp(uint32_t(rawTempVoltages[c][0] * (float(rawTempVoltages[c][2]) / 50000)));
-      out[c][therm + 16] = voltToTemp(uint32_t(rawTempVoltages[c][1] * (float(rawTempVoltages[c][2]) / 50000)));
+
+      uint16_t steinhart_input_low = 10000 * (float)( (rawTempVoltages[c][2])/ (rawTempVoltages[c][0]) - 1 );
+			uint16_t steinhart_input_high = 10000 * (float)( (rawTempVoltages[c][2])/ (rawTempVoltages[c][1]) - 1 );
+      out[c][therm-1] = steinhart_est(steinhart_input_high);
+      out[c][therm + 15] = steinhart_est(steinhart_input_high);
     }
   }
+}
+
+int8_t steinhart_est(uint16_t V)
+{
+	/* min temp - max temp with buffer on both */
+	for (int i = -25; i < 80; i++) {
+		if (V > VOLT_TEMP_CONV[i + 25]) {
+			return i;
+		}
+	}
+
+	return 80;
+	
 }
 
 int8_t steinhartEq(int8_t R) {
