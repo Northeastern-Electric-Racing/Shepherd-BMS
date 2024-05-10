@@ -45,10 +45,10 @@
 #define OVER_CURR_TIME      5000 //todo adjust these based on testing and/or counter values
 #define PRE_OVER_CURR_TIME  1000
 #define OVER_CHG_CURR_TIME  1000
-#define UNDER_VOLT_TIME     15000
+#define UNDER_VOLT_TIME     45000
 #define PRE_UNDER_VOLT_TIME 12000
-#define OVER_VOLT_TIME      15000
-#define LOW_CELL_TIME       15000
+#define OVER_VOLT_TIME      45000
+#define LOW_CELL_TIME       45000
 #define HIGH_TEMP_TIME      60000
 #define CURR_ERR_MARG       1.1       // scaling factor, ie 1.1 = 10% error
 
