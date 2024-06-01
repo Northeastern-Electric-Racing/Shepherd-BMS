@@ -11,6 +11,9 @@
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
 
+#define REF_CHANNEL 0
+#define VOUT_CHANNEL 1
+
 //#define CHARGING_ENABLED
 
 uint8_t fan_speed;
@@ -164,68 +167,75 @@ void compute_set_fault(int fault_state)
 
 int16_t compute_get_pack_current()
 {
-	static const float GAIN = 5.00; // mV/A
-	static const float OFFSET = 0.0; // mV
-	static const uint8_t num_samples = 10;
-	static int16_t current_accumulator = 0.0; // A
+	// static const float GAIN = 5.00; // mV/A
+	// static const float OFFSET = 0.0; // mV
+	// static const uint8_t num_samples = 10;
+	// static int16_t current_accumulator = 0.0; // A
 
-	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	float ref_voltage = read_ref_voltage();
-	float vout = read_vout();
+	// /* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
+	// float ref_voltage = read_ref_voltage();
+	// float vout = read_vout();
 
-	ref_voltage *= 1000;// convert to mV
-	vout *= 1000;
+	// ref_voltage *= 1000;// convert to mV
+	// vout *= 1000;
 
-	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
+	// int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
 
-	/* Low Pass Filter of Current*/
-	current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
-	current_accumulator = current;
+	// /* Low Pass Filter of Current*/
+	// current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
+	// current_accumulator = current;
 
-	return current;
+	// return current;
 
-	/* TEMP keep last years math until above is verified */
+	static const float CURRENT_LOWCHANNEL_MAX = 75.0; //Amps
+    static const float CURRENT_LOWCHANNEL_MIN = -75.0; //Amps
+    // static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
+    static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
 
-	// static const float CURRENT_LOWCHANNEL_MAX = 75.0;  // Amps
-	// static const float CURRENT_LOWCHANNEL_MIN = -75.0; // Amps
-	// // static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
-	// static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
+    static const float CURRENT_LOWCHANNEL_OFFSET = 2.500; // Calibrated with current = 0A
+    static const float CURRENT_HIGHCHANNEL_OFFSET = 2.500; // Calibrated with current = 0A
 
-	// static const float CURRENT_LOWCHANNEL_OFFSET  = 2.517; // Calibrated with current = 0A
-	// static const float CURRENT_HIGHCHANNEL_OFFSET = 2.520; // Calibrated with current = 0A
+    static const float HIGHCHANNEL_GAIN = 1 / 0.0041; // Calibrated with  current = 5A, 10A, 20A
+    static const float LOWCHANNEL_GAIN = 1 / 0.0267;
 
-	// static const float HIGHCHANNEL_GAIN = 1 / 0.004; // Calibrated with  current = 5A, 10A, 20A
-	// static const float LOWCHANNEL_GAIN	= 1 / 0.0267;
+	// Change ADC channel to read the high current sensor
+	change_adc1_channel(VOUT_CHANNEL);
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	int raw_low_current = HAL_ADC_GetValue(&hadc1);
 
-	// static const float REF5V_DIV  = 19.02 / (19.08 + 19.02); // Resistive divider in kOhm
-	// static const float REF5V_CONV = 1 / REF5V_DIV; // Converting from reading to real value
+	HAL_ADC_Start(&hadc2);
+	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+	int raw_high_current = HAL_ADC_GetValue(&hadc2);
 
-	// //TODO ADD BACK THE COMMENTED OUT ANALOG READS
-	// float ref_5V = /*analogRead(MEAS_5VREF_PIN) * */(3.3 / MAX_ADC_RESOLUTION) * REF5V_CONV;
-	// int16_t high_current
-	// 	= 10
-	// 	 /* * (((5 / ref_5V) * /analogRead(CURRENT_SENSOR_PIN_L) * CURRENT_ADC_RESOLUTION))
-	// 		 - CURRENT_HIGHCHANNEL_OFFSET) */
-	// 	  * HIGHCHANNEL_GAIN; // Channel has a large range with low resolution
-	// int16_t low_current
-	// 	= 10
-	// 	  /* * (((5 / ref_5V) * (analogRead(CURRENT_SENSOR_PIN_H) * CURRENT_ADC_RESOLUTION))
-	// 		 - CURRENT_LOWCHANNEL_OFFSET) */
-	// 	  * LOWCHANNEL_GAIN; // Channel has a small range with high resolution
+	change_adc1_channel(REF_CHANNEL);
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	int ref_5V = HAL_ADC_GetValue(&hadc1);
+	
+	int16_t ref_voltage_raw = (int16_t)(1000.0f * ((float)ref_5V * CURRENT_ADC_RESOLUTION));
 
-	// // Serial.print("High: ");
-	// // Serial.println(-high_current);
-	// // Serial.print("Low: ");
-	// // Serial.println(-low_current);
-	// // Serial.print("5V: ");
-	// // Serial.println(ref_5V);
+	int16_t high_current_voltage_raw = (int16_t)(1000.0f * ((float)raw_high_current * CURRENT_ADC_RESOLUTION));
+	high_current_voltage_raw = (int16_t)(5000.0f * high_current_voltage_raw / (float) ref_voltage_raw) ;
 
-	// // If the current is scoped within the range of the low channel, use the low channel
-	// if (low_current < CURRENT_LOWCHANNEL_MAX - 5.0 || low_current > CURRENT_LOWCHANNEL_MIN + 5.0) {
-	// 	return -low_current;
-	// }
+	int16_t high_current = (high_current_voltage_raw - (1000 * CURRENT_HIGHCHANNEL_OFFSET)) * (1/4.0f); //* (HIGHCHANNEL_GAIN/100.0f))/1000;
 
-	// return -high_current;
+	int16_t low_current_voltage_raw = (int16_t)(1000.0f * ((float)raw_low_current * CURRENT_ADC_RESOLUTION));
+	low_current_voltage_raw = (int16_t)(5000.0f * low_current_voltage_raw / (float) ref_voltage_raw) ;
+
+	int16_t low_current = (float)(low_current_voltage_raw - (1000 * CURRENT_LOWCHANNEL_OFFSET)) * (1/26.7); //* (LOWCHANNEL_GAIN/100.0f))/1000;
+
+    // If the current is scoped within the range of the low channel, use the low channel
+
+
+    if((low_current < CURRENT_LOWCHANNEL_MAX - 5.0 && low_current >= 0) || (low_current > CURRENT_LOWCHANNEL_MIN + 5.0 && low_current < 0))
+    {
+		//printf("\rLow Current: %d\n", -low_current);
+        return -low_current;
+    }
+
+	//printf("\rHigh Current: %d\n", -high_current);
+    return -high_current;
 }
 
 void compute_send_mc_discharge_message(acc_data_t* bmsdata)
@@ -530,29 +540,18 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
     can_send_msg(line, &acc_msg);
 }
 
-float read_ref_voltage()
+void change_adc1_channel(uint8_t channel)
 {
 
-	HAL_ADC_Start(&hadc2);
-	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+  ADC_ChannelConfTypeDef sConfig = {0};
 
-
-	/* scaled to 2.5 as per datasheet */
-	float ref_voltage = HAL_ADC_GetValue(&hadc2) * 5.0 / MAX_ADC_RESOLUTION;
-	//printf("\rRef Voltage: %u\n", ref_voltage);
-
-	return ref_voltage;
+  if (channel == REF_CHANNEL) sConfig.Channel = ADC_CHANNEL_9;
+  else if (channel == VOUT_CHANNEL) sConfig.Channel = ADC_CHANNEL_15;
+  
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
-
-float read_vout()
-{
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-
-	/* scaled to 3.3 */
-	float vout = HAL_ADC_GetValue(&hadc1) * 5.0 / MAX_ADC_RESOLUTION;
-	//printf("\rVout: %u\n", vout);
-
-	return vout;
-}
-
