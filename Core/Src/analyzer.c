@@ -317,8 +317,8 @@ void calc_pack_voltage_stats()
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 
 			/* fings out the maximum cell voltage and location */
-			if (bmsdata->chip_data[c].voltage_reading[cell] > bmsdata->max_voltage.val) {
-    			bmsdata->max_voltage.val = bmsdata->chip_data[c].voltage_reading[cell];
+			if (bmsdata->chip_data[c].voltage[cell] > bmsdata->max_voltage.val) {
+    			bmsdata->max_voltage.val = bmsdata->chip_data[c].voltage[cell];
     			bmsdata->max_voltage.chipIndex = c;
     			bmsdata->max_voltage.cellNum = cell;
 			}
@@ -330,8 +330,8 @@ void calc_pack_voltage_stats()
 			}
 
 			/* finds out the minimum cell voltage and location */
-			if (bmsdata->chip_data[c].voltage_reading[cell] < bmsdata->min_voltage.val) {
-    			bmsdata->min_voltage.val = bmsdata->chip_data[c].voltage_reading[cell];
+			if (bmsdata->chip_data[c].voltage[cell] < bmsdata->min_voltage.val) {
+    			bmsdata->min_voltage.val = bmsdata->chip_data[c].voltage[cell];
     			bmsdata->min_voltage.chipIndex = c;
     			bmsdata->min_voltage.cellNum = cell;
 			}
@@ -342,7 +342,7 @@ void calc_pack_voltage_stats()
     			bmsdata->min_ocv.cellNum = cell;
 			}
 
-			total_volt += bmsdata->chip_data[c].voltage_reading[cell];
+			total_volt += bmsdata->chip_data[c].voltage[cell];
 			total_ocv += bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
 	}
@@ -510,7 +510,7 @@ void calc_open_cell_voltage()
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 				bmsdata->chip_data[chip].open_cell_voltage[cell]
-					= bmsdata->chip_data[chip].voltage_reading[cell];
+					= bmsdata->chip_data[chip].voltage[cell];
 			}
 		}
 		return;
@@ -523,12 +523,12 @@ void calc_open_cell_voltage()
 				for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 					/* Sets open cell voltage to a moving average of OCV_AVG values */
 					bmsdata->chip_data[chip].open_cell_voltage[cell]
-						= ((uint32_t)(bmsdata->chip_data[chip].voltage_reading[cell])
+						= ((uint32_t)(bmsdata->chip_data[chip].voltage[cell])
 						   + ((uint32_t)(prevbmsdata->chip_data[chip].open_cell_voltage[cell])
 							  * (OCV_AVG - 1)))
 						  / OCV_AVG;
 					bmsdata->chip_data[chip].open_cell_voltage[cell]
-						= bmsdata->chip_data[chip].voltage_reading[cell];
+						= bmsdata->chip_data[chip].voltage[cell];
 
 					if (bmsdata->chip_data[chip].open_cell_voltage[cell] > MAX_VOLT * 10000) {
 						bmsdata->chip_data[chip].open_cell_voltage[cell]
@@ -640,6 +640,25 @@ void calc_state_of_charge()
 		bmsdata->soc = 0;
 	}
 }
+
+void calc_noise_volt_percent()
+{	
+	int i = 0;
+	for (uint8_t seg = 0; seg < NUM_SEGMENTS; seg++) {
+		uint8_t count = 0;
+		/* merge results from each of the two chips ona  given segment */
+		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			count = bmsdata->chip_data[seg + i].noise_reading[cell];
+			count += bmsdata->chip_data[seg + i + 1].noise_reading[cell];
+		}
+		i++;
+
+		/* turn into percentage */
+		bmsdata->segment_noise_percentage[seg] = (uint8_t)(100 * (count) / (NUM_CELLS_PER_CHIP * 2.0f));
+
+	}
+}
+
 
 void high_curr_therm_check()
 {

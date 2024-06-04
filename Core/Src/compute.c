@@ -516,12 +516,17 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
         int8_t segment2_average_temp;
         int8_t segment3_average_temp;
         int8_t segment4_average_temp;
+		int8_t segment5_average_temp;
+		int8_t segment6_average_temp;
+
     } segment_temp_msg_data;
 
     segment_temp_msg_data.segment1_average_temp = bmsdata->segment_average_temps[0];
     segment_temp_msg_data.segment2_average_temp = bmsdata->segment_average_temps[1];
     segment_temp_msg_data.segment3_average_temp = bmsdata->segment_average_temps[2];
     segment_temp_msg_data.segment4_average_temp = bmsdata->segment_average_temps[3];
+	segment_temp_msg_data.segment5_average_temp = bmsdata->segment_average_temps[4];
+	segment_temp_msg_data.segment6_average_temp = bmsdata->segment_average_temps[5];
 
     uint8_t buff[4] = { 0 };
     memcpy(buff, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
@@ -539,7 +544,66 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
 
     can_send_msg(line, &acc_msg);
 }
+void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
+{
+    struct __attribute__((__packed__)){
+       uint8_t status;
+	   int16_t pack_curr;
+	   int16_t dcl;
+    } fault_msg_data;
 
+    fault_msg_data.status = status;
+	fault_msg_data.pack_curr = curr;
+	fault_msg_data.dcl = in_dcl;
+
+	endian_swap(&fault_msg_data.pack_curr, sizeof(fault_msg_data.pack_curr));
+	endian_swap(&fault_msg_data.dcl, sizeof(fault_msg_data.dcl));
+
+    can_msg_t acc_msg;
+    acc_msg.id = 0x703; 
+    acc_msg.len = 5;
+    memcpy(acc_msg.data, &fault_msg_data, sizeof(fault_msg_data));
+
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+    can_send_msg(line, &acc_msg);
+}
+
+void compute_send_voltage_noise_message(acc_data_t* bmsdata)
+{
+	struct __attribute__((__packed__)){
+		uint8_t seg1_noise;
+		uint8_t seg2_noise;
+		uint8_t seg3_noise;
+		uint8_t seg4_noise;
+		uint8_t seg5_noise;
+		uint8_t seg6_noise;
+	} voltage_noise_msg_data;
+
+	voltage_noise_msg_data.seg1_noise = bmsdata->segment_noise_percentage[0];
+	voltage_noise_msg_data.seg2_noise = bmsdata->segment_noise_percentage[1];
+	voltage_noise_msg_data.seg3_noise = bmsdata->segment_noise_percentage[2];
+	voltage_noise_msg_data.seg4_noise = bmsdata->segment_noise_percentage[3];
+	voltage_noise_msg_data.seg5_noise = bmsdata->segment_noise_percentage[4];
+	voltage_noise_msg_data.seg6_noise = bmsdata->segment_noise_percentage[5];
+
+	can_msg_t acc_msg;
+	acc_msg.id = 0x88; 
+	acc_msg.len = sizeof(voltage_noise_msg_data);
+	memcpy(acc_msg.data, &voltage_noise_msg_data, sizeof(voltage_noise_msg_data));
+
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+	can_send_msg(line, &acc_msg);
+}	
 void change_adc1_channel(uint8_t channel)
 {
 

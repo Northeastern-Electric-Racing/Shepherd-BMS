@@ -9,7 +9,7 @@
 #define VOLTAGE_WAIT_TIME	 100 /* ms */
 #define THERM_AVG			 15	 /* Number of values to average */
 #define MAX_VOLT_DELTA		 2500
-#define MAX_VOLT_DELTA_COUNT 10
+#define MAX_CONSEC_NOISE	 10
 #define GPIO_EXPANDER_ADDR   0x40
 #define GPIO_REGISTER_ADDR   0x09
 
@@ -126,13 +126,13 @@ int pull_voltages()
 	//int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800};
 	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
-				sizeof(segment_data[i].voltage_reading));
+			memcpy(segment_data[i].voltage, previous_data[i].voltage,
+				sizeof(segment_data[i].voltage));
 		}
 		return voltage_error;
 	}
 
-	uint16_t segment_voltages[NUM_CHIPS][12];
+	uint16_t raw_voltages[NUM_CHIPS][12];
 
 	push_chip_configuration();
 	LTC6804_adcv(ltc68041);
@@ -141,10 +141,10 @@ int pull_voltages()
 	 * If we received an incorrect PEC indicating a bad read
 	 * copy over the data from the last good read and indicate an error
 	 */
-	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, segment_voltages) == -1) {
+	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
-				sizeof(segment_data[i].voltage_reading));
+			memcpy(segment_data[i].voltage, previous_data[i].voltage,
+				sizeof(segment_data[i].voltage));
 
 			printf("Bad voltage read\n");
 		}
@@ -155,6 +155,7 @@ int pull_voltages()
 	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 
 		int corrected_index = mapping_correction[i];
+		
 
 		/* correction to account for missing index, see more info below */
 		int dest_index = 0;
@@ -164,24 +165,27 @@ int pull_voltages()
 			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
 			if (j == 5) continue;
 
-			if (NULL/*abs(segment_voltages[i][dest_index] - previous_data[i].voltage_reading[dest_index])
-				> MAX_VOLT_DELTA*/) {
-				segment_data[corrected_index].voltage_reading[dest_index] = previous_data[i].voltage_reading[dest_index];
-				segment_data[corrected_index].bad_volt_diff_count[dest_index]++;
+			segment_data[corrected_index].noise_reading[dest_index] = 0;
+			
+			if (raw_voltages[i][j] > (MAX_VOLT + 0.5) || raw_voltages[i][j] < (MIN_VOLT - 0.5)) {
+				segment_data[corrected_index].voltage[dest_index] = previous_data[corrected_index].voltage[dest_index];
+				segment_data[corrected_index].noise_reading[dest_index] = 1;
+				segment_data[corrected_index].consecutive_noise[dest_index]++;
 
-				if (segment_data[corrected_index].bad_volt_diff_count[dest_index] > MAX_VOLT_DELTA_COUNT) {
-					segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-					segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[corrected_index][j];
+				if (segment_data[corrected_index].consecutive_noise[dest_index] > MAX_CONSEC_NOISE) {
+					segment_data[corrected_index].noise_reading[dest_index] = 0;
+					segment_data[corrected_index].consecutive_noise[dest_index] = 0;
+					segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
 				}
 			} else {
-				segment_data[corrected_index].bad_volt_diff_count[dest_index] = 0;
-				segment_data[corrected_index].voltage_reading[dest_index] = segment_voltages[corrected_index][j];
+				segment_data[corrected_index].consecutive_noise[dest_index] = 0;
+				segment_data[corrected_index].voltage[dest_index] = raw_voltages[corrected_index][j];
 			}
 			dest_index++;
 		}
 	}
 
-
+	
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
 
@@ -203,28 +207,39 @@ int pull_thermistors()
 
 	uint16_t raw_temp_voltages[NUM_CHIPS][6];
 
-	/* Set GPIO expander to output */
-	uint8_t i2c_write_data[NUM_CHIPS][3];
-  	for(int chip = 0; chip < NUM_CHIPS; chip++) {
-		i2c_write_data[chip][0] = 0x40; // GPIO expander addr
-		i2c_write_data[chip][1] = 0x00; // GPIO direction addr
-		i2c_write_data[chip][2] = 0x00; // Set all to output
+	// /* Set GPIO expander to output */
+	// uint8_t i2c_write_data[NUM_CHIPS][3];
+  	// for(int chip = 0; chip < NUM_CHIPS; chip++) {
+	// 	i2c_write_data[chip][0] = 0x40; // GPIO expander addr
+	// 	i2c_write_data[chip][1] = 0x00; // GPIO direction addr
+	// 	i2c_write_data[chip][2] = 0x00; // Set all to output
+	// }
+	// uint8_t comm_reg_data[NUM_CHIPS][6];
+
+	// serialize_i2c_msg(i2c_write_data, comm_reg_data);
+	// LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+	// LTC6804_stcomm(ltc68041, 24);
+
+	static uint8_t therm = 1;
+	if (therm > 16) {
+		therm = 1;
 	}
-	uint8_t comm_reg_data[NUM_CHIPS][6];
-
-	serialize_i2c_msg(i2c_write_data, comm_reg_data);
-	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-	LTC6804_stcomm(ltc68041, 24);
-
+	select_therm(therm);
+	//HAL_Delay(200);
+	//push_chip_configuration();
+	LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
+	HAL_Delay(3);	
+	LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages);
 	/* Rotate through all thermistor pairs (we can poll two at once) */
-	for (int therm = 1; therm <= 16; therm++) {
+	//for (int therm = 1; therm <= 1; therm++) {
 		/* Sets multiplexors to select thermistors */
-		select_therm(therm);
+		// select_therm(therm);
 		//HAL_Delay(15);
-		push_chip_configuration();
-		LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
-		HAL_Delay(3);	
-		LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
+		// push_chip_configuration();
+		// LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
+		// HAL_Delay(3);	
+		// LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
+		//HAL_Delay(3);
 
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 
@@ -256,8 +271,9 @@ int pull_thermistors()
 					sizeof(segment_data[corrected_index].thermistor_value));
 			}
 		}
-	}
-	start_timer(&therm_timer, THERM_WAIT_TIME); /* Start timer for next reading */
+	//}
+	therm++;
+	start_timer(&therm_timer, 100/*THERM_WAIT_TIME*/); /* Start timer for next reading */
 
 	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
 	//variance_therm_check();
@@ -272,7 +288,7 @@ void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
 {
 	segment_data = databuf;
 
-	/* Pull voltages and thermistors and indiacte if there was a problem during
+	/* Pull voltages and thermistors and indiacate if there was a problem during
 	 * retrieval */
 	voltage_error = pull_voltages();
 	therm_error = pull_thermistors();

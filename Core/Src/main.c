@@ -153,7 +153,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
-        printf("%d\t", acc_data->chip_data[c].voltage_reading[cell]);
+        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
     }
     printf("\r\n");
   }
@@ -292,7 +292,7 @@ int main(void)
     //get_can2_msg();
 
     #ifdef DEBUG_STATS
-    //print_bms_stats(acc_data);
+    print_bms_stats(acc_data);
     #endif
 
     HAL_IWDG_Refresh(&hiwdg);
