@@ -166,8 +166,9 @@ int pull_voltages()
 			if (j == 5) continue;
 
 			segment_data[corrected_index].noise_reading[dest_index] = 0;
-			
-			if (raw_voltages[i][j] > (MAX_VOLT + 0.5) || raw_voltages[i][j] < (MIN_VOLT - 0.5)) {
+
+			if (raw_voltages[i][j] > (1000 * MAX_VOLT + 0.5) || raw_voltages[i][j] < (1000 * MIN_VOLT - 0.5)) {
+				printf("%d\r\n", raw_voltages[i][j]);
 				segment_data[corrected_index].voltage[dest_index] = previous_data[corrected_index].voltage[dest_index];
 				segment_data[corrected_index].noise_reading[dest_index] = 1;
 				segment_data[corrected_index].consecutive_noise[dest_index]++;
