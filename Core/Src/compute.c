@@ -528,9 +528,6 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
 	segment_temp_msg_data.segment5_average_temp = bmsdata->segment_average_temps[4];
 	segment_temp_msg_data.segment6_average_temp = bmsdata->segment_average_temps[5];
 
-    uint8_t buff[4] = { 0 };
-    memcpy(buff, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
-
     can_msg_t acc_msg;
     acc_msg.id = 0x85; 
     acc_msg.len = sizeof(segment_temp_msg_data);
