@@ -595,6 +595,7 @@ void analyzer_push(acc_data_t* data)
 	calc_cont_dcl();
 	calc_cont_ccl();
 	calc_state_of_charge();
+	calc_noise_volt_percent();
 
 	is_first_reading_ = false;
 }
@@ -654,6 +655,7 @@ void calc_noise_volt_percent()
 		i++;
 
 		/* turn into percentage */
+		printf("count: %d\r\n", count);
 		bmsdata->segment_noise_percentage[seg] = (uint8_t)(100 * (count) / (NUM_CELLS_PER_CHIP * 2.0f));
 
 	}
