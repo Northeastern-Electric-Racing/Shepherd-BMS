@@ -167,20 +167,30 @@ int pull_voltages()
 
 			segment_data[corrected_index].noise_reading[dest_index] = 0;
 
-			if (raw_voltages[i][j] > (10000 * MAX_VOLT + 0.5) || raw_voltages[i][j] < (10000 * MIN_VOLT - 0.5)) {
-				printf("%d\r\n", raw_voltages[i][j]);
+			if (raw_voltages[i][j] > (int)(10000 * (MAX_VOLT + 0.5)) || raw_voltages[i][j] < (int)(10000 * (MIN_VOLT - 0.5))) {
+				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("poop\r\n");
 				segment_data[corrected_index].voltage[dest_index] = previous_data[corrected_index].voltage[dest_index];
 				segment_data[corrected_index].noise_reading[dest_index] = 1;
 				segment_data[corrected_index].consecutive_noise[dest_index]++;
 
-				if (segment_data[corrected_index].consecutive_noise[dest_index] > MAX_CONSEC_NOISE) {
-					segment_data[corrected_index].noise_reading[dest_index] = 0;
-					segment_data[corrected_index].consecutive_noise[dest_index] = 0;
-					segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
-				}
+				// if (segment_data[corrected_index].consecutive_noise[dest_index] > MAX_CONSEC_NOISE) {
+				// 	segment_data[corrected_index].noise_reading[dest_index] = 0;
+				// 	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
+				// 	segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
+				// }
 			} else {
+				//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);
+				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("pee\r\n");
+				//else printf("wiping\r\n");
 				segment_data[corrected_index].consecutive_noise[dest_index] = 0;
 				segment_data[corrected_index].voltage[dest_index] = raw_voltages[corrected_index][j];
+
+				if (raw_voltages[i][j] < 45000 && raw_voltages[i][j] > 24000) {
+					previous_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
+					//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);	
+					printf("raw: %d\r\n", raw_voltages[i][j]);		
+					}
+				
 			}
 			dest_index++;
 		}

@@ -656,7 +656,7 @@ void calc_noise_volt_percent()
 		i++;
 
 		/* turn into percentage */
-		printf("count: %d\r\n", count);
+		//printf("count: %d\r\n", count);
 		bmsdata->segment_noise_percentage[seg] = (uint8_t)(100 * (count) / (NUM_CELLS_PER_CHIP * 2.0f));
 
 	}
