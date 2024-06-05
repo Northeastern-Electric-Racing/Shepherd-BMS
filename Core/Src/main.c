@@ -284,7 +284,7 @@ int main(void)
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
     acc_data->is_charger_connected = false;
-    //acc_data->faultCode = FAULTS_CLEAR;
+    acc_data->fault_code = FAULTS_CLEAR;
 
     /*
      * Collect all the segment data needed to perform analysis

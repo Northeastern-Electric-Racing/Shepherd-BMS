@@ -382,7 +382,7 @@ void calc_cell_resistances()
 
 void calc_dcl()
 {
-	nertimer_t dcl_timer;
+	static nertimer_t dcl_timer;
 
 	int16_t current_limit = 0x7FFF;
 
@@ -411,6 +411,7 @@ void calc_dcl()
 		bmsdata->discharge_limit = 0;
 	}
 
+	/* State machine to prevent DCL from plummeting, copy over last DCL for 500ms */
 	else if (!is_timer_active(&dcl_timer) && current_limit < 5) {
 		if (prevbmsdata == NULL) {
 			bmsdata->discharge_limit = current_limit;
