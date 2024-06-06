@@ -177,29 +177,28 @@ const void print_bms_stats(acc_data_t *acc_data)
     printf("\r\n");
   }
 
-  // printf("Filtered Cell Temps:\r\n");
-  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   printf("Chip %d:  ", c);
+  printf("Thermistors with Disabling:\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+     printf("Chip %d:  ", c);
 
-  //   for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
+	for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
-  //         if (THERM_DISABLE[c][cell]) continue;
-  //         printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
-  //       }
+          //if (THERM_DISABLE[c][cell]) continue;
+          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+        }
       
-  //       printf("\r\n");
-  //   }
+        printf("\r\n");
+  }
     
-
-  printf("UnFiltered Cell Temps:\r\n");
+  printf("UnFiltered Thermistor Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
 
     for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
-          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+          printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
         }
       
         printf("\r\n");

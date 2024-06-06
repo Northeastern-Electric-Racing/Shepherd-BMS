@@ -123,18 +123,18 @@ const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 
 uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] =
 {
-	{1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0},
-	{1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0},
-	{1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0},
-	{1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0},
-	{1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	{1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	{1,0,1,0,0,1,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,0,1,1,1,0,0,0,0,1,0 },
+	{1,0,1,0,0,1,0,0,1,0,1,1,0,1,1,0,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1 },
+	{1,0,1,0,0,1,0,0,1,0,0,1,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0 },
+	{1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,0,0,0,1,1,1,0,1,0,0,1,0,0,0,0 },
+	{1,0,1,0,0,1,0,1,1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1 },
+	{1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,0,0,0 },
+	{1,0,1,0,0,1,0,0,1,0,1,1,0,0,1,1,0,0,1,0,1,1,1,0,0,0,0,0,0,0,1,0 },
+	{1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,1,1,1 },
+	{1,1,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0 },
+	{1,0,1,0,0,0,0,0,1,0,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,0,1,0,0,0,0 },
+	{1,1,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0 },
+	{1,1,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0,0,0,0,1,0,1,1,1,0,1,0,1,0,0 }
 };
 
 /*
@@ -193,56 +193,25 @@ void calc_state_of_charge();
 
 void calc_cell_temps()
 {
-	static uint8_t num_samples = 7; /* Samples for LPF */
-
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		//const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
-		int16_t therm_sum = 0;
-		uint8_t therm_count = 0;
-
-		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
-
-			if (THERM_DISABLE[c][therm]) continue;
-
-			therm_sum += bmsdata->chip_data[c].thermistor_value[therm];
-			therm_count++;
-		}
-
-		int8_t temp_avg = therm_sum / therm_count;
-
-		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
-			bmsdata->chip_data[c].thermistor_value[therm] = temp_avg;
-			bmsdata->chip_data[c].thermistor_value[therm] = (int8_t)((((int64_t)prevbmsdata->chip_data[c].thermistor_value[therm] * (num_samples - 5))
-													 				 + bmsdata->chip_data[c].thermistor_value[therm] * 5) / num_samples);
-		}
-
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+			uint8_t therm_count = 0;
+			int temp_sum = 0;
+			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
+				uint8_t thermNum = therm_map[cell][therm];
 
-			/* Takes the average temperature of all the relevant thermistors */
-			bmsdata->chip_data[c].cell_temp[cell] = bmsdata->chip_data[c].thermistor_value[0]; /* Note, all temp readings are the same at this point */
-
-			/* Low Pass Filter */
-
-
-			/* Cleansing value */
-			if (bmsdata->chip_data[c].cell_temp[cell] > MAX_TEMP) {
-				bmsdata->chip_data[c].cell_temp[cell] = MAX_TEMP;
+				if (thermNum != NO_THERM) {
+					//printf("%d\t", bmsdata->chip_data[c].thermistor_value[therm]);
+					temp_sum += bmsdata->chip_data[c].thermistor_value[therm];
+					therm_count++;
+				}
 			}
+			//printf("\r\n");
+			/* Takes the average temperature of all the relevant thermistors */
+			bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
+			therm_count = 0;
 		}
-		// uint8_t therm_count = 0;
-		// int temp_sum = 0;
-		// for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
-		// 	uint8_t thermNum = therm_map[cell][therm];
-
-		// 	if (thermNum != NO_THERM) {
-		// 		temp_sum += bmsdata->chip_data[c].thermistor_value[thermNum];
-		// 		therm_count++;
-		// 	}
-		// }
-
-		// /* Takes the average temperature of all the relevant thermistors */
-		// bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
-		// therm_count = 0;
 	}
 }
 
@@ -579,7 +548,7 @@ void analyzer_push(acc_data_t* data)
 	prevbmsdata = bmsdata;
 	bmsdata		= data;
 
-	//disable_therms();
+	disable_therms();
 
 	//high_curr_therm_check(); /* = prev if curr > 50 */
 	// diff_curr_therm_check();     /* = prev if curr - prevcurr > 10 */
@@ -603,17 +572,18 @@ void analyzer_push(acc_data_t* data)
 
 void disable_therms()
 {
-	int8_t temp_rep_1 = 25; /* Iniitalize to room temp (necessary to stabilize when the BMS first
-							   boots up/has null values) */
-	// if (!is_first_reading_) temp_rep_1 = prevbmsdata->avg_temp; /* Set to actual average temp of
-	// the pack */
+	int8_t tmp_temp = 25; /* Iniitalize to room temp (necessary to stabilize when the BMS first boots up/has null values) */
+	if (!is_first_reading_) tmp_temp = prevbmsdata->avg_temp; /* Set to actual average temp of the pack */
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* If 2D LUT shows therm should be disable */
 			if (THERM_DISABLE[c][therm]) {
 				/* Nullify thermistor by setting to pack average */
-				bmsdata->chip_data[c].thermistor_value[therm] = temp_rep_1;
+				bmsdata->chip_data[c].thermistor_value[therm] = tmp_temp;
+			}
+			else {
+				bmsdata->chip_data[c].thermistor_value[therm] = bmsdata->chip_data[c].thermistor_reading[therm];
 			}
 		}
 	}
