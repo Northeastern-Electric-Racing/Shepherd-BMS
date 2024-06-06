@@ -230,27 +230,20 @@ int pull_thermistors()
 	// LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
 	// LTC6804_stcomm(ltc68041, 24);
 
-	static uint8_t therm = 1;
-	if (therm > 16) {
-		therm = 1;
+	static uint8_t current_therm = 1;
+	if (current_therm > 16) {
+		current_therm = 1;
 	}
-	select_therm(therm);
+
+	/* Sets multiplexors to select thermistors */
+	select_therm(current_therm);
 	//HAL_Delay(200);
 	//push_chip_configuration();
 	LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
 	HAL_Delay(3);	
 	LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages);
 	/* Rotate through all thermistor pairs (we can poll two at once) */
-	//for (int therm = 1; therm <= 1; therm++) {
-		/* Sets multiplexors to select thermistors */
-		// select_therm(therm);
-		//HAL_Delay(15);
-		// push_chip_configuration();
-		// LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
-		// HAL_Delay(3);	
-		// LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
-		//HAL_Delay(3);
-
+	for (uint8_t therm = 1; therm <= (NUM_THERMS_PER_CHIP / 2); therm++) {
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 
 			int corrected_index = mapping_correction[c];
@@ -258,31 +251,36 @@ int pull_thermistors()
 			 * Get current temperature LUT. Voltage is adjusted to account for 5V reg
 			 * fluctuations (index 2 is a reading of the ADC 5V ref)
 			 */
+			if (therm == current_therm) {
+				/* see "thermister decoding" in confluence in shepherd software 22A */
+				uint16_t steinhart_input_low = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
+				uint16_t steinhart_input_high = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
 
-			/* see "thermister decoding" in confluence in shepherd software 22A */
-			uint16_t steinhart_input_low = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
-			uint16_t steinhart_input_high = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
+				segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
+				segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
 
-			segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
-			segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
+				/* Directly update for a set time from start up due to therm voltages
+			 	* needing to settle */
+				segment_data[corrected_index].thermistor_value[therm - 1]
+					= segment_data[corrected_index].thermistor_reading[therm - 1];
+				segment_data[corrected_index].thermistor_value[therm + 15]
+					= segment_data[corrected_index].thermistor_reading[therm + 15];
 
-			/* Directly update for a set time from start up due to therm voltages
-			 * needing to settle */
-			segment_data[corrected_index].thermistor_value[therm - 1]
-				= segment_data[corrected_index].thermistor_reading[therm - 1];
-			segment_data[corrected_index].thermistor_value[therm + 15]
-				= segment_data[corrected_index].thermistor_reading[therm + 15];
-
-			if (raw_temp_voltages[c][0] == LTC_BAD_READ
-				|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
-				memcpy(segment_data[corrected_index].thermistor_reading, previous_data[c].thermistor_reading,
-					sizeof(segment_data[corrected_index].thermistor_reading));
-				memcpy(segment_data[corrected_index].thermistor_value, previous_data[c].thermistor_value,
-					sizeof(segment_data[corrected_index].thermistor_value));
+				if (raw_temp_voltages[c][0] == LTC_BAD_READ
+					|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
+					memcpy(segment_data[corrected_index].thermistor_reading, previous_data[c].thermistor_reading,
+						sizeof(segment_data[corrected_index].thermistor_reading));
+					memcpy(segment_data[corrected_index].thermistor_value, previous_data[c].thermistor_value,
+						sizeof(segment_data[corrected_index].thermistor_value));
+				}
+			}
+			else {
+				segment_data[corrected_index].thermistor_reading[therm - 1] = previous_data[corrected_index].thermistor_reading[therm - 1];
+				segment_data[corrected_index].thermistor_reading[therm + 15] = previous_data[corrected_index].thermistor_reading[therm + 15];
 			}
 		}
-	//}
-	therm++;
+	}
+	current_therm++;
 	start_timer(&therm_timer, 100/*THERM_WAIT_TIME*/); /* Start timer for next reading */
 
 	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
