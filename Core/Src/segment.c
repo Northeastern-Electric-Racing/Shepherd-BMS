@@ -155,7 +155,6 @@ int pull_voltages()
 	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 
 		int corrected_index = mapping_correction[i];
-		
 
 		/* correction to account for missing index, see more info below */
 		int dest_index = 0;
@@ -172,7 +171,7 @@ int pull_voltages()
 				segment_data[corrected_index].voltage[dest_index] = previous_data[corrected_index].voltage[dest_index];
 				segment_data[corrected_index].noise_reading[dest_index] = 1;
 				segment_data[corrected_index].consecutive_noise[dest_index]++;
-
+				//printf("New data: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
 				// if (segment_data[corrected_index].consecutive_noise[dest_index] > MAX_CONSEC_NOISE) {
 				// 	segment_data[corrected_index].noise_reading[dest_index] = 0;
 				// 	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
@@ -183,12 +182,12 @@ int pull_voltages()
 				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("pee\r\n");
 				//else printf("wiping\r\n");
 				segment_data[corrected_index].consecutive_noise[dest_index] = 0;
-				segment_data[corrected_index].voltage[dest_index] = raw_voltages[corrected_index][j];
+				segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
 
 				if (raw_voltages[i][j] < 45000 && raw_voltages[i][j] > 24000) {
 					previous_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
 					//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);	
-					printf("raw: %d\r\n", raw_voltages[i][j]);		
+					//printf("raw: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
 					}
 				
 			}

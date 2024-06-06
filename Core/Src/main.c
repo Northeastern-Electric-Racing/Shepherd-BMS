@@ -301,7 +301,7 @@ int main(void)
     //get_can2_msg();
 
     #ifdef DEBUG_STATS
-    //print_bms_stats(acc_data);
+    print_bms_stats(acc_data);
     #endif
 
     HAL_IWDG_Refresh(&hiwdg);

@@ -270,7 +270,9 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	else
 	{
 		fault_table[0].data_1 = fault_data->pack_current;
+		fault_table[0].lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10 * CURR_ERR_MARG;
 		fault_table[1].data_1 = fault_data->pack_current;
+		fault_table[1].lim_1 = (fault_data->charge_limit)*10;
 		fault_table[2].data_1 = fault_data->min_voltage.val;
 		fault_table[3].data_1 = fault_data->max_voltage.val;
 		fault_table[4].data_1 = fault_data->max_voltage.val;
@@ -278,13 +280,14 @@ uint32_t sm_fault_return(acc_data_t* accData)
 		fault_table[5].data_1 = fault_data->max_temp.val;
 		fault_table[6].data_1 = fault_data->min_voltage.val;
 	}
+
 	static uint32_t fault_status = 0;
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(&fault_table[incr]);
 		incr++;
 	}
-
+	//TODO: Remove This !!!!
 	fault_status &= ~DISCHARGE_LIMIT_ENFORCEMENT_FAULT;
 	return fault_status;
 }
