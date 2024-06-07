@@ -447,12 +447,12 @@ void compute_send_current_message(acc_data_t* bmsdata)
 {
     struct __attribute__((__packed__)){
         uint16_t dcl;
-        uint16_t ccl;
+        int16_t ccl;
         uint16_t pack_curr;
     } current_status_msg_data;
 
     current_status_msg_data.dcl = bmsdata->discharge_limit;
-    current_status_msg_data.ccl = bmsdata->charge_limit;
+    current_status_msg_data.ccl =  -1 * bmsdata->charge_limit;
     current_status_msg_data.pack_curr = bmsdata->pack_current;
 
 	/* convert to big endian */
