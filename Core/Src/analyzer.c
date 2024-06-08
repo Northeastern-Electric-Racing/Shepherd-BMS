@@ -489,6 +489,10 @@ void calc_cont_ccl()
 	} else {
 		bmsdata->cont_CCL = TEMP_TO_CCL[max_res_index];
 	}
+
+	if (bmsdata->cont_CCL > MAX_CHG_CELL_CURR){
+		bmsdata->cont_CCL = MAX_CHG_CELL_CURR;
+	}
 }
 
 void calc_open_cell_voltage()
@@ -581,9 +585,12 @@ void analyzer_push(acc_data_t* data)
 	calc_cell_resistances();
 	calc_dcl();
 	calc_cont_dcl();
+	//calcCCL();
 	calc_cont_ccl();
 	calc_state_of_charge();
 	calc_noise_volt_percent();
+
+	data->charge_limit = data->cont_CCL;
 
 	is_first_reading_ = false;
 }

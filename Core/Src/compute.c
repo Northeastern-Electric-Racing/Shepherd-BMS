@@ -264,11 +264,11 @@ void compute_send_mc_charge_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((__packed__)){
-		uint16_t max_charge;
+		int16_t max_charge;
 	} charge_data;
 
 	/* scale to A * 10 */
-	charge_data.max_charge = 10 * bmsdata->charge_limit;
+	charge_data.max_charge = -10 * bmsdata->charge_limit;
 
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
