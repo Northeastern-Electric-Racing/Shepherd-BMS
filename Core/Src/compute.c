@@ -100,7 +100,7 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
     if (is_charging_enabled) {
         charger_msg_data.charger_control = 0x00;  //0：Start charging.
     } else {
-        charger_msg_data.charger_control = 0xFF;  // 1：battery protection, stop charging
+        charger_msg_data.charger_control = 0x01;  // 1：battery protection, stop charging
     }
 
     charger_msg_data.reserved_1 = 0x00;
