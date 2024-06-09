@@ -95,7 +95,8 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 	} charger_msg_data;
 
 	charger_msg_data.charger_voltage = voltage_to_set * 10;
-	charger_msg_data.charger_current = current_to_set * 10;
+	// Override charging to charge at 3.5A (or 0 if charging disabled)
+	charger_msg_data.charger_current = current_to_set == 0 ? 0 : 35;
 
     if (is_charging_enabled) {
         charger_msg_data.charger_control = 0x00;  //0：Start charging.
