@@ -256,7 +256,9 @@ int pull_thermistors()
 					= segment_data[corrected_index].thermistor_reading[therm + 15];
 
 				if (raw_temp_voltages[c][0] == LTC_BAD_READ
-					|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
+					|| raw_temp_voltages[c][1] == LTC_BAD_READ
+					|| segment_data[corrected_index].thermistor_value[therm - 1] > (MAX_CELL_TEMP + 5)
+					|| segment_data[corrected_index].thermistor_value[therm + 15] > (MAX_CELL_TEMP + 5 )) {
 					memcpy(segment_data[corrected_index].thermistor_reading, previous_data[c].thermistor_reading,
 						sizeof(segment_data[corrected_index].thermistor_reading));
 					memcpy(segment_data[corrected_index].thermistor_value, previous_data[c].thermistor_value,
@@ -266,6 +268,11 @@ int pull_thermistors()
 			else {
 				segment_data[corrected_index].thermistor_reading[therm - 1] = previous_data[corrected_index].thermistor_reading[therm - 1];
 				segment_data[corrected_index].thermistor_reading[therm + 15] = previous_data[corrected_index].thermistor_reading[therm + 15];
+
+				segment_data[corrected_index].thermistor_value[therm - 1]
+					= segment_data[corrected_index].thermistor_reading[therm - 1];
+				segment_data[corrected_index].thermistor_value[therm + 15]
+					= segment_data[corrected_index].thermistor_reading[therm + 15];
 			}
 		}
 	}
