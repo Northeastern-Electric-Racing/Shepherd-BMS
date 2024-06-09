@@ -189,4 +189,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata);
  */
 void compute_send_segment_temp_message(acc_data_t* bmsdata);
 
+void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
+void compute_send_voltage_noise_message(acc_data_t* bmsdata);
+
 #endif // COMPUTE_H

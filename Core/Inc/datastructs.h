@@ -12,7 +12,7 @@
  */
 typedef struct {
 	/* These are retrieved from the initial LTC comms */
-	uint16_t voltage_reading[NUM_CELLS_PER_CHIP];	/* store voltage readings from each chip */
+	uint16_t voltage[NUM_CELLS_PER_CHIP];	/* store voltage readings from each chip */
 	int8_t thermistor_reading[NUM_THERMS_PER_CHIP]; /* store all therm readings from each chip */
 	int8_t thermistor_value[NUM_THERMS_PER_CHIP];
 	int error_reading;
@@ -22,7 +22,8 @@ typedef struct {
 	float cell_resistance[NUM_CELLS_PER_CHIP];
 	uint16_t open_cell_voltage[NUM_CELLS_PER_CHIP];
 
-	uint8_t bad_volt_diff_count[NUM_CELLS_PER_CHIP];
+	uint8_t noise_reading[NUM_CELLS_PER_CHIP]; /* bool representing noise ignored read */
+	uint8_t consecutive_noise[NUM_CELLS_PER_CHIP]; /* count representing consecutive noisy reads */
 } chipdata_t;
 
 /**
@@ -92,6 +93,7 @@ typedef struct {
 	uint8_t soc;
 
 	int8_t segment_average_temps[NUM_SEGMENTS];
+	uint8_t segment_noise_percentage[NUM_SEGMENTS];
 
 	/**
 	 * @brief Note that this is a 32 bit integer, so there are 32 max possible fault codes

@@ -270,7 +270,9 @@ uint32_t sm_fault_return(acc_data_t* accData)
 	else
 	{
 		fault_table[0].data_1 = fault_data->pack_current;
+		fault_table[0].lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10 * CURR_ERR_MARG;
 		fault_table[1].data_1 = fault_data->pack_current;
+		fault_table[1].lim_1 = (fault_data->charge_limit)*10;
 		fault_table[2].data_1 = fault_data->min_voltage.val;
 		fault_table[3].data_1 = fault_data->max_voltage.val;
 		fault_table[4].data_1 = fault_data->max_voltage.val;
@@ -278,13 +280,15 @@ uint32_t sm_fault_return(acc_data_t* accData)
 		fault_table[5].data_1 = fault_data->max_temp.val;
 		fault_table[6].data_1 = fault_data->min_voltage.val;
 	}
+
 	static uint32_t fault_status = 0;
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
 		fault_status |= sm_fault_eval(&fault_table[incr]);
 		incr++;
 	}
-
+	//TODO: Remove This !!!!
+	fault_status &= ~DISCHARGE_LIMIT_ENFORCEMENT_FAULT;
 	return fault_status;
 }
 
@@ -337,8 +341,10 @@ uint32_t sm_fault_eval(fault_eval_t* index)
 		if (is_timer_expired(&index->timer) && fault_present) 
 		{
 			printf("\t\t\t*******Faulted: %s\r\n", index->id);
+			compute_send_fault_message(2, index->data_1, index->lim_1);
 			return index->code;
 		}
+
 
 		else return 0;
 
@@ -346,8 +352,13 @@ uint32_t sm_fault_eval(fault_eval_t* index)
 	
 	else if (!is_timer_active(&index->timer) && fault_present) 
 	{
+		
 		printf("\t\t\t*******Starting fault timer: %s\r\n", index->id);
 		start_timer(&index->timer, index->timeout);
+		if (index->code == DISCHARGE_LIMIT_ENFORCEMENT_FAULT) {
+			compute_send_fault_message(1, index->data_1, index->lim_1);
+		}
+			
 		return 0;
 	}
 	/* if (index->code == CELL_VOLTAGE_TOO_LOW) {
@@ -464,7 +475,7 @@ void sm_balance_cells(acc_data_t* bms_data)
 	 * in voltages */
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			uint16_t delta = bms_data->chip_data[chip].voltage_reading[cell]
+			uint16_t delta = bms_data->chip_data[chip].voltage[cell]
 				- (uint16_t)bms_data->min_voltage.val;
 			if (delta > MAX_DELTA_V * 10000)
 				balanceConfig[chip][cell] = true;

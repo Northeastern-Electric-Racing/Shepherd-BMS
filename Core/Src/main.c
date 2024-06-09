@@ -148,12 +148,21 @@ const void print_bms_stats(acc_data_t *acc_data)
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
   else if (current_state == 3) printf("FAULTED: %X\r\n", acc_data->fault_code);
+
+  printf("Voltage Noise Percent:\r\n");
+  printf("Seg 1: %d\r\n", acc_data->segment_noise_percentage[0]);
+  printf("Seg 2: %d\r\n", acc_data->segment_noise_percentage[1]);
+  printf("Seg 3: %d\r\n", acc_data->segment_noise_percentage[2]);
+  printf("Seg 4: %d\r\n", acc_data->segment_noise_percentage[3]);
+  printf("Seg 5: %d\r\n", acc_data->segment_noise_percentage[4]);
+  printf("Seg 6: %d\r\n", acc_data->segment_noise_percentage[5]);
+
   printf("Raw Cell Voltage:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
-        printf("%d\t", acc_data->chip_data[c].voltage_reading[cell]);
+        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
     }
     printf("\r\n");
   }
@@ -168,22 +177,21 @@ const void print_bms_stats(acc_data_t *acc_data)
     printf("\r\n");
   }
 
-  printf("Filtered Cell Temps:\r\n");
+  printf("Thermistors with Disabling:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    printf("Chip %d:  ", c);
+     printf("Chip %d:  ", c);
 
-    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
+	for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
-          if (THERM_DISABLE[c][cell]) continue;
+          //if (THERM_DISABLE[c][cell]) continue;
           printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
         }
       
         printf("\r\n");
-    }
+  }
     
-
-  printf("UnFiltered Cell Temps:\r\n");
+  printf("UnFiltered Thermistor Temps:\r\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
@@ -191,6 +199,19 @@ const void print_bms_stats(acc_data_t *acc_data)
     for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
           printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+        }
+      
+        printf("\r\n");
+    }
+
+   printf("Cell Temps:\r\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    printf("Chip %d:  ", c);
+
+    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+
+          printf("%d ", acc_data->chip_data[c].cell_temp[cell]);
         }
       
         printf("\r\n");
@@ -226,7 +247,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
-
+  HAL_Delay(500);
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
@@ -259,10 +280,10 @@ int main(void)
   //}
    
 
+  HAL_Delay(500);
   //watchdog_init();
   segment_init();
   compute_init();
-
   
   /* USER CODE END 2 */
 
@@ -275,7 +296,7 @@ int main(void)
 
     acc_data_t *acc_data = malloc(sizeof(acc_data_t));
     acc_data->is_charger_connected = false;
-    //acc_data->faultCode = FAULTS_CLEAR;
+    acc_data->fault_code = FAULTS_CLEAR;
 
     /*
      * Collect all the segment data needed to perform analysis
@@ -292,7 +313,7 @@ int main(void)
     //get_can2_msg();
 
     #ifdef DEBUG_STATS
-    //print_bms_stats(acc_data);
+    print_bms_stats(acc_data);
     #endif
 
     HAL_IWDG_Refresh(&hiwdg);
