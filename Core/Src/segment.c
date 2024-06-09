@@ -217,7 +217,6 @@ int pull_thermistors()
 
 	uint16_t raw_temp_voltages[NUM_CHIPS][6];
 
-
 	static uint8_t current_therm = 1;
 	if (current_therm > 16) {
 		current_therm = 1;
@@ -258,7 +257,9 @@ int pull_thermistors()
 				if (raw_temp_voltages[c][0] == LTC_BAD_READ
 					|| raw_temp_voltages[c][1] == LTC_BAD_READ
 					|| segment_data[corrected_index].thermistor_value[therm - 1] > (MAX_CELL_TEMP + 5)
-					|| segment_data[corrected_index].thermistor_value[therm + 15] > (MAX_CELL_TEMP + 5 )) {
+					|| segment_data[corrected_index].thermistor_value[therm + 15] > (MAX_CELL_TEMP + 5 )
+					|| segment_data[corrected_index].thermistor_value[therm - 1] < (MIN_CELL_TEMP - 5)
+					|| segment_data[corrected_index].thermistor_value[therm + 15] < (MIN_CELL_TEMP - 5 )) {
 					memcpy(segment_data[corrected_index].thermistor_reading, previous_data[c].thermistor_reading,
 						sizeof(segment_data[corrected_index].thermistor_reading));
 					memcpy(segment_data[corrected_index].thermistor_value, previous_data[c].thermistor_value,
