@@ -123,18 +123,18 @@ const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 
 uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] =
 {
-	{1, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 1, 0},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0},
-	{1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1},
-	{1, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0},
-	{1, 1, 1, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0},
-	{1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0, 1, 0, 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0},
-	{1, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	{1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	{1,0,1,0,0,1,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,0,1,1,1,0,0,0,0,1,0 },
+	{1,0,1,0,0,1,0,0,1,0,1,1,0,1,1,0,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1 },
+	{1,0,1,0,0,1,0,0,1,0,0,1,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0 },
+	{1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,0,0,0,1,1,1,0,1,0,0,1,0,0,0,0 },
+	{1,0,1,0,0,1,0,1,1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1 },
+	{1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,0,0,0 },
+	{1,0,1,0,0,1,0,0,1,0,1,1,0,0,1,1,0,0,1,0,1,1,1,0,0,0,0,0,0,0,1,0 },
+	{1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,1,1,1 },
+	{1,1,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0 },
+	{1,0,1,0,0,0,0,0,1,0,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,0,1,0,0,0,0 },
+	{1,1,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0 },
+	{1,1,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0,0,0,0,1,0,1,1,1,0,1,0,1,0,0 }
 };
 
 /*
@@ -196,38 +196,23 @@ void calc_cell_temps()
 	static uint8_t num_samples = 7; /* Samples for LPF */
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		//const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
-		int16_t therm_sum = 0;
-		uint8_t therm_count = 0;
-
-		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
-
-			if (THERM_DISABLE[c][therm]) continue;
-
-			therm_sum += bmsdata->chip_data[c].thermistor_value[therm];
-			therm_count++;
-		}
-
-		int8_t temp_avg = therm_sum / therm_count;
-
-		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
-			bmsdata->chip_data[c].thermistor_value[therm] = temp_avg;
-			bmsdata->chip_data[c].thermistor_value[therm] = (int8_t)((((int64_t)prevbmsdata->chip_data[c].thermistor_value[therm] * (num_samples - 5))
-													 				 + bmsdata->chip_data[c].thermistor_value[therm] * 5) / num_samples);
-		}
-
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			const uint8_t (*therm_map)[NUM_RELEVANT_THERMS] = (c % 2 == 0) ? RELEVANT_THERM_MAP_L : RELEVANT_THERM_MAP_H;
+			uint8_t therm_count = 0;
+			int temp_sum = 0;
+			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
+				uint8_t thermNum = therm_map[cell][therm];
 
-			/* Takes the average temperature of all the relevant thermistors */
-			bmsdata->chip_data[c].cell_temp[cell] = bmsdata->chip_data[c].thermistor_value[0]; /* Note, all temp readings are the same at this point */
-
-			/* Low Pass Filter */
-
-
-			/* Cleansing value */
-			if (bmsdata->chip_data[c].cell_temp[cell] > MAX_TEMP) {
-				bmsdata->chip_data[c].cell_temp[cell] = MAX_TEMP;
+				if (thermNum != NO_THERM) {
+					//printf("%d\t", bmsdata->chip_data[c].thermistor_value[therm]);
+					temp_sum += bmsdata->chip_data[c].thermistor_value[therm];
+					therm_count++;
+				}
 			}
+			//printf("\r\n");
+			/* Takes the average temperature of all the relevant thermistors */
+			bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
+			therm_count = 0;
 		}
 		// uint8_t therm_count = 0;
 		// int temp_sum = 0;
@@ -262,20 +247,20 @@ void calc_pack_temps()
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* finds out the maximum cell temp and location */
 
-			if (THERM_DISABLE[c][therm]) continue;
+			//if (THERM_DISABLE[c][therm]) continue;
 			total_accepted++;
-			if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
-				bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
-				bmsdata->max_temp.cellNum = c;
-				bmsdata->max_temp.chipIndex = therm;
-			}
+			//if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
+			//	bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
+			//	bmsdata->max_temp.cellNum = c;
+			//	bmsdata->max_temp.chipIndex = therm;
+			//}
 
 			/* finds out the minimum cell temp and location */
-			if (bmsdata->chip_data[c].thermistor_value[therm] < bmsdata->min_temp.val) {
-				bmsdata->min_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
-				bmsdata->min_temp.cellNum = c;
-				bmsdata->min_temp.chipIndex = therm;
-			}
+			//if (bmsdata->chip_data[c].thermistor_value[therm] < bmsdata->min_temp.val) {
+			//	bmsdata->min_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
+			//	bmsdata->min_temp.cellNum = c;
+			//	bmsdata->min_temp.chipIndex = therm;
+			//}
 
 			total_temp += bmsdata->chip_data[c].thermistor_value[therm];
 			total_seg_temp += bmsdata->chip_data[c].thermistor_value[therm];
@@ -285,6 +270,24 @@ void calc_pack_temps()
 		if (c % 2 == 0) {
 			bmsdata->segment_average_temps[c / 2] = total_seg_temp / 22;
 			total_seg_temp						  = 0;
+		}
+	}
+
+
+	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			if (bmsdata->chip_data[c].cell_temp[cell] > bmsdata->max_temp.val) {
+				bmsdata->max_temp.val = bmsdata->chip_data[c].cell_temp[cell];
+				bmsdata->max_temp.cellNum = cell;
+				bmsdata->max_temp.chipIndex = c;
+			}
+
+			/* finds out the minimum cell temp and location */
+			if (bmsdata->chip_data[c].cell_temp[cell] < bmsdata->min_temp.val) {
+				bmsdata->min_temp.val = bmsdata->chip_data[c].cell_temp[cell];
+				bmsdata->min_temp.cellNum = cell;
+				bmsdata->min_temp.chipIndex = c;
+			}
 		}
 	}
 
@@ -317,8 +320,8 @@ void calc_pack_voltage_stats()
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 
 			/* fings out the maximum cell voltage and location */
-			if (bmsdata->chip_data[c].voltage_reading[cell] > bmsdata->max_voltage.val) {
-    			bmsdata->max_voltage.val = bmsdata->chip_data[c].voltage_reading[cell];
+			if (bmsdata->chip_data[c].voltage[cell] > bmsdata->max_voltage.val) {
+    			bmsdata->max_voltage.val = bmsdata->chip_data[c].voltage[cell];
     			bmsdata->max_voltage.chipIndex = c;
     			bmsdata->max_voltage.cellNum = cell;
 			}
@@ -330,8 +333,8 @@ void calc_pack_voltage_stats()
 			}
 
 			/* finds out the minimum cell voltage and location */
-			if (bmsdata->chip_data[c].voltage_reading[cell] < bmsdata->min_voltage.val) {
-    			bmsdata->min_voltage.val = bmsdata->chip_data[c].voltage_reading[cell];
+			if (bmsdata->chip_data[c].voltage[cell] < bmsdata->min_voltage.val) {
+    			bmsdata->min_voltage.val = bmsdata->chip_data[c].voltage[cell];
     			bmsdata->min_voltage.chipIndex = c;
     			bmsdata->min_voltage.cellNum = cell;
 			}
@@ -342,7 +345,7 @@ void calc_pack_voltage_stats()
     			bmsdata->min_ocv.cellNum = cell;
 			}
 
-			total_volt += bmsdata->chip_data[c].voltage_reading[cell];
+			total_volt += bmsdata->chip_data[c].voltage[cell];
 			total_ocv += bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
 	}
@@ -382,7 +385,7 @@ void calc_cell_resistances()
 
 void calc_dcl()
 {
-	nertimer_t dcl_timer;
+	static nertimer_t dcl_timer;
 
 	int16_t current_limit = 0x7FFF;
 
@@ -411,6 +414,7 @@ void calc_dcl()
 		bmsdata->discharge_limit = 0;
 	}
 
+	/* State machine to prevent DCL from plummeting, copy over last DCL for 500ms */
 	else if (!is_timer_active(&dcl_timer) && current_limit < 5) {
 		if (prevbmsdata == NULL) {
 			bmsdata->discharge_limit = current_limit;
@@ -501,6 +505,10 @@ void calc_cont_ccl()
 	} else {
 		bmsdata->cont_CCL = TEMP_TO_CCL[max_res_index];
 	}
+
+	if (bmsdata->cont_CCL > MAX_CHG_CELL_CURR){
+		bmsdata->cont_CCL = MAX_CHG_CELL_CURR;
+	}
 }
 
 void calc_open_cell_voltage()
@@ -510,7 +518,7 @@ void calc_open_cell_voltage()
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 				bmsdata->chip_data[chip].open_cell_voltage[cell]
-					= bmsdata->chip_data[chip].voltage_reading[cell];
+					= bmsdata->chip_data[chip].voltage[cell];
 			}
 		}
 		return;
@@ -523,12 +531,12 @@ void calc_open_cell_voltage()
 				for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 					/* Sets open cell voltage to a moving average of OCV_AVG values */
 					bmsdata->chip_data[chip].open_cell_voltage[cell]
-						= ((uint32_t)(bmsdata->chip_data[chip].voltage_reading[cell])
+						= ((uint32_t)(bmsdata->chip_data[chip].voltage[cell])
 						   + ((uint32_t)(prevbmsdata->chip_data[chip].open_cell_voltage[cell])
 							  * (OCV_AVG - 1)))
 						  / OCV_AVG;
 					bmsdata->chip_data[chip].open_cell_voltage[cell]
-						= bmsdata->chip_data[chip].voltage_reading[cell];
+						= bmsdata->chip_data[chip].voltage[cell];
 
 					if (bmsdata->chip_data[chip].open_cell_voltage[cell] > MAX_VOLT * 10000) {
 						bmsdata->chip_data[chip].open_cell_voltage[cell]
@@ -578,7 +586,7 @@ void analyzer_push(acc_data_t* data)
 	prevbmsdata = bmsdata;
 	bmsdata		= data;
 
-	//disable_therms();
+	disable_therms();
 
 	//high_curr_therm_check(); /* = prev if curr > 50 */
 	// diff_curr_therm_check();     /* = prev if curr - prevcurr > 10 */
@@ -593,25 +601,30 @@ void analyzer_push(acc_data_t* data)
 	calc_cell_resistances();
 	calc_dcl();
 	calc_cont_dcl();
+	//calcCCL();
 	calc_cont_ccl();
 	calc_state_of_charge();
+	calc_noise_volt_percent();
+
+	data->charge_limit = data->cont_CCL;
 
 	is_first_reading_ = false;
 }
 
 void disable_therms()
 {
-	int8_t temp_rep_1 = 25; /* Iniitalize to room temp (necessary to stabilize when the BMS first
-							   boots up/has null values) */
-	// if (!is_first_reading_) temp_rep_1 = prevbmsdata->avg_temp; /* Set to actual average temp of
-	// the pack */
+	int8_t tmp_temp = 25; /* Iniitalize to room temp (necessary to stabilize when the BMS first boots up/has null values) */
+	if (!is_first_reading_) tmp_temp = prevbmsdata->avg_temp; /* Set to actual average temp of the pack */
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* If 2D LUT shows therm should be disable */
 			if (THERM_DISABLE[c][therm]) {
 				/* Nullify thermistor by setting to pack average */
-				bmsdata->chip_data[c].thermistor_value[therm] = temp_rep_1;
+				bmsdata->chip_data[c].thermistor_value[therm] = tmp_temp;
+			}
+			else {
+				bmsdata->chip_data[c].thermistor_value[therm] = bmsdata->chip_data[c].thermistor_reading[therm];
 			}
 		}
 	}
@@ -640,6 +653,26 @@ void calc_state_of_charge()
 		bmsdata->soc = 0;
 	}
 }
+
+void calc_noise_volt_percent()
+{	
+	int i = 0;
+	for (uint8_t seg = 0; seg < NUM_SEGMENTS; seg++) {
+		uint8_t count = 0;
+		/* merge results from each of the two chips ona  given segment */
+		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			count = bmsdata->chip_data[seg + i].noise_reading[cell];
+			count += bmsdata->chip_data[seg + i + 1].noise_reading[cell];
+		}
+		i++;
+
+		/* turn into percentage */
+		//printf("count: %d\r\n", count);
+		bmsdata->segment_noise_percentage[seg] = (uint8_t)(100 * (count) / (NUM_CELLS_PER_CHIP * 2.0f));
+
+	}
+}
+
 
 void high_curr_therm_check()
 {

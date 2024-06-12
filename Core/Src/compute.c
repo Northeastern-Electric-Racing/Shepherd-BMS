@@ -12,6 +12,10 @@
 #define MAX_CAN2_STORAGE 10
 
 #define CHARGING_ENABLED
+#define REF_CHANNEL 0
+#define VOUT_CHANNEL 1
+
+//#define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -165,68 +169,75 @@ void compute_set_fault(int fault_state)
 
 int16_t compute_get_pack_current()
 {
-	static const float GAIN = 5.00; // mV/A
-	static const float OFFSET = 0.0; // mV
-	static const uint8_t num_samples = 10;
-	static int16_t current_accumulator = 0.0; // A
+	// static const float GAIN = 5.00; // mV/A
+	// static const float OFFSET = 0.0; // mV
+	// static const uint8_t num_samples = 10;
+	// static int16_t current_accumulator = 0.0; // A
 
-	/* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	float ref_voltage = read_ref_voltage();
-	float vout = read_vout();
+	// /* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
+	// float ref_voltage = read_ref_voltage();
+	// float vout = read_vout();
 
-	ref_voltage *= 1000;// convert to mV
-	vout *= 1000;
+	// ref_voltage *= 1000;// convert to mV
+	// vout *= 1000;
 
-	int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
+	// int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
 
-	/* Low Pass Filter of Current*/
-	current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
-	current_accumulator = current;
+	// /* Low Pass Filter of Current*/
+	// current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
+	// current_accumulator = current;
 
-	return current;
+	// return current;
 
-	/* TEMP keep last years math until above is verified */
+	static const float CURRENT_LOWCHANNEL_MAX = 75.0; //Amps
+    static const float CURRENT_LOWCHANNEL_MIN = -75.0; //Amps
+    // static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
+    static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
 
-	// static const float CURRENT_LOWCHANNEL_MAX = 75.0;  // Amps
-	// static const float CURRENT_LOWCHANNEL_MIN = -75.0; // Amps
-	// // static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
-	// static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
+    static const float CURRENT_LOWCHANNEL_OFFSET = 2.500; // Calibrated with current = 0A
+    static const float CURRENT_HIGHCHANNEL_OFFSET = 2.500; // Calibrated with current = 0A
 
-	// static const float CURRENT_LOWCHANNEL_OFFSET  = 2.517; // Calibrated with current = 0A
-	// static const float CURRENT_HIGHCHANNEL_OFFSET = 2.520; // Calibrated with current = 0A
+    static const float HIGHCHANNEL_GAIN = 1 / 0.0041; // Calibrated with  current = 5A, 10A, 20A
+    static const float LOWCHANNEL_GAIN = 1 / 0.0267;
 
-	// static const float HIGHCHANNEL_GAIN = 1 / 0.004; // Calibrated with  current = 5A, 10A, 20A
-	// static const float LOWCHANNEL_GAIN	= 1 / 0.0267;
+	// Change ADC channel to read the high current sensor
+	change_adc1_channel(VOUT_CHANNEL);
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	int raw_low_current = HAL_ADC_GetValue(&hadc1);
 
-	// static const float REF5V_DIV  = 19.02 / (19.08 + 19.02); // Resistive divider in kOhm
-	// static const float REF5V_CONV = 1 / REF5V_DIV; // Converting from reading to real value
+	HAL_ADC_Start(&hadc2);
+	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+	int raw_high_current = HAL_ADC_GetValue(&hadc2);
 
-	// //TODO ADD BACK THE COMMENTED OUT ANALOG READS
-	// float ref_5V = /*analogRead(MEAS_5VREF_PIN) * */(3.3 / MAX_ADC_RESOLUTION) * REF5V_CONV;
-	// int16_t high_current
-	// 	= 10
-	// 	 /* * (((5 / ref_5V) * /analogRead(CURRENT_SENSOR_PIN_L) * CURRENT_ADC_RESOLUTION))
-	// 		 - CURRENT_HIGHCHANNEL_OFFSET) */
-	// 	  * HIGHCHANNEL_GAIN; // Channel has a large range with low resolution
-	// int16_t low_current
-	// 	= 10
-	// 	  /* * (((5 / ref_5V) * (analogRead(CURRENT_SENSOR_PIN_H) * CURRENT_ADC_RESOLUTION))
-	// 		 - CURRENT_LOWCHANNEL_OFFSET) */
-	// 	  * LOWCHANNEL_GAIN; // Channel has a small range with high resolution
+	change_adc1_channel(REF_CHANNEL);
+	HAL_ADC_Start(&hadc1);
+	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+	int ref_5V = HAL_ADC_GetValue(&hadc1);
+	
+	int16_t ref_voltage_raw = (int16_t)(1000.0f * ((float)ref_5V * CURRENT_ADC_RESOLUTION));
 
-	// // Serial.print("High: ");
-	// // Serial.println(-high_current);
-	// // Serial.print("Low: ");
-	// // Serial.println(-low_current);
-	// // Serial.print("5V: ");
-	// // Serial.println(ref_5V);
+	int16_t high_current_voltage_raw = (int16_t)(1000.0f * ((float)raw_high_current * CURRENT_ADC_RESOLUTION));
+	high_current_voltage_raw = (int16_t)(5000.0f * high_current_voltage_raw / (float) ref_voltage_raw) ;
 
-	// // If the current is scoped within the range of the low channel, use the low channel
-	// if (low_current < CURRENT_LOWCHANNEL_MAX - 5.0 || low_current > CURRENT_LOWCHANNEL_MIN + 5.0) {
-	// 	return -low_current;
-	// }
+	int16_t high_current = (high_current_voltage_raw - (1000 * CURRENT_HIGHCHANNEL_OFFSET)) * (1/4.0f); //* (HIGHCHANNEL_GAIN/100.0f))/1000;
 
-	// return -high_current;
+	int16_t low_current_voltage_raw = (int16_t)(1000.0f * ((float)raw_low_current * CURRENT_ADC_RESOLUTION));
+	low_current_voltage_raw = (int16_t)(5000.0f * low_current_voltage_raw / (float) ref_voltage_raw) ;
+
+	int16_t low_current = (float)(low_current_voltage_raw - (1000 * CURRENT_LOWCHANNEL_OFFSET)) * (1/26.7); //* (LOWCHANNEL_GAIN/100.0f))/1000;
+
+    // If the current is scoped within the range of the low channel, use the low channel
+
+
+    if((low_current < CURRENT_LOWCHANNEL_MAX - 5.0 && low_current >= 0) || (low_current > CURRENT_LOWCHANNEL_MIN + 5.0 && low_current < 0))
+    {
+		//printf("\rLow Current: %d\n", -low_current);
+        return -low_current;
+    }
+
+	//printf("\rHigh Current: %d\n", -high_current);
+    return -high_current;
 }
 
 void compute_send_mc_discharge_message(acc_data_t* bmsdata)
@@ -255,11 +266,14 @@ void compute_send_mc_charge_message(acc_data_t* bmsdata)
 {
 
 	struct __attribute__((__packed__)){
-		uint16_t max_charge;
+		int16_t max_charge;
 	} charge_data;
 
 	/* scale to A * 10 */
-	charge_data.max_charge = 10 * bmsdata->charge_limit;
+	charge_data.max_charge = -10 * bmsdata->charge_limit;
+
+	/* convert to big endian */
+	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
 
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
@@ -305,7 +319,7 @@ void compute_send_acc_status_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-	can_send_msg(&can2, &acc_msg);
+	can_send_msg(line, &acc_msg);
 }
 
 void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool balance)
@@ -337,7 +351,7 @@ void compute_send_bms_status_message(acc_data_t* bmsdata, int bms_state, bool ba
 	#else
 	can_t* line = &can1;
 	#endif
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
@@ -359,7 +373,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_cell_data_message(acc_data_t* bmsdata)
@@ -394,7 +408,7 @@ void compute_send_cell_data_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage,
@@ -431,19 +445,19 @@ void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_voltage
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_current_message(acc_data_t* bmsdata)
 {
     struct __attribute__((__packed__)){
         uint16_t dcl;
-        uint16_t ccl;
+        int16_t ccl;
         uint16_t pack_curr;
     } current_status_msg_data;
 
     current_status_msg_data.dcl = bmsdata->discharge_limit;
-    current_status_msg_data.ccl = bmsdata->charge_limit;
+    current_status_msg_data.ccl =  -1 * bmsdata->charge_limit;
     current_status_msg_data.pack_curr = bmsdata->pack_current;
 
 	/* convert to big endian */
@@ -462,7 +476,7 @@ void compute_send_current_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_cell_temp_message(acc_data_t* bmsdata)
@@ -497,7 +511,7 @@ void compute_send_cell_temp_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
 }
 
 void compute_send_segment_temp_message(acc_data_t* bmsdata)
@@ -507,15 +521,17 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
         int8_t segment2_average_temp;
         int8_t segment3_average_temp;
         int8_t segment4_average_temp;
+		int8_t segment5_average_temp;
+		int8_t segment6_average_temp;
+
     } segment_temp_msg_data;
 
     segment_temp_msg_data.segment1_average_temp = bmsdata->segment_average_temps[0];
     segment_temp_msg_data.segment2_average_temp = bmsdata->segment_average_temps[1];
     segment_temp_msg_data.segment3_average_temp = bmsdata->segment_average_temps[2];
     segment_temp_msg_data.segment4_average_temp = bmsdata->segment_average_temps[3];
-
-    uint8_t buff[4] = { 0 };
-    memcpy(buff, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
+	segment_temp_msg_data.segment5_average_temp = bmsdata->segment_average_temps[4];
+	segment_temp_msg_data.segment6_average_temp = bmsdata->segment_average_temps[5];
 
     can_msg_t acc_msg;
     acc_msg.id = 0x85; 
@@ -528,32 +544,80 @@ void compute_send_segment_temp_message(acc_data_t* bmsdata)
 	can_t* line = &can1;
 	#endif
 
-    can_send_msg(&can2, &acc_msg);
+    can_send_msg(line, &acc_msg);
+}
+void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
+{
+    struct __attribute__((__packed__)){
+       uint8_t status;
+	   int16_t pack_curr;
+	   int16_t dcl;
+    } fault_msg_data;
+
+    fault_msg_data.status = status;
+	fault_msg_data.pack_curr = curr;
+	fault_msg_data.dcl = in_dcl;
+
+	endian_swap(&fault_msg_data.pack_curr, sizeof(fault_msg_data.pack_curr));
+	endian_swap(&fault_msg_data.dcl, sizeof(fault_msg_data.dcl));
+
+    can_msg_t acc_msg;
+    acc_msg.id = 0x703; 
+    acc_msg.len = 5;
+    memcpy(acc_msg.data, &fault_msg_data, sizeof(fault_msg_data));
+
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+    can_send_msg(line, &acc_msg);
 }
 
-float read_ref_voltage()
+void compute_send_voltage_noise_message(acc_data_t* bmsdata)
+{
+	struct __attribute__((__packed__)){
+		uint8_t seg1_noise;
+		uint8_t seg2_noise;
+		uint8_t seg3_noise;
+		uint8_t seg4_noise;
+		uint8_t seg5_noise;
+		uint8_t seg6_noise;
+	} voltage_noise_msg_data;
+
+	voltage_noise_msg_data.seg1_noise = bmsdata->segment_noise_percentage[0];
+	voltage_noise_msg_data.seg2_noise = bmsdata->segment_noise_percentage[1];
+	voltage_noise_msg_data.seg3_noise = bmsdata->segment_noise_percentage[2];
+	voltage_noise_msg_data.seg4_noise = bmsdata->segment_noise_percentage[3];
+	voltage_noise_msg_data.seg5_noise = bmsdata->segment_noise_percentage[4];
+	voltage_noise_msg_data.seg6_noise = bmsdata->segment_noise_percentage[5];
+
+	can_msg_t acc_msg;
+	acc_msg.id = 0x88; 
+	acc_msg.len = sizeof(voltage_noise_msg_data);
+	memcpy(acc_msg.data, &voltage_noise_msg_data, sizeof(voltage_noise_msg_data));
+
+	#ifdef CHARGING_ENABLED
+	can_t* line = &can2;
+	#else
+	can_t* line = &can1;
+	#endif
+
+	can_send_msg(line, &acc_msg);
+}	
+void change_adc1_channel(uint8_t channel)
 {
 
-	HAL_ADC_Start(&hadc2);
-	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
+  ADC_ChannelConfTypeDef sConfig = {0};
 
-
-	/* scaled to 2.5 as per datasheet */
-	float ref_voltage = HAL_ADC_GetValue(&hadc2) * 5.0 / MAX_ADC_RESOLUTION;
-	//printf("\rRef Voltage: %u\n", ref_voltage);
-
-	return ref_voltage;
+  if (channel == REF_CHANNEL) sConfig.Channel = ADC_CHANNEL_9;
+  else if (channel == VOUT_CHANNEL) sConfig.Channel = ADC_CHANNEL_15;
+  
+  sConfig.Rank = 1;
+  sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
-
-float read_vout()
-{
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-
-	/* scaled to 3.3 */
-	float vout = HAL_ADC_GetValue(&hadc1) * 5.0 / MAX_ADC_RESOLUTION;
-	//printf("\rVout: %u\n", vout);
-
-	return vout;
-}
-
