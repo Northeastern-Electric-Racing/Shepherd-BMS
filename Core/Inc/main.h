@@ -41,13 +41,14 @@ extern "C" {
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
-
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */
+
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
@@ -61,8 +62,6 @@ void Error_Handler(void);
 #define FPGA_Reset_GPIO_Port GPIOC
 #define Communication_GPIO_Pin GPIO_PIN_14
 #define Communication_GPIO_GPIO_Port GPIOC
-#define Communication_GPIOC15_Pin GPIO_PIN_15
-#define Communication_GPIOC15_GPIO_Port GPIOC
 #define Communication_GPIOC0_Pin GPIO_PIN_0
 #define Communication_GPIOC0_GPIO_Port GPIOC
 #define SPI_2_CS_Pin GPIO_PIN_1
@@ -79,8 +78,6 @@ void Error_Handler(void);
 #define I_Sense_GPIO_Port GPIOC
 #define I_SenseB0_Pin GPIO_PIN_0
 #define I_SenseB0_GPIO_Port GPIOB
-#define I_SenseB1_Pin GPIO_PIN_1
-#define I_SenseB1_GPIO_Port GPIOB
 #define I_SenseB2_Pin GPIO_PIN_2
 #define I_SenseB2_GPIO_Port GPIOB
 #define Debug_LEDB11_Pin GPIO_PIN_11

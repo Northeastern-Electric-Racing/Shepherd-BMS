@@ -9,7 +9,9 @@
 #define VOLTAGE_WAIT_TIME	 100 /* ms */
 #define THERM_AVG			 15	 /* Number of values to average */
 #define MAX_VOLT_DELTA		 2500
-#define MAX_VOLT_DELTA_COUNT 10
+#define MAX_CONSEC_NOISE	 10
+#define GPIO_EXPANDER_ADDR   0x40
+#define GPIO_REGISTER_ADDR   0x09
 
 //TODO ensure spi 1 is correct for talking to segs
 extern SPI_HandleTypeDef hspi1;
@@ -19,7 +21,7 @@ uint8_t local_config[NUM_CHIPS][6] = {};
 uint8_t therm_avg_counter = 0;
 
 chipdata_t *segment_data = NULL;
-chipdata_t previous_data[NUM_CHIPS];
+chipdata_t previous_data[NUM_CHIPS] = {};
 uint16_t discharge_commands[NUM_CHIPS] = {};
 
 nertimer_t therm_timer;
@@ -29,15 +31,18 @@ nertimer_t variance_timer;
 int voltage_error = 0; //not faulted
 int therm_error = 0; //not faulted
 
+/* our segments are mapped backwards and in pairs, so they are read in 1,0 then 3,2, etc*/
+const int mapping_correction[12] = {1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10};
+
 uint16_t therm_settle_time_ = 0;
 
-const uint32_t VOLT_TEMP_CONV[91] = { 44260, 43970, 43670, 43450, 43030, 42690, 42340, 41980, 41620,
-	41240, 40890, 40460, 40040, 39580, 39130, 38660, 38210, 37710, 37210, 36190, 35670, 35160,
-	34620, 34080, 33550, 32990, 32390, 31880, 31270, 30690, 30160, 29590, 28990, 28450, 27880,
-	27270, 26740, 26080, 25610, 25000, 24440, 23880, 23330, 22780, 22240, 21700, 21180, 20660,
-	20150, 19640, 19140, 18650, 18170, 17700, 17230, 16780, 16330, 15890, 15470, 15030, 14640,
-	14230, 13850, 13450, 13070, 12710, 11490, 11170, 10850, 10550, 10250, 9960, 9670, 9400, 9130,
-	8870, 8620, 8370, 8130, 7900, 0 };
+const uint32_t VOLT_TEMP_CONV[106] = {
+157300, 148800, 140300, 131800, 123300, 114800, 108772, 102744, 96716, 90688, 84660, 80328, 75996, 71664, 67332,
+63000, 59860, 56720, 53580, 50440, 47300, 45004, 42708, 40412, 38116, 35820, 34124, 32428, 30732, 29036, 27340,
+26076, 24812, 23548, 22284, 21020, 20074, 19128, 18182, 17236, 16290, 15576, 14862, 14148, 13434, 12720, 12176,
+11632, 11088, 10544, 10000, 9584, 9168, 8753, 8337, 7921, 7600, 7279, 6957, 6636, 6315, 6065, 5816, 5566, 5317,
+5067, 4872, 4676, 4481, 4285, 4090, 3936, 3782, 3627, 3473, 3319, 3197, 3075, 2953, 2831, 2709, 2612, 2514, 2417,
+2319, 2222, 2144, 2066, 1988, 1910, 1832, 1769, 1706, 1644, 1581, 1518, 1467, 1416, 1366, 1315, 1264, 1223, 1181, 1140, 1098, 1057};
 
 const int32_t VOLT_TEMP_CALIB_OFFSET = 0;
 
@@ -59,7 +64,7 @@ void segment_init()
 	ltc68041 = malloc(sizeof(ltc_config));
 	LTC6804_initialize(ltc68041, &hspi1, GPIOA, SPI_1_CS_Pin);
 
-	 pull_chip_configuration();
+	pull_chip_configuration();
 
 	for (int c = 0; c < NUM_CHIPS; c++) {
 		local_config[c][0] = 0xF8;
@@ -70,105 +75,44 @@ void segment_init()
 		local_config[c][5] = 0x00;
 	}
 	push_chip_configuration();
+
+	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
+	start_timer(&therm_timer, THERM_WAIT_TIME);
+
+	uint8_t i2c_write_data[NUM_CHIPS][3];
+
+  // Set GPIO expander to output
+  	for(int chip = 0; chip < NUM_CHIPS; chip++) {
+    i2c_write_data[chip][0] = 0x40; // GPIO expander addr
+    i2c_write_data[chip][1] = 0x00; // GPIO direction addr
+    i2c_write_data[chip][2] = 0x00; // Set all to output
+  }
+  uint8_t comm_reg_data[NUM_CHIPS][6];
+
+  serialize_i2c_msg(i2c_write_data, comm_reg_data);
+  LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+  LTC6804_stcomm(ltc68041, 24);
 }
 
-void select_therm(uint8_t therm)
-{
+void select_therm(uint8_t therm){
 	/* Exit if out of range values */
-	if (therm < 0 || therm > 32) {
+	if (therm < 1 || therm > 16){
 		return;
 	}
+
 	uint8_t i2c_write_data[NUM_CHIPS][3];
 	uint8_t comm_reg_data[NUM_CHIPS][6];
-	if (therm <= 8) {
-		/* Turn off competing multiplexor (therms 9-16) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x92;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 4);
 
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x90;
-			i2c_write_data[chip][1] = 0x08 + (therm - 1);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	} else if (therm <= 16) {
-		/* Turn off competing multiplexor (therms 1-8) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x90;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x92;
-			i2c_write_data[chip][1] = 0x08 + (therm - 9);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041,NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	} else if (therm <= 24) {
-		/* Turn off competing multiplexor (therms 25-32) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x96;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041,NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x94;
-			i2c_write_data[chip][1] = 0x08 + (therm - 17);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	} else {
-		/* Turn off competing multiplexor (therms 17-24) */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x94;
-			i2c_write_data[chip][1] = 0x00;
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-
-		/* Turn on desired thermistor */
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
-			i2c_write_data[chip][0] = 0x96;
-			i2c_write_data[chip][1] = 0x08 + (therm - 25);
-			i2c_write_data[chip][2] = 0x00;
-		}
-		serialize_i2c_msg(i2c_write_data, comm_reg_data);
-		push_chip_configuration();
-		LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-		LTC6804_stcomm(ltc68041, 24);
-	}
+	// select 0-16 on GPIO expander
+    for(int chip = 0; chip < NUM_CHIPS; chip++) {
+		i2c_write_data[chip][0] = GPIO_EXPANDER_ADDR;
+		i2c_write_data[chip][1] = GPIO_REGISTER_ADDR;
+    	i2c_write_data[chip][2] = (therm - 1); // 0-15, will change multiplexer to select thermistor
+    }
+    serialize_i2c_msg(i2c_write_data, comm_reg_data);
+	push_chip_configuration();
+	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+	LTC6804_stcomm(ltc68041, 24);
 }
 
 int pull_voltages()
@@ -178,15 +122,17 @@ int pull_voltages()
 	 * just copy over the contents of the last good reading and the fault status
 	 * from the most recent attempt
 	 */
+
+	//int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800};
 	if (!is_timer_expired(&voltage_reading_timer) && voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
-				sizeof(segment_data[i].voltage_reading));
+			memcpy(segment_data[i].voltage, previous_data[i].voltage,
+				sizeof(segment_data[i].voltage));
 		}
 		return voltage_error;
 	}
 
-	uint16_t segment_voltages[NUM_CHIPS][12];
+	uint16_t raw_voltages[NUM_CHIPS][12];
 
 	push_chip_configuration();
 	LTC6804_adcv(ltc68041);
@@ -195,35 +141,64 @@ int pull_voltages()
 	 * If we received an incorrect PEC indicating a bad read
 	 * copy over the data from the last good read and indicate an error
 	 */
-	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, segment_voltages) == -1) {
+	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage_reading, previous_data[i].voltage_reading,
-				sizeof(segment_data[i].voltage_reading));
+			memcpy(segment_data[i].voltage, previous_data[i].voltage,
+				sizeof(segment_data[i].voltage));
+
+			printf("Bad voltage read\n");
 		}
 		return 1;
 	}
 
 	/* If the read was successful, copy the voltage data */
 	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP; j++) {
-			if (abs(segment_voltages[i][j] - previous_data[i].voltage_reading[j])
-				> MAX_VOLT_DELTA) {
-				segment_data[i].voltage_reading[j] = previous_data[i].voltage_reading[j];
-				segment_data[i].bad_volt_diff_count[j]++;
 
-				if (segment_data[i].bad_volt_diff_count[j] > MAX_VOLT_DELTA_COUNT) {
-					segment_data[i].bad_volt_diff_count[j] = 0;
-					segment_data[i].voltage_reading[j] = segment_voltages[i][j];
-				}
+		int corrected_index = mapping_correction[i];
+
+		/* correction to account for missing index, see more info below */
+		int dest_index = 0;
+
+		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP + 1; j++) {
+
+			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
+			if (j == 5) continue;
+
+			segment_data[corrected_index].noise_reading[dest_index] = 0;
+
+			if (raw_voltages[i][j] > (int)(10000 * (MAX_VOLT + 0.5)) || raw_voltages[i][j] < (int)(10000 * (MIN_VOLT - 0.5))) {
+				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("poop\r\n");
+				segment_data[corrected_index].voltage[dest_index] = previous_data[corrected_index].voltage[dest_index];
+				segment_data[corrected_index].noise_reading[dest_index] = 1;
+				segment_data[corrected_index].consecutive_noise[dest_index]++;
+				//printf("New data: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
+				// if (segment_data[corrected_index].consecutive_noise[dest_index] > MAX_CONSEC_NOISE) {
+				// 	segment_data[corrected_index].noise_reading[dest_index] = 0;
+				// 	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
+				// 	segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
+				// }
 			} else {
-				segment_data[i].bad_volt_diff_count[j] = 0;
-				segment_data[i].voltage_reading[j] = segment_voltages[i][j];
+				//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);
+				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("pee\r\n");
+				//else printf("wiping\r\n");
+				segment_data[corrected_index].consecutive_noise[dest_index] = 0;
+				segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
+
+				if (raw_voltages[i][j] < 45000 && raw_voltages[i][j] > 24000) {
+					previous_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
+					//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);	
+					//printf("raw: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
+					}
+				
 			}
+			dest_index++;
 		}
 	}
 
+	
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
+
 	return 0;
 }
 
@@ -242,49 +217,74 @@ int pull_thermistors()
 
 	uint16_t raw_temp_voltages[NUM_CHIPS][6];
 
+	static uint8_t current_therm = 1;
+	if (current_therm > 16) {
+		current_therm = 1;
+	}
+
+	/* Sets multiplexors to select thermistors */
+	select_therm(current_therm);
+	HAL_Delay(200);
+	//push_chip_configuration();
+	LTC6804_clraux(ltc68041);
+	LTC6804_adax(ltc68041);	/* Run ADC for AUX (GPIOs and refs) */
+	HAL_Delay(3);	
+	LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages);
 	/* Rotate through all thermistor pairs (we can poll two at once) */
-	for (int therm = 1; therm <= 16; therm++) {
-		/* Sets multiplexors to select thermistors */
-		select_therm(therm);
-		select_therm(therm + 16);
-
-		push_chip_configuration();
-		LTC6804_adax(ltc68041);									/* Run ADC for AUX (GPIOs and refs) */
-		LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages); /* Fetch ADC results from AUX registers */
-
+	for (uint8_t therm = 1; therm <= (NUM_THERMS_PER_CHIP / 2); therm++) {
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+
+			int corrected_index = mapping_correction[c];
 			/*
 			 * Get current temperature LUT. Voltage is adjusted to account for 5V reg
 			 * fluctuations (index 2 is a reading of the ADC 5V ref)
 			 */
-			segment_data[c].thermistor_reading[therm - 1]
-				= steinhart_est(raw_temp_voltages[c][0] * ((float)(raw_temp_voltages[c][2]) / 50000)
-					+ VOLT_TEMP_CALIB_OFFSET);
-			segment_data[c].thermistor_reading[therm + 15]
-				= steinhart_est(raw_temp_voltages[c][1] * ((float)(raw_temp_voltages[c][2]) / 50000)
-					+ VOLT_TEMP_CALIB_OFFSET);
+			if (therm == current_therm) {
+				/* see "thermister decoding" in confluence in shepherd software 22A */
+				uint16_t steinhart_input_low = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][0]) - 1 );
+				uint16_t steinhart_input_high = 10000 * (float)( ((float)raw_temp_voltages[c][2])/ (raw_temp_voltages[c][1]) - 1 );
 
-			/* Directly update for a set time from start up due to therm voltages
-			 * needing to settle */
-			segment_data[c].thermistor_value[therm - 1]
-				= segment_data[c].thermistor_reading[therm - 1];
-			segment_data[c].thermistor_value[therm + 15]
-				= segment_data[c].thermistor_reading[therm + 15];
+				segment_data[corrected_index].thermistor_reading[therm - 1] = steinhart_est(steinhart_input_low);
+				segment_data[corrected_index].thermistor_reading[therm + 15] = steinhart_est(steinhart_input_high);
 
-			if (raw_temp_voltages[c][0] == LTC_BAD_READ
-				|| raw_temp_voltages[c][1] == LTC_BAD_READ) {
-				memcpy(segment_data[c].thermistor_reading, previous_data[c].thermistor_reading,
-					sizeof(segment_data[c].thermistor_reading));
-				memcpy(segment_data[c].thermistor_value, previous_data[c].thermistor_value,
-					sizeof(segment_data[c].thermistor_value));
+				/* Directly update for a set time from start up due to therm voltages
+			 	* needing to settle */
+				segment_data[corrected_index].thermistor_value[therm - 1]
+					= segment_data[corrected_index].thermistor_reading[therm - 1];
+				segment_data[corrected_index].thermistor_value[therm + 15]
+					= segment_data[corrected_index].thermistor_reading[therm + 15];
+
+				if (raw_temp_voltages[c][0] == LTC_BAD_READ
+					|| raw_temp_voltages[c][1] == LTC_BAD_READ
+					|| segment_data[corrected_index].thermistor_value[therm - 1] > (MAX_CELL_TEMP + 5)
+					|| segment_data[corrected_index].thermistor_value[therm + 15] > (MAX_CELL_TEMP + 5 )
+					|| segment_data[corrected_index].thermistor_value[therm - 1] < (MIN_CELL_TEMP - 5)
+					|| segment_data[corrected_index].thermistor_value[therm + 15] < (MIN_CELL_TEMP - 5 )) {
+					memcpy(segment_data[corrected_index].thermistor_reading, previous_data[c].thermistor_reading,
+						sizeof(segment_data[corrected_index].thermistor_reading));
+					memcpy(segment_data[corrected_index].thermistor_value, previous_data[c].thermistor_value,
+						sizeof(segment_data[corrected_index].thermistor_value));
+				}
+			}
+			else {
+				segment_data[corrected_index].thermistor_reading[therm - 1] = previous_data[corrected_index].thermistor_reading[therm - 1];
+				segment_data[corrected_index].thermistor_reading[therm + 15] = previous_data[corrected_index].thermistor_reading[therm + 15];
+
+				segment_data[corrected_index].thermistor_value[therm - 1]
+					= segment_data[corrected_index].thermistor_reading[therm - 1];
+				segment_data[corrected_index].thermistor_value[therm + 15]
+					= segment_data[corrected_index].thermistor_reading[therm + 15];
 			}
 		}
 	}
-	start_timer(&therm_timer, THERM_WAIT_TIME); /* Start timer for next reading */
-	variance_therm_check();
-	// standard_dev_therm_check();
-	// averaging_therm_check();
-	discard_neutrals();
+	current_therm++;
+	start_timer(&therm_timer, 100/*THERM_WAIT_TIME*/); /* Start timer for next reading */
+
+	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
+	//variance_therm_check();
+	//standard_dev_therm_check();
+	//averaging_therm_check();
+	//discard_neutrals();
 
 	return 0; /* Read successfully */
 }
@@ -293,7 +293,7 @@ void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
 {
 	segment_data = databuf;
 
-	/* Pull voltages and thermistors and indiacte if there was a problem during
+	/* Pull voltages and thermistors and indiacate if there was a problem during
 	 * retrieval */
 	voltage_error = pull_voltages();
 	therm_error = pull_thermistors();
@@ -362,10 +362,10 @@ void segment_configure_balancing(bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_
 {
 	for (int c = 0; c < NUM_CHIPS; c++) {
 		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			if (discharge_config[c][cell])
-				discharge_commands[c] |= 1 << cell;
+			if (discharge_config[mapping_correction[c]][cell])
+				discharge_commands[mapping_correction[c]] |= 1 << cell;
 			else
-				discharge_commands[c] &= ~(1 << cell);
+				discharge_commands[mapping_correction[c]] &= ~(1 << cell);
 		}
 
 		configure_discharge(c, discharge_commands[c]);
@@ -420,12 +420,16 @@ void pull_chip_configuration()
 
 int8_t steinhart_est(uint16_t V)
 {
-	int i = 0;
-	while (V < VOLT_TEMP_CONV[i])
-		i++;
-	return i + MIN_TEMP;
-}
+	/* min temp - max temp with buffer on both */
+	for (int i = -25; i < 80; i++) {
+		if (V > VOLT_TEMP_CONV[i + 25]) {
+			return i;
+		}
+	}
 
+	return 80;
+	
+}
 void disable_gpio_pulldowns()
 {
 	HAL_Delay(1000);
