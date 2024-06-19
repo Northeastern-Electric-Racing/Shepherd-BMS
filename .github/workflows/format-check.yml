@@ -13,10 +13,8 @@ jobs:
     - name: Run clang-format style check for C/C++ sources
       uses: Northeastern-Electric-Racing/clang-format-action@main
       with:
-        clang-format-version: '17'
+        clang-format-version: '18'
         # only check core, embedded base covered internally
         check-path: "Core/"
-        # massive regex to exclude anything CubeMX generated, could require tweaking.  Uses posix extended
-        exclude-regex: "/stm32.*|main.(c|h)|freertos.*|FreeRTOS.*|sys.*|(system|startup)_stm32.*/ig"
         # use the clang-format from embedded base
         format-filepath: "./Drivers/Embedded-Base/clang-format"
