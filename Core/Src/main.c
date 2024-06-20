@@ -16,7 +16,7 @@
 
 #include "segment.h"
 #include "compute.h"
-#include "datastructs.h"
+#include "datastructs.h"CAN_RX_FIFO1
 #include "analyzer.h"
 #include "stateMachine.h"
 #include "can_handler.h"
@@ -230,6 +230,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
