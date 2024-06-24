@@ -34,7 +34,7 @@
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
-#define DEBUG_STATS
+// #define DEBUG_STATS
 // etc etc
 //#endif
 /* USER CODE END PD */
