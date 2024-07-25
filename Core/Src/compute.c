@@ -247,7 +247,7 @@ void compute_send_mc_discharge_message(acc_data_t* bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
-	//can_send_msg(&can1, &mc_msg);
+	// can_send_msg(&can1, &mc_msg);
 }
 
 void compute_send_mc_charge_message(acc_data_t* bmsdata)

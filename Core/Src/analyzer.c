@@ -265,6 +265,9 @@ void calc_pack_temps()
 			if (THERM_DISABLE[c][therm]) continue;
 			total_accepted++;
 			if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
+				if (bmsdata->chip_data[c].thermistor_value[therm] > 60) {
+					continue;
+				}
 				bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
 				bmsdata->max_temp.cellNum = c;
 				bmsdata->max_temp.chipIndex = therm;
