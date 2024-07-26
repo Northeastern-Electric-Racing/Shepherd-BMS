@@ -16,7 +16,7 @@
 
 #include "segment.h"
 #include "compute.h"
-#include "datastructs.h"CAN_RX_FIFO1
+#include "datastructs.h"
 #include "analyzer.h"
 #include "stateMachine.h"
 #include "can_handler.h"
