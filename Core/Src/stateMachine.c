@@ -118,7 +118,7 @@ void handle_charging(acc_data_t* bmsdata)
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) || !is_timer_active(&charger_message_timer)) {
 			compute_send_charging_message(
-				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), 5, bmsdata);
+				(MAX_CHARGE_VOLT * NUM_CELLS_PER_CHIP * NUM_CHIPS), CHARGE_TARGET_CURRENT, bmsdata);
 			start_timer(&charger_message_timer, CHARGE_MESSAGE_WAIT);
 
 		}

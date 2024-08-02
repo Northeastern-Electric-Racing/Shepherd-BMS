@@ -56,4 +56,6 @@
 
 #define CAN_MESSAGE_WAIT    5
 
+#define CHARGE_TARGET_CURRENT 2
+
 #endif
