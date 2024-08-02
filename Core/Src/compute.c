@@ -133,15 +133,8 @@ int compute_send_charging_message(uint16_t voltage_to_set, uint16_t current_to_s
 
 bool compute_charger_connected()
 {
-	//TODO need to set up CAN msg that actually toggles this bool
-	return false; //bmsdata->is_charger_connected;
+	return bmsdata->is_charger_connected;
 }
-
-//TODO add this back
-// void compute_charger_callback(const CAN_message_t& msg)
-// {
-// 	return;
-// }
 
 uint8_t compute_set_fan_speed(TIM_HandleTypeDef* pwmhandle, fan_select_t fan_select, uint8_t duty_cycle)
 {
