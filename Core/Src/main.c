@@ -10,6 +10,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -68,6 +69,13 @@ UART_HandleTypeDef huart4;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 acc_data_t *prev_acc_data = NULL;
 /* USER CODE END PV */
@@ -90,6 +98,8 @@ static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_IWDG_Init(void);
+void StartDefaultTask(void *argument);
+
 /* USER CODE BEGIN PFP */
 
 /* this is for the hardware watchdog ic. Currently not activated  in hw */
@@ -287,37 +297,45 @@ int main(void)
   
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+  /* add queues, ... */
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  /* add threads, ... */
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   for(;;) {
-    /* Create a dynamically allocated structure */
-
-    //TODO add ISR/timer based debug LED toggle
-
-    acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-    acc_data->is_charger_connected = false;
-    acc_data->fault_code = FAULTS_CLEAR;
-
-    /*
-     * Collect all the segment data needed to perform analysis
-     * Not state specific
-     */
-    segment_retrieve_data(acc_data->chip_data);
-    acc_data->pack_current = compute_get_pack_current();
-
-    analyzer_push(acc_data);
-    sm_handle_state(acc_data);
-
-    /* check for inbound CAN */
-    //get_can1_msg();
-    //get_can2_msg();
-
-    #ifdef DEBUG_STATS
-    print_bms_stats(acc_data);
-    #endif
-
-    HAL_IWDG_Refresh(&hiwdg);
-
+    
   }
     /* USER CODE END WHILE */
 
@@ -1019,7 +1037,7 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
@@ -1128,6 +1146,52 @@ void watchdog_pet(void)
 }
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  /* Infinite loop */
+  for(;;)
+  {
+    /* Create a dynamically allocated structure */
+
+    //TODO add ISR/timer based debug LED toggle
+
+    acc_data_t *acc_data = malloc(sizeof(acc_data_t));
+    acc_data->is_charger_connected = false;
+    acc_data->fault_code = FAULTS_CLEAR;
+
+    /*
+     * Collect all the segment data needed to perform analysis
+     * Not state specific
+     */
+    segment_retrieve_data(acc_data->chip_data);
+    acc_data->pack_current = compute_get_pack_current();
+
+    analyzer_push(acc_data);
+    sm_handle_state(acc_data);
+
+    /* check for inbound CAN */
+    //get_can1_msg();
+    //get_can2_msg();
+
+    #ifdef DEBUG_STATS
+    print_bms_stats(acc_data);
+    #endif
+
+    HAL_IWDG_Refresh(&hiwdg);
+
+    osDelay(1);
+  }
+  /* USER CODE END 5 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.
