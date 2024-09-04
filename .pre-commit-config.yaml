@@ -1,0 +1,25 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v14.0.0  # Specify the version of clang-format you want to use
+    hooks:
+      - id: clang-format
+        name: Apply clang-format
+        description: Run clang-format to check and fix C/C++ files
+        types: [c, c++]
+        files: \.(c|h|cpp|hpp|cc|cxx|hxx)$
+        args:
+          - --style=file
+           - --config=../Embedded-Base/clang-format
+        exclude: |
+           ^(?!.*Embedded-Base/\.clang-format-ignore).*$
+        additional_dependencies: []
+
+  - repo: local
+    hooks:
+      - id: clang_restage
+        name: Restage formatted files
+        entry: clang_restage
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [commit]
