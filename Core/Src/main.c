@@ -22,6 +22,9 @@
 #include "stateMachine.h"
 #include "can_handler.h"
 #include <stdio.h>
+#include "shep_tasks.h"
+
+#include "assert.h"
 
 /* USER CODE END Includes */
 
@@ -36,6 +39,7 @@
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
 #define DEBUG_STATS
+#define CHARGING
 // etc etc
 //#endif
 /* USER CODE END PD */
@@ -144,7 +148,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
 	// printf("Prev Fault: %#x", previousFault);
-  printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
+  printf("CAN Error:\t%ld\r\n", HAL_CAN_GetError(&hcan1));
   printf("Current * 10: %d\r\n", (acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
   printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
@@ -157,7 +161,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 3) printf("FAULTED: %X\r\n", acc_data->fault_code);
+  else if (current_state == 3) printf("FAULTED: %lX\r\n", acc_data->fault_code);
 
   printf("Voltage Noise Percent:\r\n");
   printf("Seg 1: %d\r\n", acc_data->segment_noise_percentage[0]);
@@ -250,7 +254,12 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  //TODO add ISR/timer based debug LED toggle
 
+  acc_data_t *acc_data = malloc(sizeof(acc_data_t));
+  acc_data->is_charger_connected = false;
+  acc_data->fault_code = FAULTS_CLEAR;
+  
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -313,15 +322,49 @@ int main(void)
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
-  /* add queues, ... */
+
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, acc_data, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+  get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
+  assert(get_segment_data_thread);
+
+  calc_ocv_thread = osThreadNew(vCalcOCV, acc_data, &calc_ocv_attrs);
+  assert(calc_ocv_thread);
+
+  calc_noise_thread = osThreadNew(vCalcNoise, acc_data, &calc_noise_attrs);
+  assert(calc_noise_thread);
+
+  calc_volt_stats_thread = osThreadNew(vCalcVoltageStats, acc_data, &calc_volt_stats_attrs);
+  assert(calc_volt_stats_thread);
+
+  calc_soc_thread = osThreadNew(vCalcSoC, acc_data, &calc_soc_attrs);
+  assert(calc_soc_thread);
+
+  calc_therms_thread = osThreadNew(vCalcTherms, acc_data, &calc_therms_attrs);
+  assert(calc_therms_thread);
+
+  calc_resistance_thread = osThreadNew(vCalcResistance, acc_data, &calc_resistance_attrs);
+  assert(calc_resistance_thread);
+
+  calc_dcl_thread = osThreadNew(vCalcDCL, acc_data, &calc_dcl_attrs);
+  assert(calc_dcl_thread);
+
+  calc_ccl_thread = osThreadNew(vCalcCCL, acc_data, &calc_ccl_attrs);
+  assert(calc_ccl_thread);
+
+  current_monitor_thread = osThreadNew(vCurrentMonitor, acc_data, &current_monitor_attrs);
+  assert(current_monitor_thread);
+  
+  state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
+  assert(state_machine_thread);
+
+  can_dispatch_thread = osThreadNew(vCanDispatch, NULL, &can_dispatch_attrs);
+  assert(can_dispatch_thread);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -1157,38 +1200,17 @@ void watchdog_pet(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  acc_data_t *bmsdata = (acc_data_t*)argument;
   /* Infinite loop */
   for(;;)
   {
-    /* Create a dynamically allocated structure */
-
-    //TODO add ISR/timer based debug LED toggle
-
-    acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-    acc_data->is_charger_connected = false;
-    acc_data->fault_code = FAULTS_CLEAR;
-
-    /*
-     * Collect all the segment data needed to perform analysis
-     * Not state specific
-     */
-    segment_retrieve_data(acc_data->chip_data);
-    acc_data->pack_current = compute_get_pack_current();
-
-    analyzer_push(acc_data);
-    sm_handle_state(acc_data);
-
-    /* check for inbound CAN */
-    //get_can1_msg();
-    //get_can2_msg();
-
     #ifdef DEBUG_STATS
-    print_bms_stats(acc_data);
+    print_bms_stats(bmsdata);
     #endif
 
     HAL_IWDG_Refresh(&hiwdg);
 
-    osDelay(1);
+    osDelay(200);
   }
   /* USER CODE END 5 */
 }

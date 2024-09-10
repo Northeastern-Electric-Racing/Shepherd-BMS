@@ -153,7 +153,7 @@ int pull_voltages()
 	LTC6804_adcv(ltc68041);
 
 	/**
-	 * If we received an incorrect PEC indicating a bad read
+	 * If we received an incorrect PEC indicating a bad read,
 	 * copy over the data from the last good read and indicate an error
 	 */
 	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
