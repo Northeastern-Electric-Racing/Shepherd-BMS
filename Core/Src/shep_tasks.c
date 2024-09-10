@@ -134,8 +134,8 @@ void vCalcDCL(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
-		osThreadFlagsWait(CALC_DCL_FLAG2 + CALC_DCL_FLAG1, osFlagsWaitAll,
-				  osWaitForever);
+		osThreadFlagsWait(CALC_DCL_FLAG2 + CALC_DCL_FLAG1,
+				  osFlagsWaitAll, osWaitForever);
 		calc_dcl(bmsdata);
 		calc_cont_dcl(bmsdata);
 	}
