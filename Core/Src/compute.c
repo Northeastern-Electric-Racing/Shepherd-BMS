@@ -145,9 +145,9 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 
 bool compute_charger_connected()
 {
-	#ifdef CHARGING
+#ifdef CHARGING
 	return true;
-	#endif
+#endif
 	//TODO need to set up CAN msg that actually toggles this bool
 	return false; //bmsdata->is_charger_connected;
 }
