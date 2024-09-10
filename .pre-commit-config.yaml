@@ -1,0 +1,10 @@
+repos:
+    - repo: local
+      hooks:
+        - id: clang_restage
+          name: Restage formatted files
+          entry: clang_restage
+          language: system
+          pass_filenames: false
+          always_run: true
+          stages: [pre-commit]
