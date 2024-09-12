@@ -33,7 +33,7 @@ void vGetSegmentData(void *pv_params)
 }
 
 osThreadId_t calc_ocv_thread;
-const osThreadAttr_t calc_ocv_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_ocv_attrs = { .name = "Calc OCV",
 					.stack_size = 2048,
 					.priority = osPriorityNormal };
 void vCalcOCV(void *pv_params)
@@ -48,7 +48,7 @@ void vCalcOCV(void *pv_params)
 }
 
 osThreadId_t calc_noise_thread;
-const osThreadAttr_t calc_noise_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_noise_attrs = { .name = "Calc Noise",
 					  .stack_size = 2048,
 					  .priority = osPriorityNormal };
 void vCalcNoise(void *pv_params)
@@ -63,7 +63,7 @@ void vCalcNoise(void *pv_params)
 }
 
 osThreadId_t calc_volt_stats_thread;
-const osThreadAttr_t calc_volt_stats_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_volt_stats_attrs = { .name = "Calc Volt Stats",
 					       .stack_size = 2048,
 					       .priority = osPriorityNormal };
 void vCalcVoltageStats(void *pv_params)
@@ -80,7 +80,7 @@ void vCalcVoltageStats(void *pv_params)
 }
 
 osThreadId_t calc_soc_thread;
-const osThreadAttr_t calc_soc_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_soc_attrs = { .name = "Calc SoC",
 					.stack_size = 2048,
 					.priority = osPriorityNormal };
 void vCalcSoC(void *pv_params)
@@ -94,7 +94,7 @@ void vCalcSoC(void *pv_params)
 }
 
 osThreadId_t calc_therms_thread;
-const osThreadAttr_t calc_therms_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_therms_attrs = { .name = "Calc Therms",
 					   .stack_size = 2048,
 					   .priority = osPriorityNormal };
 void vCalcTherms(void *pv_params)
@@ -111,7 +111,7 @@ void vCalcTherms(void *pv_params)
 }
 
 osThreadId_t calc_resistance_thread;
-const osThreadAttr_t calc_resistance_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_resistance_attrs = { .name = "Calc Resistance",
 					       .stack_size = 2048,
 					       .priority = osPriorityNormal };
 void vCalcResistance(void *pv_params)
@@ -127,7 +127,7 @@ void vCalcResistance(void *pv_params)
 }
 
 osThreadId_t calc_dcl_thread;
-const osThreadAttr_t calc_dcl_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t calc_dcl_attrs = { .name = "Calc DCL",
 					.stack_size = 2048,
 					.priority = osPriorityAboveNormal };
 void vCalcDCL(void *pv_params)
@@ -169,17 +169,6 @@ void vCurrentMonitor(void *pv_params)
 	}
 }
 
-osThreadId_t charging_thread;
-const osThreadAttr_t charging_attrs = { .name = "Get Segment Data",
-					.stack_size = 2048,
-					.priority = osPriorityNormal };
-void vCharging(void *pv_params)
-{
-	for (;;) {
-		//TODO: all of it
-	}
-}
-
 osThreadId_t state_machine_thread;
 const osThreadAttr_t state_machine_attrs = { .name = "State machine task",
 					     .stack_size = 2048,
@@ -196,7 +185,7 @@ void vStateMachine(void *pv_params)
 
 osThreadId_t can_dispatch_thread;
 const osThreadAttr_t can_dispatch_attrs = {
-	.name = "CanDispatch",
+	.name = "Can Dispatch",
 	.stack_size = 128 * 8,
 	.priority = (osPriority_t)osPriorityRealtime5,
 };
@@ -205,6 +194,12 @@ void vCanDispatch(void *pv_params)
 {
 	can_msg_t msg_from_queue;
 	HAL_StatusTypeDef msg_status;
+	
+	can_t *line;
+#ifdef CHARGING
+	line = &can2;
+#endif
+	line = &can1;
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
@@ -213,7 +208,7 @@ void vCanDispatch(void *pv_params)
 		if (osOK == osMessageQueueGet(can_outbound_queue,
 					      &msg_from_queue, NULL,
 					      osWaitForever)) {
-			msg_status = can_send_msg(&can1, &msg_from_queue);
+			msg_status = can_send_msg(line, &msg_from_queue);
 			if (msg_status == HAL_ERROR) {
 				// TODO: error handling
 				// fault_data.diag = "Failed to send CAN message";
