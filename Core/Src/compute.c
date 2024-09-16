@@ -14,7 +14,7 @@
 #define REF_CHANNEL  0
 #define VOUT_CHANNEL 1
 
-//#define CHARGING_ENABLED
+#define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -140,7 +140,7 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 bool compute_charger_connected()
 {
 	//TODO need to set up CAN msg that actually toggles this bool
-	return false; //bmsdata->is_charger_connected;
+	return true; //bmsdata->is_charger_connected;
 }
 
 //TODO add this back

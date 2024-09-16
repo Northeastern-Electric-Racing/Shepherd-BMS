@@ -22,7 +22,7 @@
 //cell limits
 #define MIN_VOLT	  2.5
 #define MAX_VOLT	  4.2
-#define MAX_CHARGE_VOLT	  4.21
+#define MAX_CHARGE_VOLT	  4.17
 #define MAX_DELTA_V	  0.015
 #define BAL_MIN_V	  4.00
 #define MAX_CELL_TEMP	  55
