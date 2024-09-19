@@ -13,29 +13,6 @@
 
 #include "cmsis_os2.h"
 
-#define CALC_OCV_FLAG 1
-
-#define CALC_NOISE_FLAG 1
-
-#define CALC_VOLT_STATS_FLAG 1
-
-#define CALC_SOC_FLAG 1
-
-#define CALC_THERMS_FLAG 1
-
-#define CALC_RESIST_FLAG 1
-
-/* Set from calc voltage stats task */
-#define CALC_DCL_FLAG1 0x00000001
-/* Set from calc resistance task */
-#define CALC_DCL_FLAG2 0x00000002
-
-#define CALC_CCL_FLAG 0x00000001
-
-#define STATE_MACHINE_FLAG 1
-
-#define CAN_DISPATCH_FLAG 1
-
 /**
  * @brief Task for retrieving segment data
  * 
@@ -46,76 +23,13 @@ extern osThreadId_t get_segment_data_thread;
 extern const osThreadAttr_t get_segment_data_attrs;
 
 /**
- * @brief Task for calculating OCV
+ * @brief Task for analyzing data after it is collected
  * 
  * @param pv_params Pointer to acc_data_t struct containing BMS data
  */
-void vCalcOCV(void *pv_params);
-extern osThreadId_t calc_ocv_thread;
-extern const osThreadAttr_t calc_ocv_attrs;
-
-/**
- * @brief Task for calculating the percent of voltage readings that are noisy
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcNoise(void *pv_params);
-extern osThreadId_t calc_noise_thread;
-extern const osThreadAttr_t calc_noise_attrs;
-
-/**
- * @brief Task for calculating statistics about voltage readings
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcVoltageStats(void *pv_params);
-extern osThreadId_t calc_volt_stats_thread;
-extern const osThreadAttr_t calc_volt_stats_attrs;
-
-/**
- * @brief Task for calculating state of charge
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcSoC(void *pv_params);
-extern osThreadId_t calc_soc_thread;
-extern const osThreadAttr_t calc_soc_attrs;
-
-/**
- * @brief Task for calculating thermal data
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcTherms(void *pv_params);
-extern osThreadId_t calc_therms_thread;
-extern const osThreadAttr_t calc_therms_attrs;
-
-/**
- * @brief Task for calculating cell resistances
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcResistance(void *pv_params);
-extern osThreadId_t calc_resistance_thread;
-extern const osThreadAttr_t calc_resistance_attrs;
-
-/**
- * @brief Task for calculating DCL and continuous DCL
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcDCL(void *pv_params);
-extern osThreadId_t calc_dcl_thread;
-extern const osThreadAttr_t calc_dcl_attrs;
-
-/**
- * @brief Task for calculating CCL and continuous CCL
- * 
- * @param pv_params Pointer to acc_data_t struct containing BMS data
- */
-void vCalcCCL(void *pv_params);
-extern osThreadId_t calc_ccl_thread;
-extern const osThreadAttr_t calc_ccl_attrs;
+void vAnalyzer(void *pv_params);
+extern osThreadId_t analyzer_thread;
+extern const osThreadAttr_t analyzer_attrs;
 
 /**
  * @brief Task for reading the current sensor

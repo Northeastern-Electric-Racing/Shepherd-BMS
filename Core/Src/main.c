@@ -332,29 +332,8 @@ int main(void)
   get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
   assert(get_segment_data_thread);
 
-  calc_ocv_thread = osThreadNew(vCalcOCV, acc_data, &calc_ocv_attrs);
-  assert(calc_ocv_thread);
-
-  calc_noise_thread = osThreadNew(vCalcNoise, acc_data, &calc_noise_attrs);
-  assert(calc_noise_thread);
-
-  calc_volt_stats_thread = osThreadNew(vCalcVoltageStats, acc_data, &calc_volt_stats_attrs);
-  assert(calc_volt_stats_thread);
-
-  calc_soc_thread = osThreadNew(vCalcSoC, acc_data, &calc_soc_attrs);
-  assert(calc_soc_thread);
-
-  calc_therms_thread = osThreadNew(vCalcTherms, acc_data, &calc_therms_attrs);
-  assert(calc_therms_thread);
-
-  calc_resistance_thread = osThreadNew(vCalcResistance, acc_data, &calc_resistance_attrs);
-  assert(calc_resistance_thread);
-
-  calc_dcl_thread = osThreadNew(vCalcDCL, acc_data, &calc_dcl_attrs);
-  assert(calc_dcl_thread);
-
-  calc_ccl_thread = osThreadNew(vCalcCCL, acc_data, &calc_ccl_attrs);
-  assert(calc_ccl_thread);
+  analyzer_thread = osThreadNew(vAnalyzer, acc_data, &analyzer_attrs);
+  assert(analyzer_thread);
 
   current_monitor_thread = osThreadNew(vCurrentMonitor, acc_data, &current_monitor_attrs);
   assert(current_monitor_thread);

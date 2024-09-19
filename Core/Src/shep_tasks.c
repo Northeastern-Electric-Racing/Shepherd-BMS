@@ -15,6 +15,12 @@
 #include "analyzer.h"
 #include "compute.h"
 
+#define STATE_MACHINE_FLAG 1
+
+#define CAN_DISPATCH_FLAG 1
+
+#define ANALYZER_FLAG 1
+
 osThreadId_t get_segment_data_thread;
 const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
 						.stack_size = 2048,
@@ -25,134 +31,39 @@ void vGetSegmentData(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		segment_retrieve_data(bmsdata->chip_data);
-		osThreadFlagsSet(calc_ocv_thread, CALC_OCV_FLAG);
-		osThreadFlagsSet(calc_noise_thread, CALC_NOISE_FLAG);
-		osThreadFlagsSet(calc_therms_thread, CALC_THERMS_FLAG);
-		osDelay(10);
+		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
+		osThreadYield();
 	}
 }
 
-osThreadId_t calc_ocv_thread;
-const osThreadAttr_t calc_ocv_attrs = { .name = "Calc OCV",
-					.stack_size = 2048,
+osThreadId_t analyzer_thread;
+const osThreadAttr_t analyzer_attrs = { .name = "Analyzer",
+					.stack_size = 4096,
 					.priority = osPriorityNormal };
-void vCalcOCV(void *pv_params)
+void vAnalyzer(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
-		osThreadFlagsWait(CALC_OCV_FLAG, osFlagsWaitAny, osWaitForever);
-		calc_open_cell_voltage(bmsdata);
-		osThreadFlagsSet(calc_volt_stats_thread, CALC_VOLT_STATS_FLAG);
-		osDelay(30);
-	}
-}
-
-osThreadId_t calc_noise_thread;
-const osThreadAttr_t calc_noise_attrs = { .name = "Calc Noise",
-					  .stack_size = 2048,
-					  .priority = osPriorityNormal };
-void vCalcNoise(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	for (;;) {
-		osThreadFlagsWait(CALC_NOISE_FLAG, osFlagsWaitAny,
-				  osWaitForever);
-		calc_noise_volt_percent(bmsdata);
-		osDelay(1000);
-	}
-}
-
-osThreadId_t calc_volt_stats_thread;
-const osThreadAttr_t calc_volt_stats_attrs = { .name = "Calc Volt Stats",
-					       .stack_size = 2048,
-					       .priority = osPriorityNormal };
-void vCalcVoltageStats(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	for (;;) {
-		osThreadFlagsWait(CALC_VOLT_STATS_FLAG, osFlagsWaitAny,
-				  osWaitForever);
-		calc_pack_voltage_stats(bmsdata);
-		osThreadFlagsSet(calc_soc_thread, CALC_SOC_FLAG);
-		osThreadFlagsSet(calc_dcl_thread, CALC_DCL_FLAG1);
-		osDelay(1000);
-	}
-}
-
-osThreadId_t calc_soc_thread;
-const osThreadAttr_t calc_soc_attrs = { .name = "Calc SoC",
-					.stack_size = 2048,
-					.priority = osPriorityNormal };
-void vCalcSoC(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	for (;;) {
-		osThreadFlagsWait(CALC_SOC_FLAG, osFlagsWaitAny, osWaitForever);
-		calc_state_of_charge(bmsdata);
-		osDelay(1000);
-	}
-}
-
-osThreadId_t calc_therms_thread;
-const osThreadAttr_t calc_therms_attrs = { .name = "Calc Therms",
-					   .stack_size = 2048,
-					   .priority = osPriorityNormal };
-void vCalcTherms(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	for (;;) {
-		osThreadFlagsWait(CALC_THERMS_FLAG, osFlagsWaitAny,
-				  osWaitForever);
+		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
+		osMutexAcquire(bmsdata->mutex, osWaitForever);
 		disable_therms(bmsdata);
+
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
-		osThreadFlagsSet(calc_resistance_thread, CALC_RESIST_FLAG);
-	}
-}
-
-osThreadId_t calc_resistance_thread;
-const osThreadAttr_t calc_resistance_attrs = { .name = "Calc Resistance",
-					       .stack_size = 2048,
-					       .priority = osPriorityNormal };
-void vCalcResistance(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	for (;;) {
-		osThreadFlagsWait(CALC_RESIST_FLAG, osFlagsWaitAny,
-				  osWaitForever);
+		calc_pack_voltage_stats(bmsdata);
+		calc_open_cell_voltage(bmsdata);
 		calc_cell_resistances(bmsdata);
-		osThreadFlagsSet(calc_dcl_thread, CALC_DCL_FLAG2);
-		osThreadFlagsSet(calc_ccl_thread, CALC_CCL_FLAG);
-	}
-}
-
-osThreadId_t calc_dcl_thread;
-const osThreadAttr_t calc_dcl_attrs = { .name = "Calc DCL",
-					.stack_size = 2048,
-					.priority = osPriorityAboveNormal };
-void vCalcDCL(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	for (;;) {
-		osThreadFlagsWait(CALC_DCL_FLAG2 + CALC_DCL_FLAG1,
-				  osFlagsWaitAll, osWaitForever);
 		calc_dcl(bmsdata);
 		calc_cont_dcl(bmsdata);
-	}
-}
-
-osThreadId_t calc_ccl_thread;
-const osThreadAttr_t calc_ccl_attrs = { .name = "Get Segment Data",
-					.stack_size = 2048,
-					.priority = osPriorityAboveNormal };
-void vCalcCCL(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-
-	for (;;) {
-		osThreadFlagsWait(CALC_CCL_FLAG, osFlagsWaitAny, osWaitForever);
+		//calcCCL();
 		calc_cont_ccl(bmsdata);
+		calc_state_of_charge(bmsdata);
+		calc_noise_volt_percent(bmsdata);
+
 		bmsdata->charge_limit = bmsdata->cont_CCL;
+
+		osMutexRelease(bmsdata->mutex);
+		osThreadYield();
 	}
 }
 
@@ -194,7 +105,7 @@ void vCanDispatch(void *pv_params)
 {
 	can_msg_t msg_from_queue;
 	HAL_StatusTypeDef msg_status;
-	
+
 	can_t *line;
 #ifdef CHARGING
 	line = &can2;
