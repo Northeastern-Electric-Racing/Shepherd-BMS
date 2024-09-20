@@ -28,6 +28,13 @@ typedef struct {
 		[NUM_CELLS_PER_CHIP]; /* bool representing noise ignored read */
 	uint8_t consecutive_noise
 		[NUM_CELLS_PER_CHIP]; /* count representing consecutive noisy reads */
+
+	/* These are retrieved from the initial LTC comms */
+	uint16_t unfilt_volt
+		[NUM_CELLS_PER_CHIP]; /* store voltage readings from each chip */
+	int8_t unfilt_therm_reading
+		[NUM_THERMS_PER_CHIP]; /* store all therm readings from each chip */
+	int8_t unfilt_therm_val[NUM_THERMS_PER_CHIP];
 } chipdata_t;
 
 /**
@@ -106,8 +113,11 @@ typedef struct {
 
 	/* Max, min, and avg thermistor readings */
 	crit_cellval_t max_temp;
+	crit_cellval_t unfilt_max_temp;
 	crit_cellval_t min_temp;
+	crit_cellval_t unfilt_min_temp;
 	int8_t avg_temp;
+	int8_t unfilt_avg_temp;
 
 	/* Max and min cell resistances */
 	crit_cellval_t max_res;

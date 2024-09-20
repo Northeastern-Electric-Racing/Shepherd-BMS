@@ -529,19 +529,21 @@ void compute_send_cell_temp_message(acc_data_t *bmsdata)
 		uint16_t average_temp;
 	} cell_temp_msg_data;
 
-	cell_temp_msg_data.max_cell_temp = bmsdata->max_temp.val;
-	cell_temp_msg_data.max_cell_id = (bmsdata->max_temp.chipIndex << 4) |
-					 (bmsdata->max_temp.cellNum - 17);
-	cell_temp_msg_data.min_cell_temp = bmsdata->min_temp.val;
-	cell_temp_msg_data.min_cell_id = (bmsdata->min_temp.chipIndex << 4) |
-					 (bmsdata->min_temp.cellNum - 17);
-	cell_temp_msg_data.average_temp = bmsdata->avg_temp;
+	cell_temp_msg_data.max_cell_temp = bmsdata->unfilt_max_temp.val;
+	cell_temp_msg_data.max_cell_id = (bmsdata->unfilt_max_temp.chipIndex << 4) |
+					 (bmsdata->unfilt_max_temp.cellNum - 17);
+	cell_temp_msg_data.min_cell_temp = bmsdata->unfilt_min_temp.val;
+	cell_temp_msg_data.min_cell_id = (bmsdata->unfilt_min_temp.chipIndex << 4) |
+					 (bmsdata->unfilt_min_temp.cellNum - 17);
+	cell_temp_msg_data.average_temp = bmsdata->unfilt_avg_temp;
 
 	/* convert to big endian */
 	endian_swap(&cell_temp_msg_data.max_cell_temp,
 		    sizeof(cell_temp_msg_data.max_cell_temp));
+	
 	endian_swap(&cell_temp_msg_data.min_cell_temp,
 		    sizeof(cell_temp_msg_data.min_cell_temp));
+	
 	endian_swap(&cell_temp_msg_data.average_temp,
 		    sizeof(cell_temp_msg_data.average_temp));
 

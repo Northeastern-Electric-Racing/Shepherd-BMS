@@ -348,6 +348,21 @@ int pull_thermistors()
 					segment_data[corrected_index]
 						.thermistor_reading[therm + 15];
 			}
+
+			if (raw_temp_voltages[c][0] == LTC_BAD_READ ||
+			    raw_temp_voltages[c][1] == LTC_BAD_READ) {
+				memcpy(segment_data[corrected_index]
+					       .unfilt_therm_reading,
+				       previous_data[c].unfilt_therm_reading,
+				       sizeof(segment_data[corrected_index]
+						      .unfilt_therm_reading));
+
+				memcpy(segment_data[corrected_index]
+					       .unfilt_therm_val,
+				       previous_data[c].unfilt_therm_val,
+				       sizeof(segment_data[corrected_index]
+						      .unfilt_therm_val));
+			}
 		}
 	}
 	current_therm++;

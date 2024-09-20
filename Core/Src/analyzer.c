@@ -233,27 +233,57 @@ void calc_pack_temps()
 	int total_temp = 0;
 	int total_seg_temp = 0;
 	int total_accepted = 0;
+	int unfilt_total_temp = 0;
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* finds out the maximum cell temp and location */
 
-			//if (THERM_DISABLE[c][therm]) continue;
+			if (THERM_DISABLE[c][therm])
+				continue;
 			total_accepted++;
-			//if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
-			//	bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
-			//	bmsdata->max_temp.cellNum = c;
-			//	bmsdata->max_temp.chipIndex = therm;
-			//}
+			if (bmsdata->chip_data[c].thermistor_value[therm] >
+			    bmsdata->max_temp.val) {
+				bmsdata->max_temp.val =
+					bmsdata->chip_data[c]
+						.thermistor_value[therm];
+				bmsdata->max_temp.cellNum = c;
+				bmsdata->max_temp.chipIndex = therm;
+			}
 
 			/* finds out the minimum cell temp and location */
-			//if (bmsdata->chip_data[c].thermistor_value[therm] < bmsdata->min_temp.val) {
-			//	bmsdata->min_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
-			//	bmsdata->min_temp.cellNum = c;
-			//	bmsdata->min_temp.chipIndex = therm;
-			//}
+			if (bmsdata->chip_data[c].thermistor_value[therm] <
+			    bmsdata->min_temp.val) {
+				bmsdata->min_temp.val =
+					bmsdata->chip_data[c]
+						.thermistor_value[therm];
+				bmsdata->min_temp.cellNum = c;
+				bmsdata->min_temp.chipIndex = therm;
+			}
+
+			/* Calc unfiltered therms */
+			if (bmsdata->chip_data[c].unfilt_therm_val[therm] >
+			    bmsdata->unfilt_max_temp.val) {
+				bmsdata->unfilt_max_temp.val =
+					bmsdata->chip_data[c]
+						.unfilt_therm_val[therm];
+				bmsdata->unfilt_max_temp.cellNum = c;
+				bmsdata->unfilt_max_temp.chipIndex = therm;
+			}
+
+			/* finds out the minimum cell temp and location */
+			if (bmsdata->chip_data[c].unfilt_therm_val[therm] <
+			    bmsdata->unfilt_min_temp.val) {
+				bmsdata->unfilt_min_temp.val =
+					bmsdata->chip_data[c]
+						.unfilt_therm_val[therm];
+				bmsdata->unfilt_min_temp.cellNum = c;
+				bmsdata->unfilt_min_temp.chipIndex = therm;
+			}
 
 			total_temp +=
 				bmsdata->chip_data[c].thermistor_value[therm];
+			unfilt_total_temp +=
+				bmsdata->chip_data[c].unfilt_therm_val[therm];
 			total_seg_temp +=
 				bmsdata->chip_data[c].thermistor_value[therm];
 		}
@@ -266,29 +296,9 @@ void calc_pack_temps()
 		}
 	}
 
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			if (bmsdata->chip_data[c].cell_temp[cell] >
-			    bmsdata->max_temp.val) {
-				bmsdata->max_temp.val =
-					bmsdata->chip_data[c].cell_temp[cell];
-				bmsdata->max_temp.cellNum = cell;
-				bmsdata->max_temp.chipIndex = c;
-			}
-
-			/* finds out the minimum cell temp and location */
-			if (bmsdata->chip_data[c].cell_temp[cell] <
-			    bmsdata->min_temp.val) {
-				bmsdata->min_temp.val =
-					bmsdata->chip_data[c].cell_temp[cell];
-				bmsdata->min_temp.cellNum = cell;
-				bmsdata->min_temp.chipIndex = c;
-			}
-		}
-	}
-
 	/* takes the average of all the cell temperatures */
 	bmsdata->avg_temp = total_temp / (total_accepted);
+	bmsdata->unfilt_avg_temp = unfilt_total_temp / total_accepted;
 }
 
 void calc_pack_voltage_stats()
