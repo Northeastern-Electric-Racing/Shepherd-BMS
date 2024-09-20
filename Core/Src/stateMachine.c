@@ -227,7 +227,7 @@ void sm_handle_state(acc_data_t *bmsdata)
 				break;
 			
 			case CAN_DEBUG:
-				compute_send_debug_message(&crc_error_check, 2);
+				compute_send_debug_message(0,0, crc_error_check, 0);
 
 			default:
 				break;

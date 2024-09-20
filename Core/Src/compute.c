@@ -670,19 +670,29 @@ void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 	can_send_msg(line, &acc_msg);
 }
 
-void compute_send_debug_message(uint8_t *data, uint8_t len)
+void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
+				uint32_t debug3)
 {
+	struct __attribute__((__packed__)) {
+		uint8_t debug0;
+		uint8_t debug1;
+		uint16_t debug2;
+		uint32_t debug3;
+	} debug_msg_data;
+
+	debug_msg_data.debug0 = debug0;
+	debug_msg_data.debug1 = debug1;
+	debug_msg_data.debug2 = debug2;
+	debug_msg_data.debug3 = debug3;
+
 	can_msg_t debug_msg;
 	debug_msg.id = 0x702;
 	debug_msg.len = 8; // yaml decodes this msg as 8 bytes
 
-	if (len > 8) {
-		len = 8;
-	}
+	endian_swap(&debug_msg_data.debug2, sizeof(debug_msg_data.debug2));
+	endian_swap(&debug_msg_data.debug3, sizeof(debug_msg_data.debug3));
 
-	memset(debug_msg.data, 0, 8);
-	memcpy(debug_msg.data, data, len);
-	endian_swap(debug_msg.data, 8);
+	memcpy(debug_msg.data, &debug_msg_data, 8);
 
 #ifdef CHARGING_ENABLED
 	can_t *line = &can2;
