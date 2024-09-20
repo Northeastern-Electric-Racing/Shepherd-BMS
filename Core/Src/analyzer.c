@@ -200,6 +200,7 @@ void calc_cell_temps()
 					       RELEVANT_THERM_MAP_H;
 			uint8_t therm_count = 0;
 			int temp_sum = 0;
+			int unfilt_temp_sum = 0;
 			for (uint8_t therm = 0; therm < NUM_RELEVANT_THERMS;
 			     therm++) {
 				uint8_t thermNum = therm_map[cell][therm];
@@ -209,6 +210,9 @@ void calc_cell_temps()
 					temp_sum +=
 						bmsdata->chip_data[c]
 							.thermistor_value[therm];
+					unfilt_temp_sum =
+						bmsdata->chip_data[c]
+							.unfilt_therm_val[therm];
 					therm_count++;
 				}
 			}
@@ -216,6 +220,8 @@ void calc_cell_temps()
 			/* Takes the average temperature of all the relevant thermistors */
 			bmsdata->chip_data[c].cell_temp[cell] =
 				temp_sum / therm_count;
+			bmsdata->chip_data[c].unfilt_cell_temp[cell] =
+				unfilt_temp_sum / therm_count;
 			therm_count = 0;
 		}
 	}
@@ -230,6 +236,15 @@ void calc_pack_temps()
 	bmsdata->min_temp.val = MAX_TEMP;
 	bmsdata->min_temp.cellNum = 0;
 	bmsdata->min_temp.chipIndex = 0;
+
+	bmsdata->unfilt_max_temp.val = MIN_TEMP;
+	bmsdata->unfilt_max_temp.cellNum = 0;
+	bmsdata->unfilt_max_temp.chipIndex = 0;
+
+	bmsdata->unfilt_min_temp.val = MAX_TEMP;
+	bmsdata->unfilt_min_temp.cellNum = 0;
+	bmsdata->unfilt_min_temp.chipIndex = 0;
+
 	int total_temp = 0;
 	int total_seg_temp = 0;
 	int total_accepted = 0;
@@ -311,15 +326,24 @@ void calc_pack_voltage_stats()
 	bmsdata->max_ocv.cellNum = 0;
 	bmsdata->max_ocv.chipIndex = 0;
 
+	bmsdata->unfilt_max_voltage.val = MIN_VOLT_MEAS;
+	bmsdata->unfilt_max_voltage.cellNum = 0;
+	bmsdata->unfilt_max_voltage.chipIndex = 0;
+
 	bmsdata->min_voltage.val = MAX_VOLT_MEAS;
 	bmsdata->min_voltage.cellNum = 0;
 	bmsdata->min_voltage.chipIndex = 0;
+
+	bmsdata->unfilt_min_voltage.val = MAX_VOLT_MEAS;
+	bmsdata->unfilt_min_voltage.cellNum = 0;
+	bmsdata->unfilt_min_voltage.chipIndex = 0;
 
 	bmsdata->min_ocv.val = MAX_VOLT_MEAS;
 	bmsdata->min_ocv.cellNum = 0;
 	bmsdata->min_ocv.chipIndex = 0;
 
 	uint32_t total_volt = 0;
+	uint32_t unfilt_total_volt = 0;
 	uint32_t total_ocv = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
@@ -360,7 +384,26 @@ void calc_pack_voltage_stats()
 				bmsdata->min_ocv.cellNum = cell;
 			}
 
+			// unfilt
+			if (bmsdata->chip_data[c].unfilt_volt[cell] >
+			    bmsdata->unfilt_max_voltage.val) {
+				bmsdata->unfilt_max_voltage.val =
+					bmsdata->chip_data[c].unfilt_volt[cell];
+				bmsdata->unfilt_max_voltage.chipIndex = c;
+				bmsdata->unfilt_max_voltage.cellNum = cell;
+			}
+
+			if (bmsdata->chip_data[c].unfilt_volt[cell] <
+			    bmsdata->unfilt_min_voltage.val) {
+				bmsdata->unfilt_min_voltage.val =
+					bmsdata->chip_data[c].unfilt_volt[cell];
+				bmsdata->unfilt_min_voltage.chipIndex = c;
+				bmsdata->unfilt_min_voltage.cellNum = cell;
+			}
+
 			total_volt += bmsdata->chip_data[c].voltage[cell];
+			unfilt_total_volt +=
+				bmsdata->chip_data[c].unfilt_volt[cell];
 			total_ocv +=
 				bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
@@ -368,6 +411,8 @@ void calc_pack_voltage_stats()
 
 	/* calculate some voltage stats */
 	bmsdata->avg_voltage = total_volt / (NUM_CELLS_PER_CHIP * NUM_CHIPS);
+	bmsdata->unfilt_avg_voltage =
+		unfilt_total_volt / (NUM_CELLS_PER_CHIP * NUM_CHIPS);
 	bmsdata->pack_voltage = total_volt / 1000; /* convert to voltage * 10 */
 	bmsdata->delt_voltage =
 		bmsdata->max_voltage.val - bmsdata->min_voltage.val;

@@ -136,8 +136,8 @@ const void print_bms_stats(acc_data_t *acc_data)
 	// printf("Prev Fault: %#x", previousFault);
   printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
   printf("Current * 10: %d\r\n", (acc_data->pack_current));
-  printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
+  printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->unfilt_min_temp.val, acc_data->unfilt_max_temp.val, acc_data->unfilt_avg_temp);
+  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->unfilt_min_voltage.val, acc_data->unfilt_max_voltage.val, acc_data->unfilt_avg_voltage, acc_data->delt_voltage);
   printf("DCL: %d\r\n", acc_data->discharge_limit);
   printf("CCL: %d\r\n", acc_data->charge_limit);
   printf("Cont CCL %d\r\n", acc_data->cont_CCL);
@@ -162,7 +162,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
-        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
+        printf("%d\t", acc_data->chip_data[c].unfilt_volt[cell]);
     }
     printf("\r\n");
   }
@@ -185,7 +185,7 @@ const void print_bms_stats(acc_data_t *acc_data)
 	for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
           //if (THERM_DISABLE[c][cell]) continue;
-          printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
+          printf("%d ", acc_data->chip_data[c].unfilt_therm_val[cell]);
         }
       
         printf("\r\n");
@@ -198,7 +198,7 @@ const void print_bms_stats(acc_data_t *acc_data)
 
     for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
 
-          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+          printf("%d ", acc_data->chip_data[c].unfilt_therm_reading[cell]);
         }
       
         printf("\r\n");
@@ -211,7 +211,7 @@ const void print_bms_stats(acc_data_t *acc_data)
 
     for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 
-          printf("%d ", acc_data->chip_data[c].cell_temp[cell]);
+          printf("%d ", acc_data->chip_data[c].unfilt_cell_temp[cell]);
         }
       
         printf("\r\n");

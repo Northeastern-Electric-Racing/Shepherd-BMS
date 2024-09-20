@@ -411,14 +411,14 @@ void compute_send_cell_data_message(acc_data_t *bmsdata)
 		uint16_t volt_avg;
 	} cell_data_msg_data;
 
-	cell_data_msg_data.high_cell_voltage = bmsdata->max_voltage.val;
+	cell_data_msg_data.high_cell_voltage = bmsdata->unfilt_max_voltage.val;
 	cell_data_msg_data.high_cell_id =
-		(bmsdata->max_voltage.chipIndex << 4) |
-		bmsdata->max_voltage.cellNum;
-	cell_data_msg_data.low_cell_voltage = bmsdata->min_voltage.val;
-	cell_data_msg_data.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) |
-					 bmsdata->min_voltage.cellNum;
-	cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
+		(bmsdata->unfilt_max_voltage.chipIndex << 4) |
+		bmsdata->unfilt_max_voltage.cellNum;
+	cell_data_msg_data.low_cell_voltage = bmsdata->unfilt_min_voltage.val;
+	cell_data_msg_data.low_cell_id = (bmsdata->unfilt_min_voltage.chipIndex << 4) |
+					 bmsdata->unfilt_min_voltage.cellNum;
+	cell_data_msg_data.volt_avg = bmsdata->unfilt_avg_voltage;
 
 	/* convert to big endian */
 	endian_swap(&cell_data_msg_data.high_cell_voltage,

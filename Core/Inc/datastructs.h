@@ -21,6 +21,7 @@ typedef struct {
 
 	/* These are calculated during the analysis of data */
 	int8_t cell_temp[NUM_CELLS_PER_CHIP];
+	int8_t unfilt_cell_temp[NUM_CELLS_PER_CHIP];
 	float cell_resistance[NUM_CELLS_PER_CHIP];
 	uint16_t open_cell_voltage[NUM_CELLS_PER_CHIP];
 
@@ -126,7 +127,10 @@ typedef struct {
 	/* Max, min, and avg voltage of the cells */
 	crit_cellval_t max_voltage;
 	crit_cellval_t min_voltage;
+	crit_cellval_t unfilt_max_voltage;
+	crit_cellval_t unfilt_min_voltage;
 	uint16_t avg_voltage;
+	uint16_t unfilt_avg_voltage;
 	uint16_t delt_voltage;
 
 	crit_cellval_t max_ocv;

@@ -220,6 +220,9 @@ int pull_voltages()
 					//printf("raw: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
 				}
 			}
+
+			segment_data[corrected_index].unfilt_volt[dest_index] =
+				raw_voltages[i][j];
 			dest_index++;
 		}
 	}
