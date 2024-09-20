@@ -420,6 +420,7 @@ void calc_dcl()
 	/* ceiling for current limit */
 	if (current_limit > MAX_CELL_CURR) {
 		bmsdata->discharge_limit = MAX_CELL_CURR;
+		return;
 	}
 
 	/* protection against being init to a high value */
