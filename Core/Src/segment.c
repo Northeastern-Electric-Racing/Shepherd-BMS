@@ -1,9 +1,9 @@
 #include "segment.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
 #include "main.h"
 #include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define THERM_WAIT_TIME	   500 /* ms */
 #define VOLTAGE_WAIT_TIME  100 /* ms */
@@ -13,7 +13,7 @@
 #define GPIO_EXPANDER_ADDR 0x40
 #define GPIO_REGISTER_ADDR 0x09
 
-//TODO ensure spi 1 is correct for talking to segs
+// TODO ensure spi 1 is correct for talking to segs
 extern SPI_HandleTypeDef hspi1;
 ltc_config *ltc68041;
 
@@ -28,10 +28,12 @@ nertimer_t therm_timer;
 nertimer_t voltage_reading_timer;
 nertimer_t variance_timer;
 
-int voltage_error = 0; //not faulted
-int therm_error = 0; //not faulted
+int voltage_error = 0; // not faulted
+int therm_error = 0; // not faulted
+uint16_t crc_error_check = 0;
 
-/* our segments are mapped backwards and in pairs, so they are read in 1,0 then 3,2, etc*/
+/* our segments are mapped backwards and in pairs, so they are read in 1,0 then
+ * 3,2, etc*/
 const int mapping_correction[12] = { 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10 };
 
 uint16_t therm_settle_time_ = 0;
@@ -131,12 +133,13 @@ void select_therm(uint8_t therm)
 int pull_voltages()
 {
 	/**
-	 * If we haven't waited long enough between pulling voltage data
-	 * just copy over the contents of the last good reading and the fault status
-	 * from the most recent attempt
-	 */
+   * If we haven't waited long enough between pulling voltage data
+   * just copy over the contents of the last good reading and the fault status
+   * from the most recent attempt
+   */
 
-	//int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800};
+	// int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
+	// 800};
 	if (!is_timer_expired(&voltage_reading_timer) &&
 	    voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
@@ -153,15 +156,16 @@ int pull_voltages()
 	LTC6804_adcv(ltc68041);
 
 	/**
-	 * If we received an incorrect PEC indicating a bad read
-	 * copy over the data from the last good read and indicate an error
-	 */
+   * If we received an incorrect PEC indicating a bad read
+   * copy over the data from the last good read and indicate an error
+   */
 	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 			memcpy(segment_data[i].voltage,
 			       previous_data[i].voltage,
 			       sizeof(segment_data[i].voltage));
 
+			crc_error_check++;
 			printf("Bad voltage read\n");
 		}
 		return 1;
@@ -175,7 +179,8 @@ int pull_voltages()
 		int dest_index = 0;
 
 		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP + 1; j++) {
-			/* cell 6 on every chip is not a real reading, we need to have the array skip this, and shift the remaining readings up one index*/
+			/* cell 6 on every chip is not a real reading, we need to have the array
+       * skip this, and shift the remaining readings up one index*/
 			if (j == 5)
 				continue;
 
@@ -186,7 +191,9 @@ int pull_voltages()
 				    (int)(10000 * (MAX_VOLT + 0.5)) ||
 			    raw_voltages[i][j] <
 				    (int)(10000 * (MIN_VOLT - 0.5))) {
-				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("poop\r\n");
+				// if (previous_data[corrected_index].voltage[dest_index] > 45000 ||
+				// previous_data[corrected_index].voltage[dest_index] < 20000)
+				// printf("poop\r\n");
 				segment_data[corrected_index]
 					.voltage[dest_index] =
 					previous_data[corrected_index]
@@ -195,16 +202,21 @@ int pull_voltages()
 					.noise_reading[dest_index] = 1;
 				segment_data[corrected_index]
 					.consecutive_noise[dest_index]++;
-				//printf("New data: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
-				// if (segment_data[corrected_index].consecutive_noise[dest_index] > MAX_CONSEC_NOISE) {
-				// 	segment_data[corrected_index].noise_reading[dest_index] = 0;
-				// 	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
-				// 	segment_data[corrected_index].voltage[dest_index] = raw_voltages[i][j];
-				// }
+				// printf("New data: %d\r\n",
+				// segment_data[corrected_index].voltage[dest_index]);
+				//  if (segment_data[corrected_index].consecutive_noise[dest_index] >
+				//  MAX_CONSEC_NOISE) {
+				//  	segment_data[corrected_index].noise_reading[dest_index] = 0;
+				//  	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
+				//  	segment_data[corrected_index].voltage[dest_index] =
+				//  raw_voltages[i][j];
+				//  }
 			} else {
-				//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);
-				//if (previous_data[corrected_index].voltage[dest_index] > 45000 || previous_data[corrected_index].voltage[dest_index] < 20000) printf("pee\r\n");
-				//else printf("wiping\r\n");
+				// printf("previous: %d\r\n",
+				// previous_data[corrected_index].voltage[dest_index]); if
+				// (previous_data[corrected_index].voltage[dest_index] > 45000 ||
+				// previous_data[corrected_index].voltage[dest_index] < 20000)
+				// printf("pee\r\n"); else printf("wiping\r\n");
 				segment_data[corrected_index]
 					.consecutive_noise[dest_index] = 0;
 				segment_data[corrected_index]
@@ -216,8 +228,9 @@ int pull_voltages()
 					previous_data[corrected_index]
 						.voltage[dest_index] =
 						raw_voltages[i][j];
-					//printf("previous: %d\r\n", previous_data[corrected_index].voltage[dest_index]);
-					//printf("raw: %d\r\n", segment_data[corrected_index].voltage[dest_index]);
+					// printf("previous: %d\r\n",
+					// previous_data[corrected_index].voltage[dest_index]); printf("raw:
+					// %d\r\n", segment_data[corrected_index].voltage[dest_index]);
 				}
 			}
 			dest_index++;
@@ -255,7 +268,7 @@ int pull_thermistors()
 	/* Sets multiplexors to select thermistors */
 	select_therm(current_therm);
 	HAL_Delay(200);
-	//push_chip_configuration();
+	// push_chip_configuration();
 	LTC6804_clraux(ltc68041);
 	LTC6804_adax(ltc68041); /* Run ADC for AUX (GPIOs and refs) */
 	HAL_Delay(3);
@@ -265,9 +278,9 @@ int pull_thermistors()
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 			int corrected_index = mapping_correction[c];
 			/*
-			 * Get current temperature LUT. Voltage is adjusted to account for 5V reg
-			 * fluctuations (index 2 is a reading of the ADC 5V ref)
-			 */
+       * Get current temperature LUT. Voltage is adjusted to account for 5V reg
+       * fluctuations (index 2 is a reading of the ADC 5V ref)
+       */
 			if (therm == current_therm) {
 				/* see "thermister decoding" in confluence in shepherd software 22A */
 				uint16_t steinhart_input_low =
@@ -291,7 +304,7 @@ int pull_thermistors()
 					steinhart_est(steinhart_input_high);
 
 				/* Directly update for a set time from start up due to therm voltages
-			 	* needing to settle */
+         * needing to settle */
 				segment_data[corrected_index]
 					.thermistor_value[therm - 1] =
 					segment_data[corrected_index]
@@ -354,11 +367,12 @@ int pull_thermistors()
 	start_timer(&therm_timer,
 		    100 /*THERM_WAIT_TIME*/); /* Start timer for next reading */
 
-	/* the following algorithms were used to eliminate noise on Car 17D - keep them off if possible */
-	//variance_therm_check();
-	//standard_dev_therm_check();
-	//averaging_therm_check();
-	//discard_neutrals();
+	/* the following algorithms were used to eliminate noise on Car 17D - keep
+   * them off if possible */
+	// variance_therm_check();
+	// standard_dev_therm_check();
+	// averaging_therm_check();
+	// discard_neutrals();
 
 	return 0; /* Read successfully */
 }
@@ -368,12 +382,12 @@ void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
 	segment_data = databuf;
 
 	/* Pull voltages and thermistors and indiacate if there was a problem during
-	 * retrieval */
+   * retrieval */
 	voltage_error = pull_voltages();
 	therm_error = pull_thermistors();
 
 	/* Save the contents of the reading so that we can use it to fill in missing
-	 * data */
+   * data */
 	memcpy(previous_data, segment_data, sizeof(chipdata_t) * NUM_CHIPS);
 
 	segment_data = NULL;
@@ -382,15 +396,15 @@ void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
 void configure_discharge(uint8_t chip, uint16_t cells)
 {
 	/*
-	 * chipConfigurations[chip][4] == chipConfigurations[Literally what chip you
-	 * want][register] 4 and 5 are registers to discharge chips
-	 */
+   * chipConfigurations[chip][4] == chipConfigurations[Literally what chip you
+   * want][register] 4 and 5 are registers to discharge chips
+   */
 	local_config[chip][4] = (uint8_t)(cells & 0x00FF);
 
 	/*
-	 * Register 5 is split in half, so we maintain the upper half and add in the
-	 * bottom half to discharge cells
-	 */
+   * Register 5 is split in half, so we maintain the upper half and add in the
+   * bottom half to discharge cells
+   */
 	local_config[chip][5] =
 		(local_config[chip][5] & 0xF0) + (uint8_t)(cells >> 8);
 }
@@ -398,9 +412,9 @@ void configure_discharge(uint8_t chip, uint16_t cells)
 void segment_enable_balancing(bool balance_enable)
 {
 	/*
-	 * Discharging all cells in series
-	 * Making the discharge command all 1's for all cells per chip
-	 */
+   * Discharging all cells in series
+   * Making the discharge command all 1's for all cells per chip
+   */
 	static const uint16_t DICHARGE_ALL_COMMAND = 0xFFFF >>
 						     (16 - NUM_CELLS_PER_CHIP);
 
@@ -554,7 +568,7 @@ void averaging_therm_check()
 	for (int therm = 1; therm <= 16; therm++) {
 		for (int c = 0; c < NUM_CHIPS; c++) {
 			/* Directly update for a set time from start up due to therm voltages
-			 * needing to settle */
+       * needing to settle */
 			if (therm_avg_counter < THERM_AVG * 10) {
 				segment_data[c].thermistor_value[therm - 1] =
 					segment_data[c]
@@ -570,7 +584,7 @@ void averaging_therm_check()
 					    .thermistor_reading[therm - 1] !=
 				    33) {
 					/* If measured value is larger than current "averaged" value,
-					 * increment value */
+           * increment value */
 					if (segment_data[c]
 						    .thermistor_reading[therm -
 									1] >
@@ -581,7 +595,7 @@ void averaging_therm_check()
 							.thermistor_value[therm -
 									  1]++;
 						/* If measured value is smaller than current "averaged" value,
-						 * decrement value */
+             * decrement value */
 					} else if (segment_data[c]
 							   .thermistor_reading
 								   [therm - 1] <
@@ -631,9 +645,9 @@ void standard_dev_therm_check()
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t therm = 17; therm < 28; therm++) {
 			/*
-			 * If difference between thermistor and average is more than
-			 * MAX_STANDARD_DEV set the therm to pack average
-			 */
+       * If difference between thermistor and average is more than
+       * MAX_STANDARD_DEV set the therm to pack average
+       */
 			if (abs(segment_data[c].thermistor_value[therm] -
 				avg_temp) > (MAX_STANDARD_DEV * standard_dev)) {
 				/* Nullify thermistor by setting to pack average */

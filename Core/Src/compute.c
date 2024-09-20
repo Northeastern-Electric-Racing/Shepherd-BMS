@@ -1,12 +1,12 @@
 #include "compute.h"
-#include "can_handler.h"
-#include "can.h"
 #include "c_utils.h"
+#include "can.h"
+#include "can_handler.h"
 #include "main.h"
-#include <assert.h>
 #include "stm32f405xx.h"
-#include <string.h>
+#include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
@@ -14,7 +14,7 @@
 #define REF_CHANNEL  0
 #define VOUT_CHANNEL 1
 
-//#define CHARGING_ENABLED
+// #define CHARGING_ENABLED
 
 uint8_t fan_speed;
 bool is_charging_enabled;
@@ -50,14 +50,14 @@ uint8_t compute_init()
 	can1.hcan = &hcan1;
 	can1.id_list = can1_id_list;
 	can1.id_list_len = sizeof(can1_id_list) / sizeof(can1_id_list[0]);
-	//can1.callback = can_receive_callback;
+	// can1.callback = can_receive_callback;
 	can1_rx_queue = ringbuffer_create(MAX_CAN1_STORAGE, sizeof(can_msg_t));
 	can_init(&can1);
 
 	can2.hcan = &hcan2;
 	can2.id_list = can2_id_list;
 	can2.id_list_len = sizeof(can2_id_list) / sizeof(can2_id_list[0]);
-	//can2.callback = can_receive_callback;
+	// can2.callback = can_receive_callback;
 	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 	can_init(&can2);
 
@@ -95,8 +95,10 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 				  uint16_t current_to_set, acc_data_t *bms_data)
 {
 	struct __attribute__((__packed__)) {
-		uint16_t charger_voltage; // Note the charger voltage sent over should be 10*desired voltage
-		uint16_t charger_current; // Note the charge current sent over should be 10*desired current
+		uint16_t charger_voltage; // Note the charger voltage sent over should be
+			// 10*desired voltage
+		uint16_t charger_current; // Note the charge current sent over should be
+			// 10*desired current
 		uint8_t charger_control;
 		uint8_t reserved_1;
 		uint16_t reserved_23;
@@ -106,7 +108,7 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 	charger_msg_data.charger_current = current_to_set * 10;
 
 	if (is_charging_enabled) {
-		charger_msg_data.charger_control = 0x00; //0：Start charging.
+		charger_msg_data.charger_control = 0x00; // 0：Start charging.
 	} else {
 		charger_msg_data.charger_control =
 			0xFF; // 1：battery protection, stop charging
@@ -139,15 +141,15 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 
 bool compute_charger_connected()
 {
-	//TODO need to set up CAN msg that actually toggles this bool
-	return false; //bmsdata->is_charger_connected;
+	// TODO need to set up CAN msg that actually toggles this bool
+	return false; // bmsdata->is_charger_connected;
 }
 
-//TODO add this back
-// void compute_charger_callback(const CAN_message_t& msg)
-// {
-// 	return;
-// }
+// TODO add this back
+//  void compute_charger_callback(const CAN_message_t& msg)
+//  {
+//  	return;
+//  }
 
 uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 			      fan_select_t fan_select, uint8_t duty_cycle)
@@ -170,9 +172,9 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 
 void compute_set_fault(int fault_state)
 {
-	//TODO work with charger fw on this
+	// TODO work with charger fw on this
 	HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin, !fault_state);
-	//if (true) digitalWrite(CHARGE_SAFETY_RELAY, 1);
+	// if (true) digitalWrite(CHARGE_SAFETY_RELAY, 1);
 }
 
 int16_t compute_get_pack_current()
@@ -192,13 +194,13 @@ int16_t compute_get_pack_current()
 	// int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
 
 	// /* Low Pass Filter of Current*/
-	// current = ((current_accumulator * (num_samples - 1)) + current) / num_samples;
-	// current_accumulator = current;
+	// current = ((current_accumulator * (num_samples - 1)) + current) /
+	// num_samples; current_accumulator = current;
 
 	// return current;
 
-	static const float CURRENT_LOWCHANNEL_MAX = 75.0; //Amps
-	static const float CURRENT_LOWCHANNEL_MIN = -75.0; //Amps
+	static const float CURRENT_LOWCHANNEL_MAX = 75.0; // Amps
+	static const float CURRENT_LOWCHANNEL_MIN = -75.0; // Amps
 	// static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
 	static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
 
@@ -250,15 +252,16 @@ int16_t compute_get_pack_current()
 				      (1000 * CURRENT_LOWCHANNEL_OFFSET)) *
 			      (1 / 26.7); //* (LOWCHANNEL_GAIN/100.0f))/1000;
 
-	// If the current is scoped within the range of the low channel, use the low channel
+	// If the current is scoped within the range of the low channel, use the low
+	// channel
 
 	if ((low_current < CURRENT_LOWCHANNEL_MAX - 5.0 && low_current >= 0) ||
 	    (low_current > CURRENT_LOWCHANNEL_MIN + 5.0 && low_current < 0)) {
-		//printf("\rLow Current: %d\n", -low_current);
+		// printf("\rLow Current: %d\n", -low_current);
 		return -low_current;
 	}
 
-	//printf("\rHigh Current: %d\n", -high_current);
+	// printf("\rHigh Current: %d\n", -high_current);
 	return -high_current;
 }
 
@@ -666,6 +669,40 @@ void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 
 	can_send_msg(line, &acc_msg);
 }
+
+void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
+				uint32_t debug3)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t debug0;
+		uint8_t debug1;
+		uint16_t debug2;
+		uint32_t debug3;
+	} debug_msg_data;
+
+	debug_msg_data.debug0 = debug0;
+	debug_msg_data.debug1 = debug1;
+	debug_msg_data.debug2 = debug2;
+	debug_msg_data.debug3 = debug3;
+
+	can_msg_t debug_msg;
+	debug_msg.id = 0x702;
+	debug_msg.len = 8; // yaml decodes this msg as 8 bytes
+
+	endian_swap(&debug_msg_data.debug2, sizeof(debug_msg_data.debug2));
+	endian_swap(&debug_msg_data.debug3, sizeof(debug_msg_data.debug3));
+
+	memcpy(debug_msg.data, &debug_msg_data, 8);
+
+#ifdef CHARGING_ENABLED
+	can_t *line = &can2;
+#else
+	can_t *line = &can1;
+#endif
+
+	can_send_msg(line, &debug_msg);
+}
+
 void change_adc1_channel(uint8_t channel)
 {
 	ADC_ChannelConfTypeDef sConfig = { 0 };
