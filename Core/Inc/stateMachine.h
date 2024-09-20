@@ -10,6 +10,9 @@
 /* global that can be read for debugging in main */
 extern BMSState_t current_state;
 
+/* global defined in segment.c that keeps an eye on the number of crc errors */
+extern uint16_t crc_error_check;
+
 #define NUM_FAULTS 8
 
 /**

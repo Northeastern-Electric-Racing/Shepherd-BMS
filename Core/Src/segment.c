@@ -30,6 +30,7 @@ nertimer_t variance_timer;
 
 int voltage_error = 0; //not faulted
 int therm_error = 0; //not faulted
+uint16_t crc_error_check = 0;
 
 /* our segments are mapped backwards and in pairs, so they are read in 1,0 then 3,2, etc*/
 const int mapping_correction[12] = { 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10 };
@@ -162,6 +163,7 @@ int pull_voltages()
 			       previous_data[i].voltage,
 			       sizeof(segment_data[i].voltage));
 
+			crc_error_check++;
 			printf("Bad voltage read\n");
 		}
 		return 1;

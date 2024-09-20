@@ -177,6 +177,7 @@ void sm_handle_state(acc_data_t *bmsdata)
 		SEGMENT_TEMP,
 		MC_DISCHARGE,
 		MC_CHARGE,
+		CAN_DEBUG,
 		MAX_MSGS
 	};
 
@@ -224,6 +225,9 @@ void sm_handle_state(acc_data_t *bmsdata)
 			case MC_CHARGE:
 				compute_send_mc_charge_message(bmsdata);
 				break;
+			
+			case CAN_DEBUG:
+				compute_send_debug_message(&crc_error_check, 2);
 
 			default:
 				break;

@@ -666,6 +666,32 @@ void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 
 	can_send_msg(line, &acc_msg);
 }
+
+void compute_send_debug_message(uint8_t *data, uint8_t len)
+{
+	can_msg_t debug_msg;
+	debug_msg.id = 0x702;
+	debug_msg.len = len;
+
+	if (len > 8) {
+		len = 8;
+	}
+
+	if (len > 1) {
+		endian_swap(data, len);
+	}
+
+	memcpy(debug_msg.data, data, len);
+
+#ifdef CHARGING_ENABLED
+	can_t *line = &can2;
+#else
+	can_t *line = &can1;
+#endif
+
+	can_send_msg(line, &debug_msg);
+}
+	
 void change_adc1_channel(uint8_t channel)
 {
 	ADC_ChannelConfTypeDef sConfig = { 0 };
