@@ -674,17 +674,15 @@ void compute_send_debug_message(uint8_t *data, uint8_t len)
 {
 	can_msg_t debug_msg;
 	debug_msg.id = 0x702;
-	debug_msg.len = len;
+	debug_msg.len = 8; // yaml decodes this msg as 8 bytes
 
 	if (len > 8) {
 		len = 8;
 	}
 
-	if (len > 1) {
-		endian_swap(data, len);
-	}
-
+	memset(debug_msg.data, 0, 8);
 	memcpy(debug_msg.data, data, len);
+	endian_swap(debug_msg.data, 8);
 
 #ifdef CHARGING_ENABLED
 	can_t *line = &can2;
