@@ -222,8 +222,6 @@ void DMA1_Stream2_IRQHandler(void)
 void DMA1_Stream4_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Stream4_IRQn 0 */
-
-  //call back thread safe Tyler
   
   /* USER CODE END DMA1_Stream4_IRQn 0 */
   HAL_DMA_IRQHandler(&hdma_uart4_tx);
