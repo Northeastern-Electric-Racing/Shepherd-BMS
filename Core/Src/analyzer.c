@@ -412,7 +412,7 @@ void calc_dcl(acc_data_t *bmsdata)
 	/* ceiling for current limit */
 	if (current_limit > MAX_CELL_CURR) {
 		bmsdata->discharge_limit = MAX_CELL_CURR;
-		prev_dcl = MAX_CELL_CURR;
+		return;
 	}
 
 	/* protection against being init to a high value */

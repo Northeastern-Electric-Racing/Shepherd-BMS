@@ -1,6 +1,6 @@
 #include "stateMachine.h"
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 extern UART_HandleTypeDef huart4;
@@ -87,7 +87,7 @@ void handle_ready(acc_data_t *bmsdata)
 {
 	/* check for charger connection */
 	if (compute_charger_connected() &&
-	    is_timer_expired(&bootup_timer)) { //TODO Fix once charger works
+	    is_timer_expired(&bootup_timer)) { // TODO Fix once charger works
 		request_transition(READY_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
@@ -159,8 +159,8 @@ void handle_faulted(acc_data_t *bmsdata)
 	else {
 		compute_set_fault(0);
 
-		//TODO update to HAL
-		//digitalWrite(CHARGE_SAFETY_RELAY, 0);
+		// TODO update to HAL
+		// digitalWrite(CHARGE_SAFETY_RELAY, 0);
 	}
 	return;
 }
@@ -177,12 +177,13 @@ void sm_handle_state(acc_data_t *bmsdata)
 		SEGMENT_TEMP,
 		MC_DISCHARGE,
 		MC_CHARGE,
+		CAN_DEBUG,
 		MAX_MSGS
 	};
 
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
-	//calculate_pwm(bmsdata);
+	// calculate_pwm(bmsdata);
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
@@ -224,6 +225,9 @@ void sm_handle_state(acc_data_t *bmsdata)
 			case MC_CHARGE:
 				compute_send_mc_charge_message(bmsdata);
 				break;
+			
+			case CAN_DEBUG:
+				compute_send_debug_message(0,0, crc_error_check, 0);
 
 			default:
 				break;
@@ -263,7 +267,8 @@ uint32_t sm_fault_return(acc_data_t *accData)
 	fault_data = accData;
 
 	if (!fault_table) {
-		/* Note that we are only allocating this table once at runtime, so there is no need to free it */
+		/* Note that we are only allocating this table once at runtime, so there is
+     * no need to free it */
 		fault_table = (fault_eval_t *)malloc(NUM_FAULTS *
 						     sizeof(fault_eval_t));
 		// clang-format off
@@ -308,7 +313,7 @@ uint32_t sm_fault_return(acc_data_t *accData)
 		fault_status |= sm_fault_eval(&fault_table[incr]);
 		incr++;
 	}
-	//TODO: Remove This !!!!
+	// TODO: Remove This !!!!
 	fault_status &= ~DISCHARGE_LIMIT_ENFORCEMENT_FAULT;
 	return fault_status;
 }
@@ -380,16 +385,20 @@ uint32_t sm_fault_eval(fault_eval_t *index)
 		return 0;
 	}
 	/* if (index->code == CELL_VOLTAGE_TOO_LOW) {
-		printf("\t\t\t*******Not fautled!!!!!\t%d\r\n", !is_timer_active(&index->timer) && condition1 && condition2);
-		printf("More stats...\t:%d\t%d\r\n", is_timer_expired(&index->timer), index->timer.active);
-	} */
+          printf("\t\t\t*******Not fautled!!!!!\t%d\r\n",
+  !is_timer_active(&index->timer) && condition1 && condition2); printf("More
+  stats...\t:%d\t%d\r\n", is_timer_expired(&index->timer), index->timer.active);
+  } */
 	printf("err should not get here");
 	return 0;
 }
 
-/* charger settle countup =  1 minute pause to let readings settle and get good OCV */
-/* charger settle countdown = 5 minute interval between 1 minute settle pauses */
-/*  charger_max_volt_timer  = interval of time when voltage is too high before trying to start again */
+/* charger settle countup =  1 minute pause to let readings settle and get good
+ * OCV */
+/* charger settle countdown = 5 minute interval between 1 minute settle pauses
+ */
+/*  charger_max_volt_timer  = interval of time when voltage is too high before
+ * trying to start again */
 bool sm_charging_check(acc_data_t *bmsdata)
 {
 	if (!compute_charger_connected()) {
@@ -494,8 +503,8 @@ void sm_balance_cells(acc_data_t *bms_data)
 {
 	bool balanceConfig[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 
-	/* For all cells of all the chips, figure out if we need to balance by comparing the difference
-	 * in voltages */
+	/* For all cells of all the chips, figure out if we need to balance by
+   * comparing the difference in voltages */
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			uint16_t delta =
