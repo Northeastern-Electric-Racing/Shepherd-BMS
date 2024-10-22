@@ -38,7 +38,7 @@
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
-#define DEBUG_STATS
+// #define DEBUG_STATS
 // etc etc
 //#endif
 /* USER CODE END PD */
@@ -337,7 +337,7 @@ int main(void)
 
   current_monitor_thread = osThreadNew(vCurrentMonitor, acc_data, &current_monitor_attrs);
   assert(current_monitor_thread);
-  
+
   state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
   assert(state_machine_thread);
 
@@ -1179,6 +1179,8 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   acc_data_t *bmsdata = (acc_data_t*)argument;
+  bool alt = true;
+
   /* Infinite loop */
   for(;;)
   {
@@ -1186,9 +1188,17 @@ void StartDefaultTask(void *argument)
     print_bms_stats(bmsdata);
     #endif
 
+    if (alt) {
+      printf(".\r\n");
+    } else {
+      printf("..\r\n");
+    }
+
+    alt = !alt;
+
     HAL_IWDG_Refresh(&hiwdg);
 
-    osDelay(200);
+    osDelay(1000);
   }
   /* USER CODE END 5 */
 }
