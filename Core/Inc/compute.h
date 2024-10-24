@@ -4,6 +4,7 @@
 #include "datastructs.h"
 #include "stateMachine.h"
 #include "ringbuffer.h"
+#include "can.h"
 
 #define CURRENT_SENSOR_PIN_L A1
 #define CURRENT_SENSOR_PIN_H A0
@@ -16,6 +17,9 @@
 #define MAX_ADC_RESOLUTION   4095 // 12 bit ADC
 
 typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
+
+extern can_t can1; // main can bus, used by most peripherals
+extern can_t can2; // p2p can bus with charger
 
 /**
  * @brief inits the compute interface

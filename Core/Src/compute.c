@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include "bmsConfig.h"
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
@@ -35,16 +37,19 @@ ADC_ChannelConfTypeDef adc_config;
 const uint32_t fan_channels[6] = { TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4,
 				   TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1 };
 
-can_t can1; // main can bus, used by most peripherals
-can_t can2; // p2p can bus with charger
-
 uint32_t adc_values[2] = { 0 };
 
 /* private function defintions */
 float read_ref_voltage();
 float read_vout();
+void change_adc1_channel(uint8_t channel);
 
-uint8_t compute_init()
+can_t can1;
+can_t can2;
+
+osMessageQueueId_t can_outbound_queue;
+
+uint8_t compute_init(acc_data_t *bmsdata)
 {
 	// TODO throw all of these objects into a compute struct
 	can1.hcan = &hcan1;
@@ -60,6 +65,9 @@ uint8_t compute_init()
 	// can2.callback = can_receive_callback;
 	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 	can_init(&can2);
+
+	can_outbound_queue =
+		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
 
 	pwm_config.OCMode = TIM_OCMODE_PWM1;
 	pwm_config.Pulse = 0;
@@ -141,8 +149,11 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 
 bool compute_charger_connected()
 {
-	// TODO need to set up CAN msg that actually toggles this bool
-	return false; // bmsdata->is_charger_connected;
+#ifdef CHARGING
+	return true;
+#endif
+	//TODO need to set up CAN msg that actually toggles this bool
+	return false; //bmsdata->is_charger_connected;
 }
 
 // TODO add this back
@@ -208,11 +219,11 @@ int16_t compute_get_pack_current()
 		2.500; // Calibrated with current = 0A
 	static const float CURRENT_HIGHCHANNEL_OFFSET =
 		2.500; // Calibrated with current = 0A
-
+	/*
 	static const float HIGHCHANNEL_GAIN =
 		1 / 0.0041; // Calibrated with  current = 5A, 10A, 20A
 	static const float LOWCHANNEL_GAIN = 1 / 0.0267;
-
+	*/
 	// Change ADC channel to read the high current sensor
 	change_adc1_channel(VOUT_CHANNEL);
 	HAL_ADC_Start(&hadc1);
@@ -234,6 +245,7 @@ int16_t compute_get_pack_current()
 	int16_t high_current_voltage_raw =
 		(int16_t)(1000.0f *
 			  ((float)raw_high_current * CURRENT_ADC_RESOLUTION));
+
 	high_current_voltage_raw =
 		(int16_t)(5000.0f * high_current_voltage_raw /
 			  (float)ref_voltage_raw);

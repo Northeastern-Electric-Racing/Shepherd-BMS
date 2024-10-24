@@ -421,7 +421,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 	if (bmsdata->max_voltage.val > MAX_CHARGE_VOLT * 10000) {
 		start_timer(&charger_max_volt_timer, CHARGE_VOLT_TIMEOUT);
 		printf("Charger max volt timer started\r\n");
-		printf("Max voltage: %d\r\n", bmsdata->max_voltage.val);
+		printf("Max voltage: %ld\r\n", bmsdata->max_voltage.val);
 		return false;
 	}
 

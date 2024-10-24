@@ -10,6 +10,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -21,6 +22,9 @@
 #include "stateMachine.h"
 #include "can_handler.h"
 #include <stdio.h>
+#include "shep_tasks.h"
+
+#include "assert.h"
 
 /* USER CODE END Includes */
 
@@ -34,7 +38,7 @@
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
-#define DEBUG_STATS
+// #define DEBUG_STATS
 // etc etc
 //#endif
 /* USER CODE END PD */
@@ -68,6 +72,13 @@ UART_HandleTypeDef huart4;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
 /* USER CODE BEGIN PV */
 acc_data_t *prev_acc_data = NULL;
 /* USER CODE END PV */
@@ -90,6 +101,8 @@ static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_IWDG_Init(void);
+void StartDefaultTask(void *argument);
+
 /* USER CODE BEGIN PFP */
 
 /* this is for the hardware watchdog ic. Currently not activated  in hw */
@@ -134,7 +147,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
 	// printf("Prev Fault: %#x", previousFault);
-  printf("CAN Error:\t%d\r\n", HAL_CAN_GetError(&hcan1));
+  printf("CAN Error:\t%ld\r\n", HAL_CAN_GetError(&hcan1));
   printf("Current * 10: %d\r\n", (acc_data->pack_current));
   printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
   printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
@@ -147,7 +160,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   if (current_state == 0) printf("BOOT\r\n");
   else if (current_state == 1) printf("READY\r\n");
   else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 3) printf("FAULTED: %X\r\n", acc_data->fault_code);
+  else if (current_state == 3) printf("FAULTED: %lX\r\n", acc_data->fault_code);
 
   printf("Voltage Noise Percent:\r\n");
   printf("Seg 1: %d\r\n", acc_data->segment_noise_percentage[0]);
@@ -240,7 +253,12 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+  //TODO add ISR/timer based debug LED toggle
 
+  acc_data_t *acc_data = malloc(sizeof(acc_data_t));
+  acc_data->is_charger_connected = false;
+  acc_data->fault_code = FAULTS_CLEAR;
+  
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -287,37 +305,58 @@ int main(void)
   
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();
+
+  /* USER CODE BEGIN RTOS_MUTEX */
+  /* add mutexes, ... */
+  /* USER CODE END RTOS_MUTEX */
+
+  /* USER CODE BEGIN RTOS_SEMAPHORES */
+  /* add semaphores, ... */
+  /* USER CODE END RTOS_SEMAPHORES */
+
+  /* USER CODE BEGIN RTOS_TIMERS */
+  /* start timers, add new ones, ... */
+  /* USER CODE END RTOS_TIMERS */
+
+  /* USER CODE BEGIN RTOS_QUEUES */
+
+  /* USER CODE END RTOS_QUEUES */
+
+  /* Create the thread(s) */
+  /* creation of defaultTask */
+  defaultTaskHandle = osThreadNew(StartDefaultTask, acc_data, &defaultTask_attributes);
+
+  /* USER CODE BEGIN RTOS_THREADS */
+  get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
+  assert(get_segment_data_thread);
+
+  analyzer_thread = osThreadNew(vAnalyzer, acc_data, &analyzer_attrs);
+  assert(analyzer_thread);
+
+  current_monitor_thread = osThreadNew(vCurrentMonitor, acc_data, &current_monitor_attrs);
+  assert(current_monitor_thread);
+
+  state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
+  assert(state_machine_thread);
+
+  can_dispatch_thread = osThreadNew(vCanDispatch, NULL, &can_dispatch_attrs);
+  assert(can_dispatch_thread);
+  /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
+
+  /* Start scheduler */
+  osKernelStart();
+
+  /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   for(;;) {
-    /* Create a dynamically allocated structure */
-
-    //TODO add ISR/timer based debug LED toggle
-
-    acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-    acc_data->is_charger_connected = false;
-    acc_data->fault_code = FAULTS_CLEAR;
-
-    /*
-     * Collect all the segment data needed to perform analysis
-     * Not state specific
-     */
-    segment_retrieve_data(acc_data->chip_data);
-    acc_data->pack_current = compute_get_pack_current();
-
-    analyzer_push(acc_data);
-    sm_handle_state(acc_data);
-
-    /* check for inbound CAN */
-    //get_can1_msg();
-    //get_can2_msg();
-
-    #ifdef DEBUG_STATS
-    print_bms_stats(acc_data);
-    #endif
-
-    HAL_IWDG_Refresh(&hiwdg);
-
+    
   }
     /* USER CODE END WHILE */
 
@@ -1019,7 +1058,7 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA2_Stream0_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
 
 }
@@ -1128,6 +1167,40 @@ void watchdog_pet(void)
 }
 
 /* USER CODE END 4 */
+
+/* USER CODE BEGIN Header_StartDefaultTask */
+/**
+  * @brief  Function implementing the defaultTask thread.
+  * @param  argument: Not used
+  * @retval None
+  */
+/* USER CODE END Header_StartDefaultTask */
+void StartDefaultTask(void *argument)
+{
+  /* USER CODE BEGIN 5 */
+  bool alt = true;
+
+  /* Infinite loop */
+  for(;;)
+  {
+    #ifdef DEBUG_STATS
+    print_bms_stats(bmsdata);
+    #endif
+
+    if (alt) {
+      printf(".\r\n");
+    } else {
+      printf("..\r\n");
+    }
+
+    alt = !alt;
+
+    HAL_IWDG_Refresh(&hiwdg);
+
+    osDelay(1000);
+  }
+  /* USER CODE END 5 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

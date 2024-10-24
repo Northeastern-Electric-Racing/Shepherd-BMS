@@ -58,10 +58,19 @@ int8_t get_can2_msg()
 	switch (msg.id) {
 	/* CAN ID of message charger sends every second. */
 	case 0x18FF50E5:
-		bmsdata->is_charger_connected = true;
+		// This doesn't work anyway
+		// bmsdata->is_charger_connected = true;
 		break;
 	default:
 		break;
 	}
 	return 0;
+}
+
+osStatus_t queue_can_msg(can_msg_t msg)
+{
+	if (!can_outbound_queue)
+		return -1;
+
+	return osMessageQueuePut(can_outbound_queue, &msg, 0U, 0U);
 }

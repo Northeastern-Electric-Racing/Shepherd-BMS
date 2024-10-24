@@ -60,4 +60,8 @@
 
 #define CAN_MESSAGE_WAIT 5
 
+#define CAN_DISPATCH_DELAY 5
+
+// #define CHARGING
+
 #endif

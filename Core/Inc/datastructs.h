@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "bmsConfig.h"
 #include "timer.h"
+#include "cmsis_os2.h"
 
 /**
  * @brief Individual chip data
@@ -127,6 +128,8 @@ typedef struct {
 	uint16_t boost_setting;
 
 	bool is_charger_connected;
+
+	osMutexId_t mutex;
 } acc_data_t;
 
 /**
