@@ -374,7 +374,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
-	bms_status_msg_data.balance = (uint8_t)(balance);
+	bms_status_msg_data.balance = (uint8_t)(balance); // segment_is_balancing() 
 
 	/* convert to big endian */
 	endian_swap(&bms_status_msg_data.fault,
@@ -613,6 +613,7 @@ void compute_send_segment_temp_message(acc_data_t *bmsdata)
 
 	can_send_msg(line, &acc_msg);
 }
+
 void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 {
 	struct __attribute__((__packed__)) {

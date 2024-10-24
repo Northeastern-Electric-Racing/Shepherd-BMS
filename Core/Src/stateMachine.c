@@ -182,11 +182,14 @@ void sm_handle_state(acc_data_t *bmsdata)
 	};
 
 	bmsdata->fault_code = sm_fault_return(bmsdata);
+	// compute_send_bms_status_message
 
 	// calculate_pwm(bmsdata);
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
+		// compute_send_mc_discharge_message
+		// compute_send_current_message
 		request_transition(FAULTED_STATE);
 	}
 	// TODO needs testing - (update, seems to work fine)
@@ -248,6 +251,7 @@ void request_transition(BMSState_t next_state)
 
 	init_LUT[next_state]();
 	current_state = next_state;
+	// compute_send_bms_status_message
 }
 
 uint32_t sm_fault_return(acc_data_t *accData)

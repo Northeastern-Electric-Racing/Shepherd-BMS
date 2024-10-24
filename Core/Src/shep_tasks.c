@@ -61,6 +61,7 @@ void vAnalyzer(void *pv_params)
 		calc_noise_volt_percent(bmsdata);
 
 		bmsdata->charge_limit = bmsdata->cont_CCL;
+		// compute_send_current_message
 
 		osMutexRelease(bmsdata->mutex);
 		osThreadYield();
@@ -76,6 +77,8 @@ void vCurrentMonitor(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		bmsdata->pack_current = compute_get_pack_current();
+		//compute_send_acc_status_message
+		//compute_send_current_message
 		osDelay(100);
 	}
 }
@@ -115,8 +118,9 @@ void vCanDispatch(void *pv_params)
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
 				  osFlagsWaitAny);
-		/* Send CAN message */
-		if (osOK == osMessageQueueGet(can_outbound_queue,
+
+		/* Send all CAN messages in the queue */
+		while (osOK == osMessageQueueGet(can_outbound_queue,
 					      &msg_from_queue, NULL,
 					      osWaitForever)) {
 			msg_status = can_send_msg(line, &msg_from_queue);
