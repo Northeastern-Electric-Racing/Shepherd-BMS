@@ -81,9 +81,9 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 int16_t compute_get_pack_current();
 
 /**
- * @brief sends max discharge current to Motor Controller
+ * @brief Sends max discharge current to Motor Controller.
  *
- * @param bmsdata
+ * @param bmsdata data structure containing the discharge limit
  */
 void compute_send_mc_discharge_message(acc_data_t *bmsdata);
 

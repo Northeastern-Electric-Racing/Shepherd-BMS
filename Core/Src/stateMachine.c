@@ -182,14 +182,11 @@ void sm_handle_state(acc_data_t *bmsdata)
 	};
 
 	bmsdata->fault_code = sm_fault_return(bmsdata);
-	// compute_send_bms_status_message
 
 	// calculate_pwm(bmsdata);
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
-		// compute_send_mc_discharge_message
-		// compute_send_current_message
 		request_transition(FAULTED_STATE);
 	}
 	// TODO needs testing - (update, seems to work fine)
@@ -199,47 +196,8 @@ void sm_handle_state(acc_data_t *bmsdata)
 
 	sm_broadcast_current_limit(bmsdata);
 
-	/* send relevant CAN msgs */
-	// clang-format off
-	if (is_timer_expired(&can_msg_timer) || !is_timer_active(&can_msg_timer))
-	{
-		switch (can_msg_to_send) {
-			case ACC_STATUS:
-				compute_send_acc_status_message(bmsdata);
-				break;
-			case CURRENT:
-				compute_send_current_message(bmsdata);
-				break;
-			case BMS_STATUS:
-				compute_send_bms_status_message(bmsdata, current_state, segment_is_balancing());
-				break;
-			case CELL_TEMP:
-				compute_send_cell_temp_message(bmsdata);
-				break;
-			case CELL_DATA:
-				compute_send_cell_data_message(bmsdata);
-				break;
-			case SEGMENT_TEMP:
-				compute_send_segment_temp_message(bmsdata);
-				break;
-			case MC_DISCHARGE:
-				compute_send_mc_discharge_message(bmsdata);
-				break;
-			case MC_CHARGE:
-				compute_send_mc_charge_message(bmsdata);
-				break;
-			
-			case CAN_DEBUG:
-				compute_send_debug_message(0,0, crc_error_check, 0);
-
-			default:
-				break;
-		}
-
-		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
-		can_msg_to_send = (can_msg_to_send + 1) % MAX_MSGS;
-	}
-	// clang-format on
+	compute_send_bms_status_message(bmsdata, current_state,
+					segment_is_balancing());
 }
 
 void request_transition(BMSState_t next_state)
@@ -251,7 +209,6 @@ void request_transition(BMSState_t next_state)
 
 	init_LUT[next_state]();
 	current_state = next_state;
-	// compute_send_bms_status_message
 }
 
 uint32_t sm_fault_return(acc_data_t *accData)

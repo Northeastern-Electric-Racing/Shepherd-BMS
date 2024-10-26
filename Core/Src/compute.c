@@ -9,6 +9,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "bmsConfig.h"
+#include "can_handler.h"
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
@@ -296,7 +297,7 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
-	can_send_msg(&can1, &mc_msg);
+	queue_can_msg(mc_msg);
 }
 
 void compute_send_mc_charge_message(acc_data_t *bmsdata)
@@ -317,7 +318,7 @@ void compute_send_mc_charge_message(acc_data_t *bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
 
-	can_send_msg(&can1, &mc_msg);
+	queue_can_msg(mc_msg);
 }
 
 void compute_send_acc_status_message(acc_data_t *bmsdata)
@@ -356,7 +357,7 @@ void compute_send_acc_status_message(acc_data_t *bmsdata)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
@@ -374,7 +375,8 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
-	bms_status_msg_data.balance = (uint8_t)(balance); // segment_is_balancing() 
+	bms_status_msg_data.balance =
+		(uint8_t)(balance); // segment_is_balancing()
 
 	/* convert to big endian */
 	endian_swap(&bms_status_msg_data.fault,
@@ -390,7 +392,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 #else
 	can_t *line = &can1;
 #endif
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
@@ -413,7 +415,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_cell_data_message(acc_data_t *bmsdata)
@@ -454,7 +456,7 @@ void compute_send_cell_data_message(acc_data_t *bmsdata)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id,
@@ -496,7 +498,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id,
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_current_message(acc_data_t *bmsdata)
@@ -531,7 +533,7 @@ void compute_send_current_message(acc_data_t *bmsdata)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_cell_temp_message(acc_data_t *bmsdata)
@@ -571,7 +573,7 @@ void compute_send_cell_temp_message(acc_data_t *bmsdata)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_segment_temp_message(acc_data_t *bmsdata)
@@ -611,7 +613,7 @@ void compute_send_segment_temp_message(acc_data_t *bmsdata)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
@@ -641,7 +643,7 @@ void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_voltage_noise_message(acc_data_t *bmsdata)
@@ -680,7 +682,7 @@ void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
@@ -713,7 +715,7 @@ void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	can_t *line = &can1;
 #endif
 
-	can_send_msg(line, &debug_msg);
+	queue_can_msg(debug_msg);
 }
 
 void change_adc1_channel(uint8_t channel)

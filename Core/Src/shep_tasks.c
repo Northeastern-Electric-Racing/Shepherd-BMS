@@ -14,10 +14,9 @@
 #include "can_handler.h"
 #include "analyzer.h"
 #include "compute.h"
+#include <stdio.h>
 
 #define STATE_MACHINE_FLAG 1
-
-#define CAN_DISPATCH_FLAG 1
 
 #define ANALYZER_FLAG 1
 
@@ -32,7 +31,7 @@ void vGetSegmentData(void *pv_params)
 	for (;;) {
 		segment_retrieve_data(bmsdata->chip_data);
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
-		osThreadYield();
+		osDelay(1000 / SAMPLE_RATE);
 	}
 }
 
@@ -45,6 +44,7 @@ void vAnalyzer(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
+
 		osMutexAcquire(bmsdata->mutex, osWaitForever);
 		disable_therms(bmsdata);
 
@@ -57,14 +57,16 @@ void vAnalyzer(void *pv_params)
 		calc_cont_dcl(bmsdata);
 		//calcCCL();
 		calc_cont_ccl(bmsdata);
+		// temporary
+		bmsdata->charge_limit = bmsdata->cont_CCL;
+		compute_send_mc_charge_message(bmsdata);
+		compute_send_current_message(bmsdata);
+		// temporary end
+
 		calc_state_of_charge(bmsdata);
 		calc_noise_volt_percent(bmsdata);
 
-		bmsdata->charge_limit = bmsdata->cont_CCL;
-		// compute_send_current_message
-
 		osMutexRelease(bmsdata->mutex);
-		osThreadYield();
 	}
 }
 
@@ -77,9 +79,9 @@ void vCurrentMonitor(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		bmsdata->pack_current = compute_get_pack_current();
-		//compute_send_acc_status_message
-		//compute_send_current_message
-		osDelay(100);
+		compute_send_acc_status_message(bmsdata);
+		compute_send_current_message(bmsdata);
+		osDelay(1000 / SAMPLE_RATE);
 	}
 }
 
@@ -121,13 +123,16 @@ void vCanDispatch(void *pv_params)
 
 		/* Send all CAN messages in the queue */
 		while (osOK == osMessageQueueGet(can_outbound_queue,
-					      &msg_from_queue, NULL,
-					      osWaitForever)) {
+						 &msg_from_queue, NULL, 0)) {
 			msg_status = can_send_msg(line, &msg_from_queue);
 			if (msg_status == HAL_ERROR) {
+				// temporary
+				printf("CAN ERROR\r\n");
 				// TODO: error handling
 				// fault_data.diag = "Failed to send CAN message";
 			} else if (msg_status == HAL_BUSY) {
+				// temporary
+				printf("CAN BUSY\r\n");
 				// TODO: error handling
 				//"Outbound mailbox full!";
 			}

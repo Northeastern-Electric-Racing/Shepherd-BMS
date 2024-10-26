@@ -1,6 +1,8 @@
 #include "analyzer.h"
 #include "ringbuffer.h"
 #include "can_handler.h"
+#include "shep_tasks.h"
+#include <stdio.h>
 
 ringbuffer_t *can1_rx_queue = NULL;
 ringbuffer_t *can2_rx_queue = NULL;
@@ -72,5 +74,13 @@ osStatus_t queue_can_msg(can_msg_t msg)
 	if (!can_outbound_queue)
 		return -1;
 
-	return osMessageQueuePut(can_outbound_queue, &msg, 0U, 0U);
+	osStatus_t res = osMessageQueuePut(can_outbound_queue, &msg, 0U, 0U);
+
+	if (res) {
+		printf("CAN Queue full\r\n");
+	}
+
+	osThreadFlagsSet(can_dispatch_thread, CAN_DISPATCH_FLAG);
+
+	return res;
 }
