@@ -112,7 +112,10 @@ static void MX_IWDG_Init(void);
 
 PUTCHAR_PROTOTYPE
 {
-  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&ch, 1);
+  if (HAL_UART_GetState(&huart4) == HAL_UART_STATE_READY)
+  {
+    HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&ch, 1);
+  }
   return ch;
 }
 
