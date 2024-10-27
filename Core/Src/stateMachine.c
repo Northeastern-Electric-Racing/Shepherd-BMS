@@ -168,19 +168,6 @@ void handle_faulted(acc_data_t *bmsdata)
 void sm_handle_state(acc_data_t *bmsdata)
 {
 
-	enum {
-		ACC_STATUS,
-		CURRENT,
-		BMS_STATUS,
-		CELL_TEMP,
-		CELL_DATA,
-		SEGMENT_TEMP,
-		MC_DISCHARGE,
-		MC_CHARGE,
-		CAN_DEBUG,
-		MAX_MSGS
-	};
-
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	// calculate_pwm(bmsdata);
@@ -189,7 +176,7 @@ void sm_handle_state(acc_data_t *bmsdata)
 		bmsdata->discharge_limit = 0;
 		request_transition(FAULTED_STATE);
 	}
-	// TODO needs testing - (update, seems to work fine)
+	
 	handler_LUT[current_state](bmsdata);
 
 	bmsdata->is_charger_connected = compute_charger_connected();
