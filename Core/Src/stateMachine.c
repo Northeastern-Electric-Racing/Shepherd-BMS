@@ -167,7 +167,6 @@ void handle_faulted(acc_data_t *bmsdata)
 
 void sm_handle_state(acc_data_t *bmsdata)
 {
-
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	// calculate_pwm(bmsdata);
@@ -176,7 +175,7 @@ void sm_handle_state(acc_data_t *bmsdata)
 		bmsdata->discharge_limit = 0;
 		request_transition(FAULTED_STATE);
 	}
-	
+
 	handler_LUT[current_state](bmsdata);
 
 	bmsdata->is_charger_connected = compute_charger_connected();
