@@ -167,7 +167,7 @@ void handle_faulted(acc_data_t *bmsdata)
 
 void sm_handle_state(acc_data_t *bmsdata)
 {
-	static uint8_t can_msg_to_send = 0;
+
 	enum {
 		ACC_STATUS,
 		CURRENT,

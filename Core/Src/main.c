@@ -1178,7 +1178,9 @@ void watchdog_pet(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  #ifdef DEBUG_STATS
   acc_data_t* bmsdata = (acc_data_t*) argument;
+  #endif
 
   bool alt = true;
 
