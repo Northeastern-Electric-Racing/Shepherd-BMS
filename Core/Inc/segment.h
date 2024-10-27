@@ -53,6 +53,7 @@ bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num);
 
 /**
  * @brief Returns if any cells are balancing
+ * @todo This should just be a state variable -Scott
  *
  * @return true
  * @return false

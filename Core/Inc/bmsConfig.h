@@ -64,4 +64,6 @@
 
 // #define CHARGING
 
+#define SAMPLE_RATE 2 /* Hz */
+
 #endif

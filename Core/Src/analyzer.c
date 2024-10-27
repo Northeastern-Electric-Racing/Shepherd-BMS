@@ -1,6 +1,9 @@
 #include "analyzer.h"
+
 #include <stdlib.h>
 #include <stdio.h>
+
+#include "compute.h"
 
 // clang-format off
 /**
@@ -279,6 +282,8 @@ void calc_pack_temps(acc_data_t *bmsdata)
 
 	/* takes the average of all the cell temperatures */
 	bmsdata->avg_temp = total_temp / (total_accepted);
+
+	compute_send_cell_temp_message(bmsdata);
 }
 
 void calc_pack_voltage_stats(acc_data_t *bmsdata)
@@ -355,6 +360,9 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->avg_ocv = total_ocv / (NUM_CELLS_PER_CHIP * NUM_CHIPS);
 	bmsdata->pack_ocv = total_ocv / 1000; /* convert to voltage * 10 */
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
+
+	compute_send_acc_status_message(bmsdata);
+	compute_send_cell_data_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)
@@ -450,6 +458,9 @@ void calc_dcl(acc_data_t *bmsdata)
 		bmsdata->discharge_limit -= DCDC_CURRENT_DRAW;
 		prev_dcl -= DCDC_CURRENT_DRAW;
 	}
+
+	compute_send_mc_discharge_message(bmsdata);
+	compute_send_current_message(bmsdata);
 }
 
 void calc_cont_dcl(acc_data_t *bmsdata)
@@ -494,6 +505,9 @@ void calcCCL(acc_data_t *bmsdata)
 	} else {
 		bmsdata->charge_limit = currentLimit;
 	}
+
+	compute_send_mc_charge_message(bmsdata);
+	compute_send_current_message(bmsdata);
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)
@@ -654,6 +668,8 @@ void calc_state_of_charge(acc_data_t *bmsdata)
 	if (bmsdata->soc < 0) {
 		bmsdata->soc = 0;
 	}
+
+	compute_send_acc_status_message(bmsdata);
 }
 
 void calc_noise_volt_percent(acc_data_t *bmsdata)

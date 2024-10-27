@@ -13,6 +13,8 @@
 
 #include "cmsis_os2.h"
 
+#define CAN_DISPATCH_FLAG 1
+
 /**
  * @brief Task for retrieving segment data
  * 

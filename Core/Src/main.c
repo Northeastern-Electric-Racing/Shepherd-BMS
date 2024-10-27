@@ -302,14 +302,14 @@ int main(void)
   //watchdog_init();
   segment_init();
   compute_init();
-  
+  printf("Init passed\r\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
-  /* add mutexes, ... */
+  acc_data->mutex = osMutexNew(NULL);
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -1178,6 +1178,10 @@ void watchdog_pet(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  #ifdef DEBUG_STATS
+  acc_data_t* bmsdata = (acc_data_t*) argument;
+  #endif
+
   bool alt = true;
 
   /* Infinite loop */
