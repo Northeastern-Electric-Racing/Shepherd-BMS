@@ -6,6 +6,8 @@ services:
         build: .
         network_mode: host
         privileged: true
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
         volumes:
             - type: bind
               source: .
@@ -17,6 +19,5 @@ services:
             - DEBUG_PORT=/dev/ttyACM0
             - STM_TARGET_NAME=stm32f4
             - USBIP_PORT=1-1.4        
-        devices:
-            - "/dev/ttyACM0:/dev/ttyACM0"
+
         
