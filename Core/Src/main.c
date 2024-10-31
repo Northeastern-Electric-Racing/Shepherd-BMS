@@ -69,6 +69,8 @@ TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart4;
+DMA_HandleTypeDef hdma_uart4_rx;
+DMA_HandleTypeDef hdma_uart4_tx;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
@@ -123,16 +125,12 @@ void StartDefaultTask(void *argument);
 
 PUTCHAR_PROTOTYPE
 {
-  HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&ch, 1);
   return ch;
 }
 
 int _write(int file, char* ptr, int len) {
-  int DataIdx;
-
-  for (DataIdx = 0; DataIdx < len; DataIdx++) {
-    __io_putchar( *ptr++ );
-  }
+  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);
   return len;
 }
 
@@ -235,6 +233,17 @@ const void print_bms_stats(acc_data_t *acc_data)
 
 
 #endif
+
+/**
+ * @brief Callback for UART
+ * @param phuart: UART_HandleTypeDef
+ * @return None
+ */
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *phuart)
+{
+  HAL_UART_DMAStop(&huart4);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -326,7 +335,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, acc_data, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
@@ -1055,8 +1064,15 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
+  /* DMA1_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
+  /* DMA1_Stream4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
