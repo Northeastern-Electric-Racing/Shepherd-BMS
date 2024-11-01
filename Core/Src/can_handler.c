@@ -84,3 +84,19 @@ osStatus_t queue_can_msg(can_msg_t msg)
 
 	return res;
 }
+
+HAL_StatusTypeDef rl_msg_init(rl_msg_t *rl_msg, uint8_t msg_rate)
+{
+	rl_msg->msg_timer = osTimerNew(NULL, osTimerOnce, NULL, NULL);
+	rl_msg->msg_rate = msg_rate;
+}
+
+void rl_bms_func(rl_msg_t *rl_msg, acc_data_t *acc_data, rl_func_t rl_func)
+{
+	if (osTimerIsRunning(rl_msg->msg_timer)) {
+		return;
+	}
+
+	rl_func(acc_data);
+	osTimerStart(rl_msg->msg_timer, pdMS_TO_TICKS(rl_msg->msg_rate * 1000));
+}

@@ -42,6 +42,9 @@ const osThreadAttr_t analyzer_attrs = { .name = "Analyzer",
 void vAnalyzer(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+	rl_msg_t *rl_charge_msg;
+	rl_msg_init(rl_charge_msg, 3);
+
 	for (;;) {
 		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
 

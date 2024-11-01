@@ -5,7 +5,8 @@
 #include "stm32f4xx_hal.h"
 #include <stdint.h>
 #include "ringbuffer.h"
-#include "cmsis_os2.h"
+#include "FreeRTOS.h"
+#include "datastructs.h"
 
 #define NUM_INBOUND_CAN1_IDS 1
 #define NUM_INBOUND_CAN2_IDS 1
@@ -18,6 +19,13 @@ extern ringbuffer_t *can2_rx_queue;
 
 #define CAN_MSG_QUEUE_SIZE 50 /* messages */
 extern osMessageQueueId_t can_outbound_queue;
+
+typedef struct {
+	osThreadId_t msg_timer;
+	uint8_t msg_rate; /* in messages per second */
+} rl_msg_t;
+
+typedef void (*rl_func_t)(acc_data_t *);
 
 static const uint32_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
 	//CANID_X,
@@ -44,5 +52,9 @@ int8_t get_can2_msg();
  * @return osStatus_t Result of queueing message
  */
 osStatus_t queue_can_msg(can_msg_t msg);
+
+/* initialize rate limited can message */
+HAL_StatusTypeDef rl_msg_init(rl_msg_t *rl_msg, uint8_t msg_rate);
+void rl_bms_func(rl_msg_t *rl_msg, acc_data_t *acc_data, rl_func_t rl_func);
 
 #endif // CAN_HANDLER_H
