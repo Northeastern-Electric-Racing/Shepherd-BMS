@@ -53,7 +53,9 @@ uint8_t compute_init()
 	// can1.callback = can_receive_callback;
 	can1_rx_queue = ringbuffer_create(MAX_CAN1_STORAGE, sizeof(can_msg_t));
 
-	uint32_t can1_id_list_size_four[4] = { can1_id_list[0], can1_id_list[0], can1_id_list[0], can1_id_list[0] };
+	uint32_t can1_id_list_size_four[4] = { can1_id_list[0], can1_id_list[0],
+					       can1_id_list[0],
+					       can1_id_list[0] };
 	can_add_filter(&can1, can1_id_list_size_four);
 	can_init(&can1);
 
@@ -63,7 +65,9 @@ uint8_t compute_init()
 	// can2.callback = can_receive_callback;
 	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
 
-	uint32_t can2_id_list_size_four[4] = { can2_id_list[0], can2_id_list[0], can2_id_list[0], can2_id_list[0] };
+	uint32_t can2_id_list_size_four[4] = { can2_id_list[0], can2_id_list[0],
+					       can2_id_list[0],
+					       can2_id_list[0] };
 	can_add_filter(&can2, can2_id_list_size_four);
 	can_init(&can2);
 
