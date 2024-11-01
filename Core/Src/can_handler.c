@@ -7,6 +7,8 @@
 ringbuffer_t *can1_rx_queue = NULL;
 ringbuffer_t *can2_rx_queue = NULL;
 
+rl_can_msg_t rl_msgs[RL_MSG_COUNT];
+
 void can_receive_callback(CAN_HandleTypeDef *hcan)
 {
 	CAN_RxHeaderTypeDef rx_header;
@@ -74,6 +76,14 @@ osStatus_t queue_can_msg(can_msg_t msg)
 	if (!can_outbound_queue)
 		return -1;
 
+	rl_can_msg_t *rl_can_msg = get_rl_msg(msg.id);
+	if (rl_can_msg != NULL && osTimerIsRunning(rl_can_msg->msg_timer)) {
+		return -1;
+	} else {
+		osTimerStart(rl_can_msg->msg_timer,
+			     pdMS_TO_TICKS(rl_can_msg->msg_rate * 1000));
+	}
+
 	osStatus_t res = osMessageQueuePut(can_outbound_queue, &msg, 0U, 0U);
 
 	if (res) {
@@ -85,18 +95,24 @@ osStatus_t queue_can_msg(can_msg_t msg)
 	return res;
 }
 
-HAL_StatusTypeDef rl_msg_init(rl_msg_t *rl_msg, uint8_t msg_rate)
+void rl_can_msg_init(rate_lim_t rl, uint8_t msg_rate)
 {
-	rl_msg->msg_timer = osTimerNew(NULL, osTimerOnce, NULL, NULL);
-	rl_msg->msg_rate = msg_rate;
+	rl_can_msg_t rl_msg = { .msg_timer = osTimerNew(NULL, osTimerOnce, NULL,
+							NULL),
+				.msg_rate = msg_rate };
+	rl_msgs[rl] = rl_msg;
 }
 
-void rl_bms_func(rl_msg_t *rl_msg, acc_data_t *acc_data, rl_func_t rl_func)
+rl_can_msg_t *get_rl_msg(uint32_t can_id)
 {
-	if (osTimerIsRunning(rl_msg->msg_timer)) {
-		return;
+	switch (can_id) {
+	case CHARGE_CANID:
+		return &rl_msgs[CHARGE];
+		break;
+	case DISCHARGE_CANID:
+		return &rl_msgs[DISCHARGE];
+		break;
+	default:
+		return NULL;
 	}
-
-	rl_func(acc_data);
-	osTimerStart(rl_msg->msg_timer, pdMS_TO_TICKS(rl_msg->msg_rate * 1000));
 }

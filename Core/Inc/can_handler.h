@@ -11,6 +11,9 @@
 #define NUM_INBOUND_CAN1_IDS 1
 #define NUM_INBOUND_CAN2_IDS 1
 
+#define CHARGE_CANID	0x176
+#define DISCHARGE_CANID 0x156
+
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
 
@@ -23,9 +26,9 @@ extern osMessageQueueId_t can_outbound_queue;
 typedef struct {
 	osThreadId_t msg_timer;
 	uint8_t msg_rate; /* in messages per second */
-} rl_msg_t;
+} rl_can_msg_t;
 
-typedef void (*rl_func_t)(acc_data_t *);
+typedef enum { CHARGE, DISCHARGE, RL_MSG_COUNT } rate_lim_t;
 
 static const uint32_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
 	//CANID_X,
@@ -54,7 +57,8 @@ int8_t get_can2_msg();
 osStatus_t queue_can_msg(can_msg_t msg);
 
 /* initialize rate limited can message */
-HAL_StatusTypeDef rl_msg_init(rl_msg_t *rl_msg, uint8_t msg_rate);
-void rl_bms_func(rl_msg_t *rl_msg, acc_data_t *acc_data, rl_func_t rl_func);
+void rl_can_msg_init(rate_lim_t rl, uint8_t msg_rate);
+
+rl_can_msg_t *get_rl_msg(uint32_t can_id);
 
 #endif // CAN_HANDLER_H

@@ -293,7 +293,7 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 
 	can_msg_t mc_msg = { 0 };
 	mc_msg.id =
-		0x156; // 0x0A is the dcl id, 0x22 is the device id set by us
+		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
@@ -314,7 +314,7 @@ void compute_send_mc_charge_message(acc_data_t *bmsdata)
 
 	can_msg_t mc_msg = { 0 };
 	mc_msg.id =
-		0x176; // 0x0A is the dcl id, 0x157 is the device id set by us
+		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
 

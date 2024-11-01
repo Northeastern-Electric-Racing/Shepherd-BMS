@@ -20,6 +20,8 @@
 
 #define ANALYZER_FLAG 1
 
+extern rl_can_msg_t rl_msgs[RL_MSG_COUNT]; /* defined in can_handler.c */
+
 osThreadId_t get_segment_data_thread;
 const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
 						.stack_size = 2048,
@@ -42,8 +44,8 @@ const osThreadAttr_t analyzer_attrs = { .name = "Analyzer",
 void vAnalyzer(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-	rl_msg_t *rl_charge_msg;
-	rl_msg_init(rl_charge_msg, 3);
+	rl_can_msg_init(DISCHARGE, 3);
+	rl_can_msg_init(CHARGE, 2);
 
 	for (;;) {
 		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
