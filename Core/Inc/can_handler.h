@@ -59,6 +59,7 @@ osStatus_t queue_can_msg(can_msg_t msg);
 /* initialize rate limited can message */
 void rl_can_msg_init(rate_lim_t rl, uint8_t msg_rate);
 
+/* gets the rate limit can message from the list of rl messages */
 rl_can_msg_t *get_rl_msg(uint32_t can_id);
 
 #endif // CAN_HANDLER_H
