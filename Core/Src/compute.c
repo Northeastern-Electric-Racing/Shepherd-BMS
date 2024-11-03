@@ -113,8 +113,8 @@ void init_rl_config()
 	rl_data_t rl_discharge_data = { .msg_rate = 100 };
 	rl_data_t rl_charge_data = { .msg_rate = 200 };
 
-	can_msgs[DISCHARGE] = discharge_msg;
-	can_msgs[CHARGE] = charge_msg;
+	bms_can_msgs[DISCHARGE] = discharge_msg;
+	bms_can_msgs[CHARGE] = charge_msg;
 
 	rl_data[DISCHARGE] = rl_discharge_data;
 	rl_data[CHARGE] = rl_charge_data;
@@ -316,10 +316,10 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 	endian_swap(&discharge_data.max_discharge,
 		    sizeof(discharge_data.max_discharge));
 
-	memcpy(can_msgs[DISCHARGE].data, &discharge_data,
+	memcpy(bms_can_msgs[DISCHARGE].data, &discharge_data,
 	       sizeof(discharge_data));
 
-	queue_can_msg(can_msgs[DISCHARGE]);
+	queue_can_msg(bms_can_msgs[DISCHARGE]);
 }
 
 void compute_send_mc_charge_message(acc_data_t *bmsdata)
@@ -334,9 +334,9 @@ void compute_send_mc_charge_message(acc_data_t *bmsdata)
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
 
-	memcpy(can_msgs[CHARGE].data, &charge_data, sizeof(charge_data));
+	memcpy(bms_can_msgs[CHARGE].data, &charge_data, sizeof(charge_data));
 
-	queue_can_msg(can_msgs[CHARGE]);
+	queue_can_msg(bms_can_msgs[CHARGE]);
 }
 
 void compute_send_acc_status_message(acc_data_t *bmsdata)
