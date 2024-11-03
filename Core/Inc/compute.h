@@ -22,6 +22,9 @@ typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
 extern can_t can1; // main can bus, used by most peripherals
 extern can_t can2; // p2p can bus with charger
 
+extern can_msg_t bms_can_msgs[RL_MSG_COUNT]; /* defined in can_handler.h */
+extern rl_data_t rl_data[RL_MSG_COUNT]; /* defined in can_handler.h */
+
 /**
  * @brief inits the compute interface
  */
