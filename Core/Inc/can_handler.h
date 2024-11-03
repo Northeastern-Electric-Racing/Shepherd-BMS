@@ -11,6 +11,7 @@
 #define NUM_INBOUND_CAN1_IDS 1
 #define NUM_INBOUND_CAN2_IDS 1
 
+/*TODO: define ids of all rate limited can messages */
 #define CHARGE_CANID	0x176
 #define DISCHARGE_CANID 0x156
 
@@ -24,11 +25,14 @@ extern ringbuffer_t *can2_rx_queue;
 extern osMessageQueueId_t can_outbound_queue;
 
 typedef struct {
-	osThreadId_t msg_timer;
-	uint8_t msg_rate; /* in messages per second */
-} rl_can_msg_t;
+	nertimer_t timer;
+	uint8_t msg_rate; /* in milliseconds */
+} rl_data_t;
 
 typedef enum { CHARGE, DISCHARGE, RL_MSG_COUNT } rate_lim_t;
+
+can_msg_t can_msgs[RL_MSG_COUNT];
+rl_data_t rl_data[RL_MSG_COUNT];
 
 static const uint32_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
 	//CANID_X,
@@ -56,10 +60,9 @@ int8_t get_can2_msg();
  */
 osStatus_t queue_can_msg(can_msg_t msg);
 
-/* initialize rate limited can message */
-void rl_can_msg_init(rate_lim_t rl, uint8_t msg_rate);
-
-/* gets the rate limit can message from the list of rl messages */
-rl_can_msg_t *get_rl_msg(uint32_t can_id);
+/**
+ * returns the rate limit data based on the specific can  id
+ */
+rl_data_t *get_rl_msg(uint32_t can_id);
 
 #endif // CAN_HANDLER_H

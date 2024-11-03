@@ -92,7 +92,32 @@ uint8_t compute_init(acc_data_t *bmsdata)
 
 	HAL_ADC_Start(&hadc2);
 
+	/* Initializing rate limited messages */
+	init_rl_config();
+
 	return 0;
+}
+
+void init_rl_config()
+{
+	can_msg_t discharge_msg = { 0 };
+	discharge_msg.id =
+		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
+	discharge_msg.len = 8;
+
+	can_msg_t charge_msg = { 0 };
+	charge_msg.id =
+		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
+	charge_msg.len = 8;
+
+	rl_data_t rl_discharge_data = { .msg_rate = 100 };
+	rl_data_t rl_charge_data = { .msg_rate = 200 };
+
+	can_msgs[DISCHARGE] = discharge_msg;
+	can_msgs[CHARGE] = charge_msg;
+
+	rl_data[DISCHARGE] = rl_discharge_data;
+	rl_data[CHARGE] = rl_charge_data;
 }
 
 void compute_enable_charging(bool enable_charging)
@@ -291,13 +316,10 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 	endian_swap(&discharge_data.max_discharge,
 		    sizeof(discharge_data.max_discharge));
 
-	can_msg_t mc_msg = { 0 };
-	mc_msg.id =
-		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
-	mc_msg.len = 8;
-	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
+	memcpy(can_msgs[DISCHARGE].data, &discharge_data,
+	       sizeof(discharge_data));
 
-	queue_can_msg(mc_msg);
+	queue_can_msg(can_msgs[DISCHARGE]);
 }
 
 void compute_send_mc_charge_message(acc_data_t *bmsdata)
@@ -312,13 +334,9 @@ void compute_send_mc_charge_message(acc_data_t *bmsdata)
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
 
-	can_msg_t mc_msg = { 0 };
-	mc_msg.id =
-		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
-	mc_msg.len = 8;
-	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
+	memcpy(can_msgs[CHARGE].data, &charge_data, sizeof(charge_data));
 
-	queue_can_msg(mc_msg);
+	queue_can_msg(can_msgs[CHARGE]);
 }
 
 void compute_send_acc_status_message(acc_data_t *bmsdata)

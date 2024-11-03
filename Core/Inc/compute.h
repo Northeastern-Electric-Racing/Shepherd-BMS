@@ -5,6 +5,7 @@
 #include "stateMachine.h"
 #include "ringbuffer.h"
 #include "can.h"
+#include "can_handler.h"
 
 #define CURRENT_SENSOR_PIN_L A1
 #define CURRENT_SENSOR_PIN_H A0
@@ -25,6 +26,11 @@ extern can_t can2; // p2p can bus with charger
  * @brief inits the compute interface
  */
 uint8_t compute_init();
+
+/**
+ * @brief inits all rate limited can messages
+ */
+void init_rl_config();
 
 /**
  * @brief sets safeguard bool to check whether charging is enabled or disabled
