@@ -31,9 +31,6 @@ typedef struct {
 
 typedef enum { CHARGE, DISCHARGE, RL_MSG_COUNT } rate_lim_t;
 
-can_msg_t bms_can_msgs[RL_MSG_COUNT];
-rl_data_t rl_data[RL_MSG_COUNT];
-
 static const uint32_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
 	//CANID_X,
 	0x0000

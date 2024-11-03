@@ -7,6 +7,9 @@
 ringbuffer_t *can1_rx_queue = NULL;
 ringbuffer_t *can2_rx_queue = NULL;
 
+can_msg_t bms_can_msgs[RL_MSG_COUNT];
+rl_data_t rl_data[RL_MSG_COUNT];
+
 void can_receive_callback(CAN_HandleTypeDef *hcan)
 {
 	CAN_RxHeaderTypeDef rx_header;
