@@ -125,12 +125,16 @@ void StartDefaultTask(void *argument);
 
 PUTCHAR_PROTOTYPE
 {
+  //Queue DMA, bypass UART
+  //Draw.io
+  // high frequency communication in 
   HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&ch, 1);
   return ch;
 }
 
 int _write(int file, char* ptr, int len) {
-  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);
+  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);\
+  HAL_Delay(10); // test see if messages print
   return len;
 }
 
