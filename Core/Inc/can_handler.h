@@ -26,7 +26,7 @@ extern osMessageQueueId_t can_outbound_queue;
 
 typedef struct {
 	nertimer_t timer;
-	uint8_t msg_rate; /* in milliseconds */
+	uint32_t msg_rate; /* in milliseconds */
 } rl_data_t;
 
 typedef enum { CHARGE, DISCHARGE, RL_MSG_COUNT } rate_lim_t;

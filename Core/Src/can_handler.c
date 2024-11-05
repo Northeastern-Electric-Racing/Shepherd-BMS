@@ -78,10 +78,14 @@ osStatus_t queue_can_msg(can_msg_t msg)
 		return -1;
 
 	rl_data_t *rl_data = get_rl_msg(msg.id);
-	if (rl_data != NULL && is_timer_active(&rl_data->timer)) {
-		return 0;
-	} else {
-		start_timer(&rl_data->timer, rl_data->msg_rate);
+
+	if (rl_data != NULL) {
+		if (!is_timer_active(&rl_data->timer) ||
+		    is_timer_expired(&rl_data->timer)) {
+			start_timer(&rl_data->timer, rl_data->msg_rate);
+		} else if (is_timer_active(&rl_data->timer)) {
+			return 0;
+		}
 	}
 
 	osStatus_t res = osMessageQueuePut(can_outbound_queue, &msg, 0U, 0U);

@@ -110,8 +110,8 @@ void init_rl_config()
 		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
 	charge_msg.len = 8;
 
-	rl_data_t rl_discharge_data = { .msg_rate = 100 };
-	rl_data_t rl_charge_data = { .msg_rate = 200 };
+	rl_data_t rl_discharge_data = { .msg_rate = 0 };
+	rl_data_t rl_charge_data = { .msg_rate = 0 };
 
 	bms_can_msgs[DISCHARGE] = discharge_msg;
 	bms_can_msgs[CHARGE] = charge_msg;
