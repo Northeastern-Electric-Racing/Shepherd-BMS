@@ -108,7 +108,42 @@ rl_data_t *get_rl_msg(uint32_t can_id)
 	case DISCHARGE_CANID:
 		return &rl_data[DISCHARGE];
 		break;
+	case ACC_STATUS_CANID:
+		return &rl_data[ACC_STATUS];
+		break;
+	case BMS_STATUS_CANID:
+		return &rl_data[BMS_STATUS];
+		break;
+	case SHUTDOWN_CTRL_CANID:
+		return &rl_data[SHUTDOWN_CTRL];
+		break;
+	case CELL_DATA_CANID:
+		return &rl_data[CELL_DATA];
+		break;
+	case CELL_VOLTAGE_CANID:
+		return &rl_data[CELL_VOLTAGE];
+		break;
+	case CURRENT_CANID:
+		return &rl_data[CURRENT];
+		break;
+	case CELL_TEMP_CANID:
+		return &rl_data[CELL_TEMP];
+		break;
+	case SEGMENT_TEMP_CANID:
+		return &rl_data[SEGMENT_TEMP];
+		break;
+	case FAULT_CANID:
+		return &rl_data[FAULT];
+		break;
+	case NOISE_CANID:
+		return &rl_data[NOISE];
+		break;
+	case DEBUG_CANID:
+		return &rl_data[DEBUG];
+		break;
 	default:
-		return NULL;
+		break;
 	}
+
+	return NULL;
 }
