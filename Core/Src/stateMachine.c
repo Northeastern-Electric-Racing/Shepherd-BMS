@@ -167,20 +167,6 @@ void handle_faulted(acc_data_t *bmsdata)
 
 void sm_handle_state(acc_data_t *bmsdata)
 {
-	static uint8_t can_msg_to_send = 0;
-	enum {
-		ACC_STATUS,
-		CURRENT,
-		BMS_STATUS,
-		CELL_TEMP,
-		CELL_DATA,
-		SEGMENT_TEMP,
-		MC_DISCHARGE,
-		MC_CHARGE,
-		CAN_DEBUG,
-		MAX_MSGS
-	};
-
 	bmsdata->fault_code = sm_fault_return(bmsdata);
 
 	// calculate_pwm(bmsdata);
@@ -189,54 +175,15 @@ void sm_handle_state(acc_data_t *bmsdata)
 		bmsdata->discharge_limit = 0;
 		request_transition(FAULTED_STATE);
 	}
-	// TODO needs testing - (update, seems to work fine)
+
 	handler_LUT[current_state](bmsdata);
 
 	bmsdata->is_charger_connected = compute_charger_connected();
 
 	sm_broadcast_current_limit(bmsdata);
 
-	/* send relevant CAN msgs */
-	// clang-format off
-	if (is_timer_expired(&can_msg_timer) || !is_timer_active(&can_msg_timer))
-	{
-		switch (can_msg_to_send) {
-			case ACC_STATUS:
-				compute_send_acc_status_message(bmsdata);
-				break;
-			case CURRENT:
-				compute_send_current_message(bmsdata);
-				break;
-			case BMS_STATUS:
-				compute_send_bms_status_message(bmsdata, current_state, segment_is_balancing());
-				break;
-			case CELL_TEMP:
-				compute_send_cell_temp_message(bmsdata);
-				break;
-			case CELL_DATA:
-				compute_send_cell_data_message(bmsdata);
-				break;
-			case SEGMENT_TEMP:
-				compute_send_segment_temp_message(bmsdata);
-				break;
-			case MC_DISCHARGE:
-				compute_send_mc_discharge_message(bmsdata);
-				break;
-			case MC_CHARGE:
-				compute_send_mc_charge_message(bmsdata);
-				break;
-			
-			case CAN_DEBUG:
-				compute_send_debug_message(0,0, crc_error_check, 0);
-
-			default:
-				break;
-		}
-
-		start_timer(&can_msg_timer, CAN_MESSAGE_WAIT);
-		can_msg_to_send = (can_msg_to_send + 1) % MAX_MSGS;
-	}
-	// clang-format on
+	compute_send_bms_status_message(bmsdata, current_state,
+					segment_is_balancing());
 }
 
 void request_transition(BMSState_t next_state)
@@ -421,7 +368,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 	if (bmsdata->max_voltage.val > MAX_CHARGE_VOLT * 10000) {
 		start_timer(&charger_max_volt_timer, CHARGE_VOLT_TIMEOUT);
 		printf("Charger max volt timer started\r\n");
-		printf("Max voltage: %d\r\n", bmsdata->max_voltage.val);
+		printf("Max voltage: %ld\r\n", bmsdata->max_voltage.val);
 		return false;
 	}
 

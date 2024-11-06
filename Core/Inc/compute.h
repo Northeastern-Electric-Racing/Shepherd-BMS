@@ -4,6 +4,7 @@
 #include "datastructs.h"
 #include "stateMachine.h"
 #include "ringbuffer.h"
+#include "can.h"
 
 #define CURRENT_SENSOR_PIN_L A1
 #define CURRENT_SENSOR_PIN_H A0
@@ -16,6 +17,9 @@
 #define MAX_ADC_RESOLUTION   4095 // 12 bit ADC
 
 typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
+
+extern can_t can1; // main can bus, used by most peripherals
+extern can_t can2; // p2p can bus with charger
 
 /**
  * @brief inits the compute interface
@@ -77,9 +81,9 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 int16_t compute_get_pack_current();
 
 /**
- * @brief sends max discharge current to Motor Controller
+ * @brief Sends max discharge current to Motor Controller.
  *
- * @param bmsdata
+ * @param bmsdata data structure containing the discharge limit
  */
 void compute_send_mc_discharge_message(acc_data_t *bmsdata);
 
@@ -125,6 +129,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 
 /**
  * @brief sends shutdown control message
+ * @note unused
  *
  * @param mpe_state
  *
@@ -185,9 +190,23 @@ void compute_send_segment_temp_message(acc_data_t *bmsdata);
 
 void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
 
+/**
+ * @brief Send CAN message for debugging the car on the fly.
+ * 
+ * @param debug0 
+ * @param debug1 
+ * @param debug2 
+ * @param debug3 
+ */
 void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 				uint32_t debug3);
 
+/**
+ * @brief Send CAN message containing voltage noise data.
+ * @note Unused
+ * 
+ * @param bmsdata 
+ */
 void compute_send_voltage_noise_message(acc_data_t *bmsdata);
 
 #endif // COMPUTE_H

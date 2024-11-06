@@ -7,6 +7,9 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdio.h>
+#include "bmsConfig.h"
+#include "can_handler.h"
 
 #define MAX_CAN1_STORAGE 10
 #define MAX_CAN2_STORAGE 10
@@ -35,16 +38,19 @@ ADC_ChannelConfTypeDef adc_config;
 const uint32_t fan_channels[6] = { TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4,
 				   TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1 };
 
-can_t can1; // main can bus, used by most peripherals
-can_t can2; // p2p can bus with charger
-
 uint32_t adc_values[2] = { 0 };
 
 /* private function defintions */
 float read_ref_voltage();
 float read_vout();
+void change_adc1_channel(uint8_t channel);
 
-uint8_t compute_init()
+can_t can1;
+can_t can2;
+
+osMessageQueueId_t can_outbound_queue;
+
+uint8_t compute_init(acc_data_t *bmsdata)
 {
 	// TODO throw all of these objects into a compute struct
 	can1.hcan = &hcan1;
@@ -66,6 +72,9 @@ uint8_t compute_init()
 					       can2_id_list[0] };
 	can_add_filter(&can2, can2_id_list_size_four);
 	can_init(&can2);
+
+	can_outbound_queue =
+		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
 
 	pwm_config.OCMode = TIM_OCMODE_PWM1;
 	pwm_config.Pulse = 0;
@@ -147,8 +156,11 @@ int compute_send_charging_message(uint16_t voltage_to_set,
 
 bool compute_charger_connected()
 {
-	// TODO need to set up CAN msg that actually toggles this bool
-	return false; // bmsdata->is_charger_connected;
+#ifdef CHARGING
+	return true;
+#endif
+	//TODO need to set up CAN msg that actually toggles this bool
+	return false; //bmsdata->is_charger_connected;
 }
 
 // TODO add this back
@@ -214,11 +226,11 @@ int16_t compute_get_pack_current()
 		2.500; // Calibrated with current = 0A
 	static const float CURRENT_HIGHCHANNEL_OFFSET =
 		2.500; // Calibrated with current = 0A
-
+	/*
 	static const float HIGHCHANNEL_GAIN =
 		1 / 0.0041; // Calibrated with  current = 5A, 10A, 20A
 	static const float LOWCHANNEL_GAIN = 1 / 0.0267;
-
+	*/
 	// Change ADC channel to read the high current sensor
 	change_adc1_channel(VOUT_CHANNEL);
 	HAL_ADC_Start(&hadc1);
@@ -240,6 +252,7 @@ int16_t compute_get_pack_current()
 	int16_t high_current_voltage_raw =
 		(int16_t)(1000.0f *
 			  ((float)raw_high_current * CURRENT_ADC_RESOLUTION));
+
 	high_current_voltage_raw =
 		(int16_t)(5000.0f * high_current_voltage_raw /
 			  (float)ref_voltage_raw);
@@ -290,7 +303,7 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &discharge_data, sizeof(discharge_data));
 
-	can_send_msg(&can1, &mc_msg);
+	queue_can_msg(mc_msg);
 }
 
 void compute_send_mc_charge_message(acc_data_t *bmsdata)
@@ -311,7 +324,7 @@ void compute_send_mc_charge_message(acc_data_t *bmsdata)
 	mc_msg.len = 8;
 	memcpy(mc_msg.data, &charge_data, sizeof(charge_data));
 
-	can_send_msg(&can1, &mc_msg);
+	queue_can_msg(mc_msg);
 }
 
 void compute_send_acc_status_message(acc_data_t *bmsdata)
@@ -344,13 +357,7 @@ void compute_send_acc_status_message(acc_data_t *bmsdata)
 	acc_msg.len = sizeof(acc_status_msg_data);
 	memcpy(acc_msg.data, &acc_status_msg_data, sizeof(acc_status_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
@@ -368,7 +375,8 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
-	bms_status_msg_data.balance = (uint8_t)(balance);
+	bms_status_msg_data.balance =
+		(uint8_t)(balance); // segment_is_balancing()
 
 	/* convert to big endian */
 	endian_swap(&bms_status_msg_data.fault,
@@ -379,12 +387,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	acc_msg.len = sizeof(bms_status_msg_data);
 	memcpy(acc_msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
@@ -401,13 +404,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	memcpy(acc_msg.data, &shutdown_control_msg_data,
 	       sizeof(shutdown_control_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_cell_data_message(acc_data_t *bmsdata)
@@ -442,13 +439,7 @@ void compute_send_cell_data_message(acc_data_t *bmsdata)
 	acc_msg.len = sizeof(cell_data_msg_data);
 	memcpy(acc_msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_cell_voltage_message(uint8_t cell_id,
@@ -484,13 +475,7 @@ void compute_send_cell_voltage_message(uint8_t cell_id,
 	memcpy(acc_msg.data, &cell_voltage_msg_data,
 	       sizeof(cell_voltage_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_current_message(acc_data_t *bmsdata)
@@ -519,13 +504,7 @@ void compute_send_current_message(acc_data_t *bmsdata)
 	memcpy(acc_msg.data, &current_status_msg_data,
 	       sizeof(current_status_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_cell_temp_message(acc_data_t *bmsdata)
@@ -559,13 +538,7 @@ void compute_send_cell_temp_message(acc_data_t *bmsdata)
 	acc_msg.len = sizeof(cell_temp_msg_data);
 	memcpy(acc_msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_segment_temp_message(acc_data_t *bmsdata)
@@ -599,14 +572,9 @@ void compute_send_segment_temp_message(acc_data_t *bmsdata)
 	memcpy(acc_msg.data, &segment_temp_msg_data,
 	       sizeof(segment_temp_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
+
 void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 {
 	struct __attribute__((__packed__)) {
@@ -628,13 +596,7 @@ void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 	acc_msg.len = 5;
 	memcpy(acc_msg.data, &fault_msg_data, sizeof(fault_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_voltage_noise_message(acc_data_t *bmsdata)
@@ -667,13 +629,7 @@ void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 	memcpy(acc_msg.data, &voltage_noise_msg_data,
 	       sizeof(voltage_noise_msg_data));
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &acc_msg);
+	queue_can_msg(acc_msg);
 }
 
 void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
@@ -700,13 +656,7 @@ void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 
 	memcpy(debug_msg.data, &debug_msg_data, 8);
 
-#ifdef CHARGING_ENABLED
-	can_t *line = &can2;
-#else
-	can_t *line = &can1;
-#endif
-
-	can_send_msg(line, &debug_msg);
+	queue_can_msg(debug_msg);
 }
 
 void change_adc1_channel(uint8_t channel)

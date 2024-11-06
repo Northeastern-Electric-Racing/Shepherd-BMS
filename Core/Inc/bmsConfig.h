@@ -60,4 +60,10 @@
 
 #define CAN_MESSAGE_WAIT 5
 
+#define CAN_DISPATCH_DELAY 5
+
+// #define CHARGING
+
+#define SAMPLE_RATE 2 /* Hz */
+
 #endif

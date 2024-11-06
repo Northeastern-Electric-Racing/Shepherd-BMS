@@ -14,8 +14,6 @@ void segment_init();
  * @brief Pulls all cell data from the segments and returns all cell data
  *
  * @todo make sure that retrieving cell data doesn't block code too much
- *
- * @return int*
  */
 void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS]);
 
@@ -55,6 +53,7 @@ bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num);
 
 /**
  * @brief Returns if any cells are balancing
+ * @todo This should just be a state variable -Scott
  *
  * @return true
  * @return false
