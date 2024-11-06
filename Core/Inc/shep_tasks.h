@@ -13,7 +13,6 @@
 
 #include "cmsis_os2.h"
 
-
 /**
  * @brief Task for retrieving segment data
  * 
