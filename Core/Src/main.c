@@ -329,7 +329,7 @@ int main(void)
   /* Messaging */
   can_dispatch_handle = osThreadNew(vCanDispatch, &hcan1, &can_dispatch_attributes);
   assert(can_dispatch_handle);
-  can_receive_thread = osThreadNew(vCanReceive, mc, &can_receive_attributes);
+  can_receive_thread = osThreadNew(vCanReceive, NULL, &can_receive_attributes);
   assert(can_receive_thread);
 
   get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
@@ -1204,7 +1204,7 @@ void StartDefaultTask(void *argument)
 
     compute_send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing());
-          
+
     HAL_IWDG_Refresh(&hiwdg);
 
     osDelay(1000);
