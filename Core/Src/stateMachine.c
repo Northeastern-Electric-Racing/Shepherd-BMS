@@ -181,9 +181,6 @@ void sm_handle_state(acc_data_t *bmsdata)
 	bmsdata->is_charger_connected = compute_charger_connected();
 
 	sm_broadcast_current_limit(bmsdata);
-
-	compute_send_bms_status_message(bmsdata, current_state,
-					segment_is_balancing());
 }
 
 void request_transition(BMSState_t next_state)

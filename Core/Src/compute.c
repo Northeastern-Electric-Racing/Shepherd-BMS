@@ -1,7 +1,5 @@
 #include "compute.h"
 #include "c_utils.h"
-#include "can.h"
-#include "can_handler.h"
 #include "main.h"
 #include "stm32f405xx.h"
 #include <assert.h>
@@ -11,9 +9,6 @@
 #include "bmsConfig.h"
 #include "can_handler.h"
 
-#define MAX_CAN1_STORAGE 10
-#define MAX_CAN2_STORAGE 10
-
 #define REF_CHANNEL  0
 #define VOUT_CHANNEL 1
 
@@ -22,9 +17,6 @@
 uint8_t fan_speed;
 bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
-
-extern CAN_HandleTypeDef hcan1;
-extern CAN_HandleTypeDef hcan2;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
@@ -45,37 +37,8 @@ float read_ref_voltage();
 float read_vout();
 void change_adc1_channel(uint8_t channel);
 
-can_t can1;
-can_t can2;
-
-osMessageQueueId_t can_outbound_queue;
-
 uint8_t compute_init(acc_data_t *bmsdata)
 {
-	// TODO throw all of these objects into a compute struct
-	can1.hcan = &hcan1;
-	// can1.callback = can_receive_callback;
-	can1_rx_queue = ringbuffer_create(MAX_CAN1_STORAGE, sizeof(can_msg_t));
-
-	uint32_t can1_id_list_size_four[4] = { can1_id_list[0], can1_id_list[0],
-					       can1_id_list[0],
-					       can1_id_list[0] };
-	can_add_filter(&can1, can1_id_list_size_four);
-	can_init(&can1);
-
-	can2.hcan = &hcan2;
-	// can2.callback = can_receive_callback;
-	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
-
-	uint32_t can2_id_list_size_four[4] = { can2_id_list[0], can2_id_list[0],
-					       can2_id_list[0],
-					       can2_id_list[0] };
-	can_add_filter(&can2, can2_id_list_size_four);
-	can_init(&can2);
-
-	can_outbound_queue =
-		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
-
 	pwm_config.OCMode = TIM_OCMODE_PWM1;
 	pwm_config.Pulse = 0;
 	pwm_config.OCPolarity = TIM_OCPOLARITY_HIGH;

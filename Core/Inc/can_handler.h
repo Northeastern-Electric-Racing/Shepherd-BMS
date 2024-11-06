@@ -2,12 +2,13 @@
 #define CAN_HANDLER_H
 
 #include "can.h"
-#include "stm32f4xx_hal.h"
-#include <stdint.h>
-#include "ringbuffer.h"
-#include "FreeRTOS.h"
-#include "datastructs.h"
+#include "cmsis_os.h"
 
+/**
+ * @brief Callback to be called when a message is received on CAN line 1.
+ * 
+ * @param hcan Pointer to struct representing CAN hardware.
+ */
 #define NUM_INBOUND_CAN1_IDS 1
 #define NUM_INBOUND_CAN2_IDS 1
 
@@ -25,14 +26,6 @@
 #define NOISE_CANID	    0x88
 #define DEBUG_CANID	    0x702
 
-extern CAN_HandleTypeDef hcan1;
-extern CAN_HandleTypeDef hcan2;
-
-extern ringbuffer_t *can1_rx_queue;
-extern ringbuffer_t *can2_rx_queue;
-
-#define CAN_MSG_QUEUE_SIZE 50 /* messages */
-extern osMessageQueueId_t can_outbound_queue;
 
 typedef struct {
 	uint32_t prev_tick;
@@ -56,31 +49,39 @@ typedef enum {
 	RL_MSG_COUNT
 } rate_lim_t;
 
-static const uint32_t can1_id_list[NUM_INBOUND_CAN1_IDS] = {
-	//CANID_X,
-	0x0000
-};
-
-static const uint32_t can2_id_list[NUM_INBOUND_CAN2_IDS] = {
-	//CANID_X,
-	0x18FF50E5
-};
-
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 
-/* for 1st CAN bus */
-int8_t get_can1_msg();
-
-/* for 2nd CAN bus */
-int8_t get_can2_msg();
+/**
+ * @brief Place a CAN message in a queue.
+ * 
+ * @param msg CAN message to be sent.
+ * @return int8_t Error code.
+ */
+int8_t queue_can_msg(can_msg_t msg);
 
 /**
- * @brief Push a CAN message into the outbound CAN queue.
+ * @brief Initialize CAN lines.
  * 
- * @param msg The CAN message to queue
- * @return osStatus_t Result of queueing message
  */
-osStatus_t queue_can_msg(can_msg_t msg);
+void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2);
+
+/**
+ * @brief Task for sending CAN messages.
+ * 
+ * @param pv_params CAN_HandleTypeDef for the CAN line that messages will be sent out on.
+ */
+void vCanDispatch(void *pv_params);
+extern osThreadId_t can_dispatch_handle;
+extern const osThreadAttr_t can_dispatch_attributes;
+
+/**
+ * @brief Task for processing received can messages.
+ * 
+ * @param pv_params A can_receive_args_t*.
+ */
+void vCanReceive(void *pv_params);
+extern osThreadId_t can_receive_thread;
+extern const osThreadAttr_t can_receive_attributes;
 
 /**
  * returns the rate limit data based on the specific can  id
