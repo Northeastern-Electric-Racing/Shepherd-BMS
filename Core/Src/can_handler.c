@@ -80,11 +80,12 @@ osStatus_t queue_can_msg(can_msg_t msg)
 	rl_data_t *rl_data = get_rl_msg(msg.id);
 
 	if (rl_data != NULL && rl_data->msg_rate != 0) {
-		if (!is_timer_active(&rl_data->timer) ||
-		    is_timer_expired(&rl_data->timer)) {
-			start_timer(&rl_data->timer, rl_data->msg_rate);
-		} else if (is_timer_active(&rl_data->timer)) {
+		if (HAL_GetTick() <=
+		    pdMS_TO_TICKS(rl_data->prev_tick) + rl_data->msg_rate) {
+			// block message
 			return 0;
+		} else {
+			rl_data->prev_tick = HAL_GetTick();
 		}
 	}
 

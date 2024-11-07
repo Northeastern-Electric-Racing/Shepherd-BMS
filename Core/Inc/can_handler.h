@@ -35,7 +35,7 @@ extern ringbuffer_t *can2_rx_queue;
 extern osMessageQueueId_t can_outbound_queue;
 
 typedef struct {
-	nertimer_t timer;
+	uint32_t prev_tick;
 	uint32_t msg_rate; /* in milliseconds */
 } rl_data_t;
 
