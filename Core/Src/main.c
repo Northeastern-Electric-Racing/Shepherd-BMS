@@ -70,7 +70,6 @@ TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart4;
 DMA_HandleTypeDef hdma_uart4_tx;
-DMA_HandleTypeDef hdma_uart4_rx;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
@@ -133,8 +132,8 @@ PUTCHAR_PROTOTYPE
 }
 
 int _write(int file, char* ptr, int len) {
-  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);\
-  HAL_Delay(10); // test see if messages print
+  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);
+  
   return len;
 }
 
@@ -1071,9 +1070,6 @@ static void MX_DMA_Init(void)
   __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Stream2_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream2_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream2_IRQn);
   /* DMA1_Stream4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
