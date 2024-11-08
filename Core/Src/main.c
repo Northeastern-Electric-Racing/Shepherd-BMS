@@ -124,9 +124,6 @@ void StartDefaultTask(void *argument);
 
 PUTCHAR_PROTOTYPE
 {
-  //Queue DMA, bypass UART
-  //Draw.io
-  // high frequency communication in 
   HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&ch, 1);
   return ch;
 }
