@@ -115,19 +115,6 @@ void StartDefaultTask(void *argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-/* the following reroutes printf to uart */
-#ifdef __GNUC__
-#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
-#else
-#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
-#endif
-
-PUTCHAR_PROTOTYPE
-{
-  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)&ch, 1);
-  return ch;
-}
-
 int _write(int file, char* ptr, int len) {
   HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);
   
