@@ -32,7 +32,11 @@ osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
 			      osThreadId_t thread_id, uint32_t flags)
 {
 	osStatus_t status = osMessageQueuePut(queue, msg_ptr, 0U, 0U);
-	osThreadFlagsSet(thread_id, flags);
+	if (status == osOK) {
+		osThreadFlagsSet(thread_id, flags);
+	} else {
+		printf("Could not put item into queue: %d", status);
+	}
 	return status;
 }
 
@@ -78,7 +82,6 @@ void can_receive_callback(CAN_HandleTypeDef *hcan)
 		// TODO add non crtical fault capability - could create one for failed can receieve
 		return;
 	}
-	//printf("NEW MESSAGE");
 	new_msg.len = rx_header.DLC;
 
 	if (hcan == can1->hcan) {
