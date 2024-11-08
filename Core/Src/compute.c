@@ -103,43 +103,56 @@ void init_rl_config()
 	can_msg_t discharge_msg = { 0 };
 	discharge_msg.id =
 		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
+	discharge_msg.len = 8;
 
 	can_msg_t charge_msg = { 0 };
 	charge_msg.id =
 		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
+	charge_msg.len = 8;
 
 	can_msg_t acc_status_msg;
 	acc_status_msg.id = ACC_STATUS_CANID;
+	acc_status_msg.len = 8;
 
 	can_msg_t bms_status_msg;
 	bms_status_msg.id = BMS_STATUS_CANID;
+	bms_status_msg.len = 8;
 
 	can_msg_t shutdown_ctrl_msg;
 	shutdown_ctrl_msg.id = SHUTDOWN_CTRL_CANID;
+	shutdown_ctrl_msg.len = 1;
 
 	can_msg_t cell_data_msg;
 	cell_data_msg.id = CELL_DATA_CANID;
+	cell_data_msg.len = 8;
 
 	can_msg_t cell_voltage_msg;
 	cell_voltage_msg.id = CELL_VOLTAGE_CANID;
+	cell_voltage_msg.len = 8;
 
 	can_msg_t current_msg;
 	current_msg.id = CURRENT_CANID;
+	current_msg.len = 6;
 
 	can_msg_t cell_temp_msg;
 	cell_temp_msg.id = CELL_TEMP_CANID;
+	cell_temp_msg.len = 8;
 
 	can_msg_t segment_temp_msg;
 	segment_temp_msg.id = SEGMENT_TEMP_CANID;
+	segment_temp_msg.len = 6;
 
 	can_msg_t fault_msg;
 	fault_msg.id = FAULT_CANID;
+	fault_msg.len = 5;
 
 	can_msg_t noise_msg;
 	noise_msg.id = NOISE_CANID;
+	noise_msg.len = 6;
 
 	can_msg_t debug_msg;
 	debug_msg.id = DEBUG_CANID;
+	debug_msg.len = 8; // yaml decodes this to 8 bytes
 
 	rl_data_t rl_discharge_data = { .msg_rate = 0 };
 	rl_data_t rl_charge_data = { .msg_rate = 0 };
@@ -358,7 +371,6 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 	endian_swap(&discharge_data.max_discharge,
 		    sizeof(discharge_data.max_discharge));
 
-	bms_can_msgs[DISCHARGE].len = 8;
 	memcpy(bms_can_msgs[DISCHARGE].data, &discharge_data,
 	       sizeof(discharge_data));
 
@@ -377,7 +389,6 @@ void compute_send_mc_charge_message(acc_data_t *bmsdata)
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
 
-	bms_can_msgs[CHARGE].len = 8;
 	memcpy(bms_can_msgs[CHARGE].data, &charge_data, sizeof(charge_data));
 
 	queue_can_msg(bms_can_msgs[CHARGE]);
@@ -408,7 +419,6 @@ void compute_send_acc_status_message(acc_data_t *bmsdata)
 	endian_swap(&acc_status_msg_data.pack_ah,
 		    sizeof(acc_status_msg_data.pack_ah));
 
-	bms_can_msgs[ACC_STATUS].len = sizeof(acc_status_msg_data);
 	memcpy(bms_can_msgs[ACC_STATUS].data, &acc_status_msg_data,
 	       sizeof(acc_status_msg_data));
 
@@ -437,7 +447,6 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	endian_swap(&bms_status_msg_data.fault,
 		    sizeof(bms_status_msg_data.fault));
 
-	bms_can_msgs[BMS_STATUS].len = sizeof(bms_status_msg_data);
 	memcpy(bms_can_msgs[BMS_STATUS].data, &bms_status_msg_data,
 	       sizeof(bms_status_msg_data));
 
@@ -452,7 +461,6 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 
 	shutdown_control_msg_data.mpeState = mpe_state;
 
-	bms_can_msgs[SHUTDOWN_CTRL].len = sizeof(shutdown_control_msg_data);
 	memcpy(bms_can_msgs[SHUTDOWN_CTRL].data, &shutdown_control_msg_data,
 	       sizeof(shutdown_control_msg_data));
 
@@ -486,7 +494,6 @@ void compute_send_cell_data_message(acc_data_t *bmsdata)
 	endian_swap(&cell_data_msg_data.volt_avg,
 		    sizeof(cell_data_msg_data.volt_avg));
 
-	bms_can_msgs[CELL_DATA].len = sizeof(cell_data_msg_data);
 	memcpy(bms_can_msgs[CELL_DATA].data, &cell_data_msg_data,
 	       sizeof(cell_data_msg_data));
 
@@ -520,7 +527,6 @@ void compute_send_cell_voltage_message(uint8_t cell_id,
 	endian_swap(&cell_voltage_msg_data.openVoltage,
 		    sizeof(cell_voltage_msg_data.openVoltage));
 
-	bms_can_msgs[CELL_VOLTAGE].len = sizeof(cell_voltage_msg_data);
 	memcpy(bms_can_msgs[CELL_VOLTAGE].data, &cell_voltage_msg_data,
 	       sizeof(cell_voltage_msg_data));
 
@@ -547,7 +553,6 @@ void compute_send_current_message(acc_data_t *bmsdata)
 	endian_swap(&current_status_msg_data.pack_curr,
 		    sizeof(current_status_msg_data.pack_curr));
 
-	bms_can_msgs[CURRENT].len = sizeof(current_status_msg_data);
 	memcpy(bms_can_msgs[CURRENT].data, &current_status_msg_data,
 	       sizeof(current_status_msg_data));
 
@@ -580,7 +585,6 @@ void compute_send_cell_temp_message(acc_data_t *bmsdata)
 	endian_swap(&cell_temp_msg_data.average_temp,
 		    sizeof(cell_temp_msg_data.average_temp));
 
-	bms_can_msgs[CELL_TEMP].len = sizeof(cell_temp_msg_data);
 	memcpy(bms_can_msgs[CELL_TEMP].data, &cell_temp_msg_data,
 	       sizeof(cell_temp_msg_data));
 
@@ -612,7 +616,6 @@ void compute_send_segment_temp_message(acc_data_t *bmsdata)
 	segment_temp_msg_data.segment6_average_temp =
 		bmsdata->segment_average_temps[5];
 
-	bms_can_msgs[SEGMENT_TEMP].len = sizeof(segment_temp_msg_data);
 	memcpy(bms_can_msgs[SEGMENT_TEMP].data, &segment_temp_msg_data,
 	       sizeof(segment_temp_msg_data));
 
@@ -635,7 +638,6 @@ void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 		    sizeof(fault_msg_data.pack_curr));
 	endian_swap(&fault_msg_data.dcl, sizeof(fault_msg_data.dcl));
 
-	bms_can_msgs[FAULT].len = 5;
 	memcpy(bms_can_msgs[FAULT].data, &fault_msg_data,
 	       sizeof(fault_msg_data));
 
@@ -666,7 +668,6 @@ void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 	voltage_noise_msg_data.seg6_noise =
 		bmsdata->segment_noise_percentage[5];
 
-	bms_can_msgs[NOISE].len = sizeof(voltage_noise_msg_data);
 	memcpy(bms_can_msgs[NOISE].data, &voltage_noise_msg_data,
 	       sizeof(voltage_noise_msg_data));
 
@@ -687,8 +688,6 @@ void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	debug_msg_data.debug1 = debug1;
 	debug_msg_data.debug2 = debug2;
 	debug_msg_data.debug3 = debug3;
-
-	bms_can_msgs[DEBUG].len = 8; // yaml decodes this msg as 8 bytes
 
 	endian_swap(&debug_msg_data.debug2, sizeof(debug_msg_data.debug2));
 	endian_swap(&debug_msg_data.debug3, sizeof(debug_msg_data.debug3));
