@@ -92,13 +92,13 @@ uint8_t compute_init(acc_data_t *bmsdata)
 
 	HAL_ADC_Start(&hadc2);
 
-	/* Initializing rate limited messages */
-	init_rl_config();
+	/* Initializing can messages limited messages */
+	init_can_msg_config();
 
 	return 0;
 }
 
-void init_rl_config()
+void init_can_msg_config()
 {
 	can_msg_t discharge_msg = { 0 };
 	discharge_msg.id =
@@ -154,7 +154,7 @@ void init_rl_config()
 	debug_msg.id = DEBUG_CANID;
 	debug_msg.len = 8; // yaml decodes this to 8 bytes
 
-	rl_data_t rl_discharge_data = { .msg_rate = 0 };
+	rl_data_t rl_discharge_data = { .msg_rate = 5000 };
 	rl_data_t rl_charge_data = { .msg_rate = 0 };
 
 	bms_can_msgs[DISCHARGE] = discharge_msg;

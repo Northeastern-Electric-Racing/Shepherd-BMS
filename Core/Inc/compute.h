@@ -31,9 +31,9 @@ extern rl_data_t rl_data[RL_MSG_COUNT]; /* defined in can_handler.c */
 uint8_t compute_init();
 
 /**
- * @brief inits all rate limited can messages
+ * @brief initializes all CAN messages and message rates
  */
-void init_rl_config();
+void init_can_msg_config();
 
 /**
  * @brief sets safeguard bool to check whether charging is enabled or disabled
