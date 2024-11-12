@@ -7,6 +7,9 @@
 ringbuffer_t *can1_rx_queue = NULL;
 ringbuffer_t *can2_rx_queue = NULL;
 
+can_msg_t bms_can_msgs[RL_MSG_COUNT];
+rl_data_t rl_data[RL_MSG_COUNT];
+
 void can_receive_callback(CAN_HandleTypeDef *hcan)
 {
 	CAN_RxHeaderTypeDef rx_header;
@@ -74,6 +77,18 @@ osStatus_t queue_can_msg(can_msg_t msg)
 	if (!can_outbound_queue)
 		return -1;
 
+	rl_data_t *rl_data = get_rl_msg(msg.id);
+
+	if (rl_data != NULL && rl_data->msg_rate != 0) {
+		if (HAL_GetTick() <=
+		    pdMS_TO_TICKS(rl_data->prev_tick) + rl_data->msg_rate) {
+			// block message
+			return 0;
+		} else {
+			rl_data->prev_tick = HAL_GetTick();
+		}
+	}
+
 	osStatus_t res = osMessageQueuePut(can_outbound_queue, &msg, 0U, 0U);
 
 	if (res) {
@@ -83,4 +98,53 @@ osStatus_t queue_can_msg(can_msg_t msg)
 	osThreadFlagsSet(can_dispatch_thread, CAN_DISPATCH_FLAG);
 
 	return res;
+}
+
+rl_data_t *get_rl_msg(uint32_t can_id)
+{
+	switch (can_id) {
+	case CHARGE_CANID:
+		return &rl_data[CHARGE];
+		break;
+	case DISCHARGE_CANID:
+		return &rl_data[DISCHARGE];
+		break;
+	case ACC_STATUS_CANID:
+		return &rl_data[ACC_STATUS];
+		break;
+	case BMS_STATUS_CANID:
+		return &rl_data[BMS_STATUS];
+		break;
+	case SHUTDOWN_CTRL_CANID:
+		return &rl_data[SHUTDOWN_CTRL];
+		break;
+	case CELL_DATA_CANID:
+		return &rl_data[CELL_DATA];
+		break;
+	case CELL_VOLTAGE_CANID:
+		return &rl_data[CELL_VOLTAGE];
+		break;
+	case CURRENT_CANID:
+		return &rl_data[CURRENT];
+		break;
+	case CELL_TEMP_CANID:
+		return &rl_data[CELL_TEMP];
+		break;
+	case SEGMENT_TEMP_CANID:
+		return &rl_data[SEGMENT_TEMP];
+		break;
+	case FAULT_CANID:
+		return &rl_data[FAULT];
+		break;
+	case NOISE_CANID:
+		return &rl_data[NOISE];
+		break;
+	case DEBUG_CANID:
+		return &rl_data[DEBUG];
+		break;
+	default:
+		break;
+	}
+
+	return NULL;
 }
