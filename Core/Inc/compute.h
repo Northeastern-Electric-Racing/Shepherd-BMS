@@ -22,11 +22,6 @@ typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
 uint8_t compute_init();
 
 /**
- * @brief initializes all CAN messages and message rates
- */
-void init_can_msg_config();
-
-/**
  * @brief sets safeguard bool to check whether charging is enabled or disabled
  *
  * @param is_enabled

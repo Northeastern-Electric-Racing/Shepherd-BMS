@@ -26,7 +26,6 @@
 #define NOISE_CANID	    0x88
 #define DEBUG_CANID	    0x702
 
-
 typedef struct {
 	uint32_t prev_tick;
 	uint32_t msg_rate; /* in milliseconds */
@@ -82,10 +81,5 @@ extern const osThreadAttr_t can_dispatch_attributes;
 void vCanReceive(void *pv_params);
 extern osThreadId_t can_receive_thread;
 extern const osThreadAttr_t can_receive_attributes;
-
-/**
- * returns the rate limit data based on the specific can  id
- */
-rl_data_t *get_rl_msg(uint32_t can_id);
 
 #endif // CAN_HANDLER_H
