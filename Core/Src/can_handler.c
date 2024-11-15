@@ -96,8 +96,8 @@ void init_can_msg_config()
 	debug_msg.id = DEBUG_CANID;
 	debug_msg.len = 8; // yaml decodes this to 8 bytes
 
-	rl_data_t rl_discharge_data = { .msg_rate = 5000 };
-	rl_data_t rl_charge_data = { .msg_rate = 0 };
+	// rl_data_t rl_discharge_data = { .msg_rate = 5000 };
+	// rl_data_t rl_charge_data = { .msg_rate = 0 };
 
 	bms_can_msgs[DISCHARGE] = discharge_msg;
 	bms_can_msgs[CHARGE] = charge_msg;
@@ -113,8 +113,8 @@ void init_can_msg_config()
 	bms_can_msgs[NOISE] = noise_msg;
 	bms_can_msgs[DEBUG] = debug_msg;
 
-	rl_data[DISCHARGE] = rl_discharge_data;
-	rl_data[CHARGE] = rl_charge_data;
+	// rl_data[DISCHARGE] = rl_discharge_data;
+	// rl_data[CHARGE] = rl_charge_data;
 }
 
 rl_data_t *get_rl_msg(uint32_t can_id)
