@@ -1,7 +1,5 @@
 #include "compute.h"
 #include "c_utils.h"
-#include "can.h"
-#include "can_handler.h"
 #include "main.h"
 #include "stm32f405xx.h"
 #include <assert.h>
@@ -10,9 +8,6 @@
 #include <stdio.h>
 #include "bmsConfig.h"
 #include "can_handler.h"
-
-#define MAX_CAN1_STORAGE 10
-#define MAX_CAN2_STORAGE 10
 
 #define REF_CHANNEL  0
 #define VOUT_CHANNEL 1
@@ -23,14 +18,13 @@ uint8_t fan_speed;
 bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
 
-extern CAN_HandleTypeDef hcan1;
-extern CAN_HandleTypeDef hcan2;
-
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
+
+extern can_msg_t bms_can_msgs[RL_MSG_COUNT];
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
@@ -45,37 +39,8 @@ float read_ref_voltage();
 float read_vout();
 void change_adc1_channel(uint8_t channel);
 
-can_t can1;
-can_t can2;
-
-osMessageQueueId_t can_outbound_queue;
-
 uint8_t compute_init(acc_data_t *bmsdata)
 {
-	// TODO throw all of these objects into a compute struct
-	can1.hcan = &hcan1;
-	// can1.callback = can_receive_callback;
-	can1_rx_queue = ringbuffer_create(MAX_CAN1_STORAGE, sizeof(can_msg_t));
-
-	uint32_t can1_id_list_size_four[4] = { can1_id_list[0], can1_id_list[0],
-					       can1_id_list[0],
-					       can1_id_list[0] };
-	can_add_filter(&can1, can1_id_list_size_four);
-	can_init(&can1);
-
-	can2.hcan = &hcan2;
-	// can2.callback = can_receive_callback;
-	can2_rx_queue = ringbuffer_create(MAX_CAN2_STORAGE, sizeof(can_msg_t));
-
-	uint32_t can2_id_list_size_four[4] = { can2_id_list[0], can2_id_list[0],
-					       can2_id_list[0],
-					       can2_id_list[0] };
-	can_add_filter(&can2, can2_id_list_size_four);
-	can_init(&can2);
-
-	can_outbound_queue =
-		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
-
 	pwm_config.OCMode = TIM_OCMODE_PWM1;
 	pwm_config.Pulse = 0;
 	pwm_config.OCPolarity = TIM_OCPOLARITY_HIGH;
@@ -98,87 +63,7 @@ uint8_t compute_init(acc_data_t *bmsdata)
 
 	HAL_ADC_Start(&hadc2);
 
-	/* Initializing can messages limited messages */
-	init_can_msg_config();
-
 	return 0;
-}
-
-void init_can_msg_config()
-{
-	can_msg_t discharge_msg = { 0 };
-	discharge_msg.id =
-		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
-	discharge_msg.len = 8;
-
-	can_msg_t charge_msg = { 0 };
-	charge_msg.id =
-		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
-	charge_msg.len = 8;
-
-	can_msg_t acc_status_msg;
-	acc_status_msg.id = ACC_STATUS_CANID;
-	acc_status_msg.len = 8;
-
-	can_msg_t bms_status_msg;
-	bms_status_msg.id = BMS_STATUS_CANID;
-	bms_status_msg.len = 8;
-
-	can_msg_t shutdown_ctrl_msg;
-	shutdown_ctrl_msg.id = SHUTDOWN_CTRL_CANID;
-	shutdown_ctrl_msg.len = 1;
-
-	can_msg_t cell_data_msg;
-	cell_data_msg.id = CELL_DATA_CANID;
-	cell_data_msg.len = 8;
-
-	can_msg_t cell_voltage_msg;
-	cell_voltage_msg.id = CELL_VOLTAGE_CANID;
-	cell_voltage_msg.len = 8;
-
-	can_msg_t current_msg;
-	current_msg.id = CURRENT_CANID;
-	current_msg.len = 6;
-
-	can_msg_t cell_temp_msg;
-	cell_temp_msg.id = CELL_TEMP_CANID;
-	cell_temp_msg.len = 8;
-
-	can_msg_t segment_temp_msg;
-	segment_temp_msg.id = SEGMENT_TEMP_CANID;
-	segment_temp_msg.len = 6;
-
-	can_msg_t fault_msg;
-	fault_msg.id = FAULT_CANID;
-	fault_msg.len = 5;
-
-	can_msg_t noise_msg;
-	noise_msg.id = NOISE_CANID;
-	noise_msg.len = 6;
-
-	can_msg_t debug_msg;
-	debug_msg.id = DEBUG_CANID;
-	debug_msg.len = 8; // yaml decodes this to 8 bytes
-
-	rl_data_t rl_discharge_data = { .msg_rate = 5000 };
-	rl_data_t rl_charge_data = { .msg_rate = 0 };
-
-	bms_can_msgs[DISCHARGE] = discharge_msg;
-	bms_can_msgs[CHARGE] = charge_msg;
-	bms_can_msgs[ACC_STATUS] = acc_status_msg;
-	bms_can_msgs[BMS_STATUS] = bms_status_msg;
-	bms_can_msgs[SHUTDOWN_CTRL] = shutdown_ctrl_msg;
-	bms_can_msgs[CELL_DATA] = cell_data_msg;
-	bms_can_msgs[CELL_VOLTAGE] = cell_voltage_msg;
-	bms_can_msgs[CURRENT] = current_msg;
-	bms_can_msgs[CELL_TEMP] = cell_temp_msg;
-	bms_can_msgs[SEGMENT_TEMP] = segment_temp_msg;
-	bms_can_msgs[FAULT] = fault_msg;
-	bms_can_msgs[NOISE] = noise_msg;
-	bms_can_msgs[DEBUG] = debug_msg;
-
-	rl_data[DISCHARGE] = rl_discharge_data;
-	rl_data[CHARGE] = rl_charge_data;
 }
 
 void compute_enable_charging(bool enable_charging)

@@ -75,3 +75,6 @@ ctrlp.root
 
 #OS specific
 .DS_Store
+
+# NixOS
+*.nix

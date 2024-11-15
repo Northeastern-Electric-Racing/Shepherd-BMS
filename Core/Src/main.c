@@ -295,7 +295,7 @@ int main(void)
    
 
   HAL_Delay(500);
-  //watchdog_init();
+	init_both_can(&hcan1, &hcan2);
   segment_init();
   compute_init();
   printf("Init passed\r\n");
@@ -325,6 +325,13 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
+  
+  /* Messaging */
+  can_dispatch_handle = osThreadNew(vCanDispatch, &hcan1, &can_dispatch_attributes);
+  assert(can_dispatch_handle);
+  can_receive_thread = osThreadNew(vCanReceive, NULL, &can_receive_attributes);
+  assert(can_receive_thread);
+
   get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
   assert(get_segment_data_thread);
 
@@ -337,8 +344,6 @@ int main(void)
   state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
   assert(state_machine_thread);
 
-  can_dispatch_thread = osThreadNew(vCanDispatch, NULL, &can_dispatch_attrs);
-  assert(can_dispatch_thread);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -538,7 +543,7 @@ static void MX_CAN1_Init(void)
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = ENABLE;
   hcan1.Init.AutoWakeUp = DISABLE;
-  hcan1.Init.AutoRetransmission = DISABLE;
+  hcan1.Init.AutoRetransmission = ENABLE;
   hcan1.Init.ReceiveFifoLocked = DISABLE;
   hcan1.Init.TransmitFifoPriority = DISABLE;
   if (HAL_CAN_Init(&hcan1) != HAL_OK)
@@ -1178,9 +1183,7 @@ void watchdog_pet(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  #ifdef DEBUG_STATS
-  acc_data_t* bmsdata = (acc_data_t*) argument;
-  #endif
+	acc_data_t *bmsdata = (acc_data_t *)argument;
 
   bool alt = true;
 
@@ -1198,6 +1201,9 @@ void StartDefaultTask(void *argument)
     }
 
     alt = !alt;
+
+    compute_send_bms_status_message(bmsdata, current_state,
+					segment_is_balancing());
 
     HAL_IWDG_Refresh(&hiwdg);
 
