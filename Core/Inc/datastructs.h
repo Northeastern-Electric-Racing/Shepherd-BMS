@@ -178,7 +178,8 @@ typedef struct {
 	int data_2;
 	int lim_2;
 
-	bool is_faulted;
+	bool is_critical;
+	// bool is_faulted; /* note: not used at all */
 } fault_eval_t;
 
 #endif
