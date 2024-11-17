@@ -13,8 +13,6 @@
 
 #include "cmsis_os2.h"
 
-#define CAN_DISPATCH_FLAG 1
-
 /**
  * @brief Task for retrieving segment data
  * 
@@ -50,14 +48,5 @@ extern const osThreadAttr_t current_monitor_attrs;
 void vStateMachine(void *pv_params);
 extern osThreadId_t state_machine_thread;
 extern const osThreadAttr_t state_machine_attrs;
-
-/**
- * @brief Task for sending CAN messages
- * 
- * @param pv_params NULL
- */
-void vCanDispatch(void *pv_params);
-extern osThreadId_t can_dispatch_thread;
-extern const osThreadAttr_t can_dispatch_attrs;
 
 #endif
