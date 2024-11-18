@@ -205,7 +205,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
-        printf("%f\t", getVoltage(acc_data->chip_data[c].voltage[cell]));
+        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
     }
     printf("\n");
   }
@@ -373,7 +373,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, acc_data, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   
