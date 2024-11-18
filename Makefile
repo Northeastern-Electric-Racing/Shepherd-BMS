@@ -53,6 +53,10 @@ Drivers/Embedded-Base/general/src/sht30.c \
 Drivers/Embedded-Base/middleware/src/timer.c \
 Drivers/Embedded-Base/middleware/src/ringbuffer.c \
 Drivers/Embedded-Base/middleware/src/c_utils.c \
+Drivers/adbms/lib/src/adBms6830GenericType.c \
+Drivers/adbms/lib/src/adBms6830ParseCreate.c \
+Drivers/adbms/program/src/serialPrintResult.c \
+Drivers/adbms/program/src/mcuWrapper.c \
 Core/Src/freertos.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc.c \
 Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c \
@@ -156,6 +160,8 @@ C_INCLUDES =  \
 -IDrivers/Embedded-Base/general/include \
 -IDrivers/Embedded-Base/platforms/stm32f405/include \
 -IDrivers/Embedded-Base/middleware/include \
+-IDrivers/adbms/program/inc \
+-IDrivers/adbms/lib/inc \
 -IMiddlewares/Third_Party/FreeRTOS/Source/include \
 -IMiddlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2 \
 -IMiddlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F

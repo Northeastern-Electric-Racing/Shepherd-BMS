@@ -26,6 +26,8 @@
 
 #include "assert.h"
 
+#include "serialPrintResult.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,7 +40,12 @@
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
-// #define DEBUG_STATS
+#define DEBUG_STATS
+#define DEBUG_VOLTAGES
+// #define DEBUG_RAW_VOLTAGES
+#define DEBUG_RAW_VOLTAGES_FORMATTED
+// #define DEBUG_OCV
+// #define DEBUG_OTHER
 // etc etc
 //#endif
 /* USER CODE END PD */
@@ -77,7 +84,7 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 128 * 8,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
@@ -126,56 +133,83 @@ int _write(int file, char* ptr, int len) {
 const void print_bms_stats(acc_data_t *acc_data)
 {
 	static nertimer_t debug_stat_timer;
-	static const uint16_t PRINT_STAT_WAIT = 500; //ms
+	static const uint16_t PRINT_STAT_WAIT = 1000; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
+  #ifdef DEBUG_OTHER
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
 	// printf("Prev Fault: %#x", previousFault);
-  printf("CAN Error:\t%ld\r\n", HAL_CAN_GetError(&hcan1));
-  printf("Current * 10: %d\r\n", (acc_data->pack_current));
-  printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
-  printf("DCL: %d\r\n", acc_data->discharge_limit);
-  printf("CCL: %d\r\n", acc_data->charge_limit);
-  printf("Cont CCL %d\r\n", acc_data->cont_CCL);
-  printf("SoC: %d\r\n", acc_data->soc);
-  printf("Is Balancing?: %d\r\n", segment_is_balancing());
+
+  printf("CAN Error:\t%ld\n", HAL_CAN_GetError(&hcan1));
+  printf("Current * 10: %d\n", (acc_data->pack_current));
+  printf("Min, Max, Avg Temps: %ld, %ld, %d\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
+  #endif
+
+  #ifdef DEBUG_VOLTAGES
+  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
+  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val / 10000.0, acc_data->max_voltage.val / 10000.0, acc_data->avg_voltage / 10000.0, acc_data->delt_voltage / 10000.0);
+  #endif
+
+  #ifdef DEBUG_OTHER
+  printf("DCL: %d\n", acc_data->discharge_limit);
+  printf("CCL: %d\n", acc_data->charge_limit);
+  printf("Cont CCL %d\n", acc_data->cont_CCL);
+  printf("SoC: %d\n", acc_data->soc);
+  printf("Is Balancing?: %d\n", segment_is_balancing());
   printf("State: ");
-  if (current_state == 0) printf("BOOT\r\n");
-  else if (current_state == 1) printf("READY\r\n");
-  else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 3) printf("FAULTED: %lX\r\n", acc_data->fault_code);
+  if (current_state == 0) printf("BOOT\n");
+  else if (current_state == 1) printf("READY\n");
+  else if (current_state == 2) printf("CHARGING\n");
+  else if (current_state == 3) printf("FAULTED: %lX\n", acc_data->fault_code);
 
-  printf("Voltage Noise Percent:\r\n");
-  printf("Seg 1: %d\r\n", acc_data->segment_noise_percentage[0]);
-  printf("Seg 2: %d\r\n", acc_data->segment_noise_percentage[1]);
-  printf("Seg 3: %d\r\n", acc_data->segment_noise_percentage[2]);
-  printf("Seg 4: %d\r\n", acc_data->segment_noise_percentage[3]);
-  printf("Seg 5: %d\r\n", acc_data->segment_noise_percentage[4]);
-  printf("Seg 6: %d\r\n", acc_data->segment_noise_percentage[5]);
+  printf("Voltage Noise Percent:\n");
+  printf("Seg 1: %d\n", acc_data->segment_noise_percentage[0]);
+  printf("Seg 2: %d\n", acc_data->segment_noise_percentage[1]);
+  printf("Seg 3: %d\n", acc_data->segment_noise_percentage[2]);
+  printf("Seg 4: %d\n", acc_data->segment_noise_percentage[3]);
+  printf("Seg 5: %d\n", acc_data->segment_noise_percentage[4]);
+  printf("Seg 6: %d\n", acc_data->segment_noise_percentage[5]);
+  #endif
 
-  printf("Raw Cell Voltage:\r\n");
+  #ifdef DEBUG_RAW_VOLTAGES
+  printf("Raw Cell Voltage:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].voltage[cell]);
     }
-    printf("\r\n");
+    printf("\n");
   }
+  #endif
 
-  printf("Open Cell Voltage:\r\n");
+  #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
+    for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    {
+        printf("%f\t", getVoltage(acc_data->chip_data[c].voltage[cell]));
+    }
+    printf("\n");
+  }
+  #endif
+
+  #ifdef DEBUG_OCV
+  printf("Open Cell Voltage:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
     }
-    printf("\r\n");
+    printf("\n");
   }
+  #endif
 
-  printf("Thermistors with Disabling:\r\n");
+  #ifdef DEBUG_OTHER
+
+  printf("Thermistors with Disabling:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
      printf("Chip %d:  ", c);
@@ -186,10 +220,10 @@ const void print_bms_stats(acc_data_t *acc_data)
           printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
         }
       
-        printf("\r\n");
+        printf("\n");
   }
     
-  printf("UnFiltered Thermistor Temps:\r\n");
+  printf("UnFiltered Thermistor Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
@@ -199,10 +233,10 @@ const void print_bms_stats(acc_data_t *acc_data)
           printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
         }
       
-        printf("\r\n");
+        printf("\n");
     }
 
-   printf("Cell Temps:\r\n");
+   printf("Cell Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
@@ -212,8 +246,9 @@ const void print_bms_stats(acc_data_t *acc_data)
           printf("%d ", acc_data->chip_data[c].cell_temp[cell]);
         }
       
-        printf("\r\n");
+        printf("\n");
     }
+  #endif
 
   start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
 }
@@ -298,7 +333,7 @@ int main(void)
 	init_both_can(&hcan1, &hcan2);
   segment_init();
   compute_init();
-  printf("Init passed\r\n");
+  printf("Init passed\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -754,7 +789,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -1183,7 +1218,9 @@ void watchdog_pet(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	acc_data_t *bmsdata = (acc_data_t *)argument;
+  #ifdef DEBUG_STATS
+  acc_data_t* bmsdata = (acc_data_t*) argument;
+  #endif
 
   bool alt = true;
 
@@ -1195,9 +1232,9 @@ void StartDefaultTask(void *argument)
     #endif
 
     if (alt) {
-      printf(".\r\n");
+      printf(".\n");
     } else {
-      printf("..\r\n");
+      printf("..\n");
     }
 
     alt = !alt;

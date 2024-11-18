@@ -5,8 +5,48 @@
 #include <stdlib.h>
 #include <string.h>
 
+// TEMPORARY
+
+#include "common.h"
+#include "adBms6830CmdList.h"
+#include "adBms6830GenericType.h"
+#include "serialPrintResult.h"
+#include "adBms6830ParseCreate.h"
+#include "mcuWrapper.h"
+
+#define TOTAL_IC 1
+cell_asic IC[TOTAL_IC];
+
+RD REDUNDANT_MEASUREMENT = RD_OFF;
+CH AUX_CH_TO_CONVERT = AUX_ALL;
+CONT CONTINUOUS_MEASUREMENT = SINGLE;
+OW_C_S CELL_OPEN_WIRE_DETECTION = OW_OFF_ALL_CH;
+OW_AUX AUX_OPEN_WIRE_DETECTION = AUX_OW_OFF;
+PUP OPEN_WIRE_CURRENT_SOURCE = PUP_DOWN;
+DCP DISCHARGE_PERMITTED = DCP_OFF;
+RSTF RESET_FILTER = RSTF_OFF;
+ERR INJECT_ERR_SPI_READ = WITHOUT_ERR;
+
+/*Loop Measurement Setup These Variables are ENABLED or DISABLED Remember ALL CAPS*/
+LOOP_MEASURMENT MEASURE_CELL =
+	ENABLED; /*   This is ENABLED or DISABLED       */
+LOOP_MEASURMENT MEASURE_AVG_CELL =
+	ENABLED; /*   This is ENABLED or DISABLED       */
+LOOP_MEASURMENT MEASURE_F_CELL =
+	ENABLED; /*   This is ENABLED or DISABLED       */
+LOOP_MEASURMENT MEASURE_S_VOLTAGE =
+	DISABLED; /*   This is ENABLED or DISABLED       */
+LOOP_MEASURMENT MEASURE_AUX =
+	DISABLED; /*   This is ENABLED or DISABLED       */
+LOOP_MEASURMENT MEASURE_RAUX =
+	DISABLED; /*   This is ENABLED or DISABLED       */
+LOOP_MEASURMENT MEASURE_STAT =
+	ENABLED; /*   This is ENABLED or DISABLED       */
+
+// END
+
 #define THERM_WAIT_TIME	   500 /* ms */
-#define VOLTAGE_WAIT_TIME  100 /* ms */
+#define VOLTAGE_WAIT_TIME  500 /* ms */
 #define THERM_AVG	   15 /* Number of values to average */
 #define MAX_VOLT_DELTA	   2500
 #define MAX_CONSEC_NOISE   10
@@ -69,10 +109,49 @@ void push_chip_configuration()
 	LTC6804_wrcfg(ltc68041, NUM_CHIPS, local_config);
 }
 
+void adbms_wake()
+{
+	adBmsCsLow();
+	adBmsCsHigh();
+}
+
+void adBms6830_init_config(uint8_t tIC, cell_asic *ic)
+{
+	for (uint8_t cic = 0; cic < tIC; cic++) {
+		/* Init config A */
+		ic[cic].tx_cfga.refon = PWR_UP;
+		//    ic[cic].cfga.cth = CVT_8_1mV;
+		//    ic[cic].cfga.flag_d = ConfigA_Flag(FLAG_D0, FLAG_SET) | ConfigA_Flag(FLAG_D1, FLAG_SET);
+		ic[cic].tx_cfga.gpo = ConfigA_Gpo(GPO1, GPO_SET) |
+				      ConfigA_Gpo(GPO2, GPO_CLR) |
+				      ConfigA_Gpo(GPO3, GPO_CLR) |
+				      ConfigA_Gpo(GPO4, GPO_CLR) |
+				      ConfigA_Gpo(GPO5, GPO_CLR) |
+				      ConfigA_Gpo(GPO6, GPO_CLR) |
+				      ConfigA_Gpo(GPO7, GPO_CLR) |
+				      ConfigA_Gpo(GPO8, GPO_CLR) |
+				      ConfigA_Gpo(GPO9, GPO_CLR) |
+				      ConfigA_Gpo(GPO10, GPO_CLR);
+		// ic[cic].tx_cfga.gpo = 0X3FF; /* All GPIO pull down off */
+		//    ic[cic].cfga.soakon = SOAKON_CLR;
+		//    ic[cic].cfga.fc = IIR_FPA256;
+
+		/* Init config B */
+		//    ic[cic].cfgb.dtmen = DTMEN_ON;
+		ic[cic].tx_cfgb.vov = SetOverVoltageThreshold(4.2);
+		ic[cic].tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
+		//    ic[cic].cfgb.dcc = ConfigB_DccBit(DCC16, DCC_BIT_SET);
+		//    SetConfigB_DischargeTimeOutValue(tIC, &ic[cic], RANG_0_TO_63_MIN, TIME_1MIN_OR_0_26HR);
+	}
+	adbms_wake();
+	adBmsWriteData(tIC, &ic[0], WRCFGA, Config, A);
+	adBmsWriteData(tIC, &ic[0], WRCFGB, Config, B);
+}
+
 void segment_init()
 {
 	printf("Initializing Segments...");
-
+	adBms6830_init_config(TOTAL_IC, &IC[0]);
 	ltc68041 = malloc(sizeof(ltc_config));
 	LTC6804_initialize(ltc68041, &hspi1, GPIOA, SPI_1_CS_Pin);
 
@@ -130,6 +209,63 @@ void select_therm(uint8_t therm)
 	LTC6804_stcomm(ltc68041, 24);
 }
 
+void read_aux_voltages()
+{
+
+	adbms_wake();
+	adBmsWriteData(NUM_CHIPS, &IC[0], WRCFGA, Config, A);
+	adBms6830_Adax(AUX_OPEN_WIRE_DETECTION, OPEN_WIRE_CURRENT_SOURCE,
+		       AUX_CH_TO_CONVERT);
+	uint32_t pladc_count = adBmsPollAdc(PLAUX1);
+
+	printf("Aux voltage conversion completed\n");
+	printPollAdcConvTime(pladc_count);
+
+	adbms_wake();
+	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXA, Aux, A);
+	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXB, Aux, B);
+	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXC, Aux, C);
+	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXD, Aux, D);
+	printVoltages(NUM_CHIPS, &IC[0], Aux);
+
+	adbms_wake();
+	adBmsWriteData(NUM_CHIPS, &IC[0], WRCFGA, Config, A);
+	adBms6830_Adax2(AUX_CH_TO_CONVERT);
+	pladc_count = adBmsPollAdc(PLAUX2);
+
+	printf("RAux voltage conversion completed\n");
+	printPollAdcConvTime(pladc_count);
+
+	adbms_wake();
+	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXA, RAux, A);
+	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXB, RAux, B);
+	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXC, RAux, C);
+	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXD, RAux, D);
+	printVoltages(NUM_CHIPS, &IC[0], RAux);
+}
+
+void adBms6830_read_status_registers(uint8_t tIC, cell_asic *ic)
+{
+	adBmsWakeupIc(tIC);
+	adBmsWriteData(tIC, &ic[0], WRCFGA, Config, A);
+	adBmsWriteData(tIC, &ic[0], WRCFGB, Config, B);
+	adBms6830_Adax(AUX_OPEN_WIRE_DETECTION, OPEN_WIRE_CURRENT_SOURCE,
+		       AUX_CH_TO_CONVERT);
+	uint32_t pladc_count = adBmsPollAdc(PLADC);
+	adBms6830_Adcv(REDUNDANT_MEASUREMENT, CONTINUOUS_MEASUREMENT,
+		       DISCHARGE_PERMITTED, RESET_FILTER,
+		       CELL_OPEN_WIRE_DETECTION);
+	pladc_count = pladc_count + adBmsPollAdc(PLADC);
+
+	adBmsReadData(tIC, &ic[0], RDSTATA, Status, A);
+	adBmsReadData(tIC, &ic[0], RDSTATB, Status, B);
+	adBmsReadData(tIC, &ic[0], RDSTATC, Status, C);
+	adBmsReadData(tIC, &ic[0], RDSTATD, Status, D);
+	adBmsReadData(tIC, &ic[0], RDSTATE, Status, E);
+	printPollAdcConvTime(pladc_count);
+	printStatus(tIC, &ic[0], Status, ALL_GRP);
+}
+
 int pull_voltages()
 {
 	/**
@@ -150,15 +286,152 @@ int pull_voltages()
 		return voltage_error;
 	}
 
-	uint16_t raw_voltages[NUM_CHIPS][12];
+	uint16_t raw_voltages[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 
-	push_chip_configuration();
-	LTC6804_adcv(ltc68041);
+	IC[0].cell.c_codes[0] = 1;
+	IC[0].cell.c_codes[1] = 2;
+	IC[0].cell.c_codes[2] = 3;
+
+	adBmsWakeupIc(TOTAL_IC);
+	adBmsWriteData(TOTAL_IC, &IC[0], WRCFGA, Config, A);
+	adBmsWriteData(TOTAL_IC, &IC[0], WRCFGB, Config, B);
+	adBmsWakeupIc(TOTAL_IC);
+	adBms6830_Adcv(REDUNDANT_MEASUREMENT, CONTINUOUS, DISCHARGE_PERMITTED,
+		       RESET_FILTER, CELL_OPEN_WIRE_DETECTION);
+	HAL_Delay(1); // ADCs are updated at their conversion rate is 1ms
+	adBms6830_Adcv(RD_ON, CONTINUOUS, DISCHARGE_PERMITTED, RESET_FILTER,
+		       CELL_OPEN_WIRE_DETECTION);
+	HAL_Delay(1); // ADCs are updated at their conversion rate is 1ms
+	adBms6830_Adsv(CONTINUOUS, DISCHARGE_PERMITTED,
+		       CELL_OPEN_WIRE_DETECTION);
+	HAL_Delay(8); // ADCs are updated at their conversion rate is 8ms
+
+	adBmsWakeupIc(TOTAL_IC);
+	adBmsReadData(TOTAL_IC, &IC[0], RDCVA, Cell, A);
+	adBmsReadData(TOTAL_IC, &IC[0], RDCVB, Cell, B);
+	adBmsReadData(TOTAL_IC, &IC[0], RDCVC, Cell, C);
+	adBmsReadData(TOTAL_IC, &IC[0], RDCVD, Cell, D);
+	adBmsReadData(TOTAL_IC, &IC[0], RDCVE, Cell, E);
+	adBmsReadData(TOTAL_IC, &IC[0], RDCVF, Cell, F);
+	// printVoltages(TOTAL_IC, &IC[0], Cell);
+
+	float voltage;
+	uint8_t ic = 0;
+	int16_t temp;
+	// number of cells
+	uint8_t channel = 16;
+	uint8_t type = Cell;
+	for (uint8_t index = 0; index < channel; index++) {
+		if (type == Cell) {
+			temp = IC[ic].cell.c_codes[index];
+		} else if (type == AvgCell) {
+			temp = IC[ic].acell.ac_codes[index];
+		} else if (type == F_volt) {
+			temp = IC[ic].fcell.fc_codes[index];
+		} else if (type == S_volt) {
+			temp = IC[ic].scell.sc_codes[index];
+		} else if (type == Aux) {
+			temp = IC[ic].aux.a_codes[index];
+		} else if (type == RAux) {
+			temp = IC[ic].raux.ra_codes[index];
+		}
+
+		voltage = getVoltage(temp);
+
+		raw_voltages[ic][index] = (uint16_t)temp;
+
+		segment_data[ic].voltage[index] = raw_voltages[ic][index];
+
+		if (type == Cell) {
+			// printf("C%d=%fV= %d raw\r\n", (index + 1), voltage,
+			//        segment_data[ic].voltage[index]);
+			if (index == (channel - 1)) {
+				// printf("CCount:%d,", IC[ic].cccrc.cmd_cntr);
+				// printf("PECError:%d", IC[ic].cccrc.cell_pec);
+			}
+		}
+	}
+	// printf("\n\n");
+	/*
+	float total_volts = 0;
+	for (int i = 0; i < 16; i++) {
+		printf("Raw %d: %f\n", i, getVoltage(segment_data[ic].voltage[i]));
+		total_volts += getVoltage(segment_data[ic].voltage[i]);
+	}
+	printf("TOTAL VOLTAGE: %f", total_volts);*/
+
+	/*
+	if (MEASURE_AVG_CELL == ENABLED) {
+		adBmsReadData(TOTAL_IC, &IC[0], RDACA, AvgCell, A);
+		adBmsReadData(TOTAL_IC, &IC[0], RDACB, AvgCell, B);
+		adBmsReadData(TOTAL_IC, &IC[0], RDACC, AvgCell, C);
+		adBmsReadData(TOTAL_IC, &IC[0], RDACD, AvgCell, D);
+		adBmsReadData(TOTAL_IC, &IC[0], RDACE, AvgCell, E);
+		adBmsReadData(TOTAL_IC, &IC[0], RDACF, AvgCell, F);
+		printVoltages(TOTAL_IC, &IC[0], AvgCell);
+	}
+
+	if (MEASURE_F_CELL == ENABLED) {
+		adBmsReadData(TOTAL_IC, &IC[0], RDFCA, F_volt, A);
+		adBmsReadData(TOTAL_IC, &IC[0], RDFCB, F_volt, B);
+		adBmsReadData(TOTAL_IC, &IC[0], RDFCC, F_volt, C);
+		adBmsReadData(TOTAL_IC, &IC[0], RDFCD, F_volt, D);
+		adBmsReadData(TOTAL_IC, &IC[0], RDFCE, F_volt, E);
+		adBmsReadData(TOTAL_IC, &IC[0], RDFCF, F_volt, F);
+		printVoltages(TOTAL_IC, &IC[0], F_volt);
+	} */
+
+	if (MEASURE_S_VOLTAGE == ENABLED) {
+		adBmsWakeupIc(TOTAL_IC);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSVA, S_volt, A);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSVB, S_volt, B);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSVC, S_volt, C);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSVD, S_volt, D);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSVE, S_volt, E);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSVF, S_volt, F);
+		printVoltages(TOTAL_IC, &IC[0], S_volt);
+	}
+
+	if (MEASURE_AUX == ENABLED) {
+		adBms6830_Adax(AUX_OPEN_WIRE_DETECTION,
+			       OPEN_WIRE_CURRENT_SOURCE, AUX_CH_TO_CONVERT);
+		adBmsPollAdc(PLAUX1);
+		adBmsReadData(TOTAL_IC, &IC[0], RDAUXA, Aux, A);
+		adBmsReadData(TOTAL_IC, &IC[0], RDAUXB, Aux, B);
+		adBmsReadData(TOTAL_IC, &IC[0], RDAUXC, Aux, C);
+		adBmsReadData(TOTAL_IC, &IC[0], RDAUXD, Aux, D);
+		printVoltages(TOTAL_IC, &IC[0], Aux);
+	}
+
+	/*
+	if (MEASURE_RAUX == ENABLED) {
+		adBmsWakeupIc(TOTAL_IC);
+		adBms6830_Adax2(AUX_CH_TO_CONVERT);
+		adBmsPollAdc(PLAUX2);
+		adBmsReadData(TOTAL_IC, &IC[0], RDRAXA, RAux, A);
+		adBmsReadData(TOTAL_IC, &IC[0], RDRAXB, RAux, B);
+		adBmsReadData(TOTAL_IC, &IC[0], RDRAXC, RAux, C);
+		adBmsReadData(TOTAL_IC, &IC[0], RDRAXD, RAux, D);
+		printVoltages(TOTAL_IC, &IC[0], RAux);
+	}	*/
+
+	if (MEASURE_STAT == ENABLED) {
+		adBms6830_Adax(AUX_OPEN_WIRE_DETECTION,
+			       OPEN_WIRE_CURRENT_SOURCE, AUX_CH_TO_CONVERT);
+		adBmsPollAdc(PLAUX1);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSTATA, Status, A);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSTATB, Status, B);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSTATC, Status, C);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSTATD, Status, D);
+		adBmsReadData(TOTAL_IC, &IC[0], RDSTATE, Status, E);
+		printStatus(TOTAL_IC, &IC[0], Status, ALL_GRP);
+	}
 
 	/**
    * If we received an incorrect PEC indicating a bad read
    * copy over the data from the last good read and indicate an error
    */
+	/*
 	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
 			memcpy(segment_data[i].voltage,
@@ -169,76 +442,12 @@ int pull_voltages()
 			printf("Bad voltage read\n");
 		}
 		return 1;
-	}
-
-	/* If the read was successful, copy the voltage data */
-	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-		int corrected_index = mapping_correction[i];
-
-		/* correction to account for missing index, see more info below */
-		int dest_index = 0;
-
-		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP + 1; j++) {
-			/* cell 6 on every chip is not a real reading, we need to have the array
-       * skip this, and shift the remaining readings up one index*/
-			if (j == 5)
-				continue;
-
-			segment_data[corrected_index].noise_reading[dest_index] =
-				0;
-
-			if (raw_voltages[i][j] >
-				    (int)(10000 * (MAX_VOLT + 0.5)) ||
-			    raw_voltages[i][j] <
-				    (int)(10000 * (MIN_VOLT - 0.5))) {
-				// if (previous_data[corrected_index].voltage[dest_index] > 45000 ||
-				// previous_data[corrected_index].voltage[dest_index] < 20000)
-				// printf("poop\r\n");
-				segment_data[corrected_index]
-					.voltage[dest_index] =
-					previous_data[corrected_index]
-						.voltage[dest_index];
-				segment_data[corrected_index]
-					.noise_reading[dest_index] = 1;
-				segment_data[corrected_index]
-					.consecutive_noise[dest_index]++;
-				// printf("New data: %d\r\n",
-				// segment_data[corrected_index].voltage[dest_index]);
-				//  if (segment_data[corrected_index].consecutive_noise[dest_index] >
-				//  MAX_CONSEC_NOISE) {
-				//  	segment_data[corrected_index].noise_reading[dest_index] = 0;
-				//  	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
-				//  	segment_data[corrected_index].voltage[dest_index] =
-				//  raw_voltages[i][j];
-				//  }
-			} else {
-				// printf("previous: %d\r\n",
-				// previous_data[corrected_index].voltage[dest_index]); if
-				// (previous_data[corrected_index].voltage[dest_index] > 45000 ||
-				// previous_data[corrected_index].voltage[dest_index] < 20000)
-				// printf("pee\r\n"); else printf("wiping\r\n");
-				segment_data[corrected_index]
-					.consecutive_noise[dest_index] = 0;
-				segment_data[corrected_index]
-					.voltage[dest_index] =
-					raw_voltages[i][j];
-
-				if (raw_voltages[i][j] < 45000 &&
-				    raw_voltages[i][j] > 24000) {
-					previous_data[corrected_index]
-						.voltage[dest_index] =
-						raw_voltages[i][j];
-					// printf("previous: %d\r\n",
-					// previous_data[corrected_index].voltage[dest_index]); printf("raw:
-					// %d\r\n", segment_data[corrected_index].voltage[dest_index]);
-				}
-			}
-			dest_index++;
-		}
-	}
+	}*/
 
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
+
+	read_aux_voltages();
 
 	return 0;
 }
