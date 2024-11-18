@@ -1,3 +1,6 @@
 [submodule "Drivers/Embedded-Base"]
 	path = Drivers/Embedded-Base
 	url = https://github.com/Northeastern-Electric-Racing/Embedded-Base.git
+[submodule "Drivers/adbms"]
+	path = Drivers/adbms
+	url = git@github.com:Northeastern-Electric-Racing/adbms.git
