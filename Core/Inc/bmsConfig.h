@@ -2,9 +2,9 @@
 #define BMS_CONFIG_H
 
 // Hardware definition
-#define NUM_SEGMENTS	    6
-#define NUM_CHIPS	    NUM_SEGMENTS * 2
-#define NUM_CELLS_PER_CHIP  10
+#define NUM_SEGMENTS	    1
+#define NUM_CHIPS	    1 //NUM_SEGMENTS * 2
+#define NUM_CELLS_PER_CHIP  16
 #define NUM_THERMS_PER_CHIP 32
 #define NUM_RELEVANT_THERMS 3
 
