@@ -5,6 +5,8 @@
 
 #include "compute.h"
 
+#include "serialPrintResult.h"
+
 // clang-format off
 /**
  * @brief Mapping Cell temperature to the cell resistance based on the
@@ -310,10 +312,13 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			/* fings out the maximum cell voltage and location */
-			if (bmsdata->chip_data[c].voltage[cell] >
+			if (getVoltage(bmsdata->chip_data[c].voltage[cell]) *
+				    10000 >
 			    bmsdata->max_voltage.val) {
 				bmsdata->max_voltage.val =
-					bmsdata->chip_data[c].voltage[cell];
+					getVoltage(bmsdata->chip_data[c]
+							   .voltage[cell]) *
+					10000;
 				bmsdata->max_voltage.chipIndex = c;
 				bmsdata->max_voltage.cellNum = cell;
 			}
@@ -328,10 +333,13 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			}
 
 			/* finds out the minimum cell voltage and location */
-			if (bmsdata->chip_data[c].voltage[cell] <
+			if (getVoltage(bmsdata->chip_data[c].voltage[cell]) *
+				    10000 <
 			    bmsdata->min_voltage.val) {
 				bmsdata->min_voltage.val =
-					bmsdata->chip_data[c].voltage[cell];
+					getVoltage(bmsdata->chip_data[c]
+							   .voltage[cell]) *
+					10000;
 				bmsdata->min_voltage.chipIndex = c;
 				bmsdata->min_voltage.cellNum = cell;
 			}
@@ -351,9 +359,21 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 		}
 	}
 
+	float real_total_volt = 0;
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		for (int i = 0; i < NUM_CELLS_PER_CHIP; i++) {
+			real_total_volt +=
+				getVoltage(bmsdata->chip_data[chip].voltage[i]);
+		}
+	}
+
 	/* calculate some voltage stats */
-	bmsdata->avg_voltage = total_volt / (NUM_CELLS_PER_CHIP * NUM_CHIPS);
-	bmsdata->pack_voltage = total_volt / 1000; /* convert to voltage * 10 */
+	bmsdata->avg_voltage =
+		10000 * (real_total_volt / (NUM_CELLS_PER_CHIP * NUM_CHIPS));
+
+	bmsdata->pack_voltage =
+		real_total_volt * 10; /* convert to voltage * 10 */
+
 	bmsdata->delt_voltage =
 		bmsdata->max_voltage.val - bmsdata->min_voltage.val;
 

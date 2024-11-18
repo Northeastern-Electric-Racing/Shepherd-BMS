@@ -123,15 +123,15 @@ void adBms6830_init_config(uint8_t tIC, cell_asic *ic)
 		//    ic[cic].cfga.cth = CVT_8_1mV;
 		//    ic[cic].cfga.flag_d = ConfigA_Flag(FLAG_D0, FLAG_SET) | ConfigA_Flag(FLAG_D1, FLAG_SET);
 		ic[cic].tx_cfga.gpo = ConfigA_Gpo(GPO1, GPO_SET) |
-				      ConfigA_Gpo(GPO2, GPO_CLR) |
-				      ConfigA_Gpo(GPO3, GPO_CLR) |
-				      ConfigA_Gpo(GPO4, GPO_CLR) |
-				      ConfigA_Gpo(GPO5, GPO_CLR) |
-				      ConfigA_Gpo(GPO6, GPO_CLR) |
-				      ConfigA_Gpo(GPO7, GPO_CLR) |
-				      ConfigA_Gpo(GPO8, GPO_CLR) |
-				      ConfigA_Gpo(GPO9, GPO_CLR) |
-				      ConfigA_Gpo(GPO10, GPO_CLR);
+				      ConfigA_Gpo(GPO2, GPO_SET) |
+				      ConfigA_Gpo(GPO3, GPO_SET) |
+				      ConfigA_Gpo(GPO4, GPO_SET) |
+				      ConfigA_Gpo(GPO5, GPO_SET) |
+				      ConfigA_Gpo(GPO6, GPO_SET) |
+				      ConfigA_Gpo(GPO7, GPO_SET) |
+				      ConfigA_Gpo(GPO8, GPO_SET) |
+				      ConfigA_Gpo(GPO9, GPO_SET) |
+				      ConfigA_Gpo(GPO10, GPO_SET);
 		// ic[cic].tx_cfga.gpo = 0X3FF; /* All GPIO pull down off */
 		//    ic[cic].cfga.soakon = SOAKON_CLR;
 		//    ic[cic].cfga.fc = IIR_FPA256;
@@ -211,7 +211,6 @@ void select_therm(uint8_t therm)
 
 void read_aux_voltages()
 {
-
 	adbms_wake();
 	adBmsWriteData(NUM_CHIPS, &IC[0], WRCFGA, Config, A);
 	adBms6830_Adax(AUX_OPEN_WIRE_DETECTION, OPEN_WIRE_CURRENT_SOURCE,
