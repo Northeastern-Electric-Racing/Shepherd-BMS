@@ -84,7 +84,7 @@ typedef struct {
 	/* Array of data from all chips in the system */
 	chipdata_t chip_data[NUM_CHIPS];
 
-	int fault_status;
+	int fault_status; // FIXME: this field is unused
 
 	int16_t pack_current; /* this value is multiplied by 10 to account for decimal precision */
 	uint16_t pack_voltage;
@@ -103,7 +103,9 @@ typedef struct {
 	/**
 	 * @brief Note that this is a 32 bit integer, so there are 32 max possible fault codes
 	 */
-	uint32_t fault_code;
+	// uint32_t fault_code;
+	uint32_t fault_code_crit;
+	uint32_t fault_code_noncrit;
 
 	/* Max, min, and avg thermistor readings */
 	crit_cellval_t max_temp;
@@ -179,7 +181,7 @@ typedef struct {
 	int lim_2;
 
 	bool is_critical;
-	// bool is_faulted; /* note: not used at all */
+	// bool is_faulted; /* note: unused field */
 } fault_eval_t;
 
 #endif

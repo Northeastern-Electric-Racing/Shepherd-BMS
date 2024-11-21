@@ -146,11 +146,14 @@ void init_faulted()
 void handle_faulted(acc_data_t *bmsdata)
 {
 	if (entered_faulted) {
+		previousFault = bmsdata->fault_code_crit;
 		entered_faulted = false;
-		previousFault = sm_fault_return(bmsdata);
+
+		// uint32_t fault_crit = 0, fault_noncrit = 0;
+		// previousFault = sm_fault_return(bmsdata, &fault_crit, &fault_noncrit);
 	}
 
-	if (bmsdata->fault_code == FAULTS_CLEAR) {
+	if (bmsdata->fault_code_crit == FAULTS_CLEAR) {
 		compute_set_fault(1);
 		request_transition(BOOT_STATE);
 		return;
@@ -167,11 +170,15 @@ void handle_faulted(acc_data_t *bmsdata)
 
 void sm_handle_state(acc_data_t *bmsdata)
 {
-	bmsdata->fault_code = sm_fault_return(bmsdata);
+	uint32_t fault_crit = 0, fault_noncrit = 0;
+	sm_fault_return(bmsdata, &fault_crit, &fault_noncrit);
+
+	bmsdata->fault_code_crit = fault_crit;
+	bmsdata->fault_code_noncrit = fault_noncrit;
 
 	// calculate_pwm(bmsdata);
 
-	if (bmsdata->fault_code != FAULTS_CLEAR) {
+	if (bmsdata->fault_code_crit != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
 		request_transition(FAULTED_STATE);
 	}
@@ -194,7 +201,8 @@ void request_transition(BMSState_t next_state)
 	current_state = next_state;
 }
 
-uint32_t sm_fault_return(acc_data_t *accData)
+void sm_fault_return(acc_data_t *bmsdata, uint32_t *out_faults_crit,
+		     uint32_t *out_faults_noncrit)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
@@ -208,11 +216,15 @@ uint32_t sm_fault_return(acc_data_t *accData)
 	static fault_eval_t *fault_table = NULL;
 	static acc_data_t *fault_data = NULL;
 
-	fault_data = accData;
+	static uint32_t fault_status_crit = 0;
+	static uint32_t fault_status_noncrit = 0;
+
+	if (!fault_data)
+		fault_data = bmsdata;
 
 	if (!fault_table) {
 		/* Note that we are only allocating this table once at runtime, so there is
-     * no need to free it */
+         * no need to free it */
 		fault_table = (fault_eval_t *)malloc(NUM_FAULTS *
 						     sizeof(fault_eval_t));
 		// clang-format off
@@ -224,7 +236,6 @@ uint32_t sm_fault_return(acc_data_t *accData)
         fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                                     MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ,  .data_2 = fault_data->is_charger_connected,  .lim_2 =      false, .is_critical = true  };
         fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =    fault_data->max_temp.val, .optype_1 = GT, .lim_1 =                                                        MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
     	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                                  900, .timeout =       LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-		// fault_table[7]  = (fault_eval_t) {.id = "Can Receive Failed".....
 		fault_table[7]  = (fault_eval_t) {.id = NULL};
 
 		cancel_timer(&ovr_curr_timer);
@@ -235,9 +246,7 @@ uint32_t sm_fault_return(acc_data_t *accData)
 		cancel_timer(&low_cell_timer);
 		cancel_timer(&high_temp_timer);
 		// clang-format on
-	}
-
-	else {
+	} else {
 		fault_table[0].data_1 = fault_data->pack_current;
 		fault_table[0].lim_1 =
 			(fault_data->discharge_limit + DCDC_CURRENT_DRAW) * 10 *
@@ -252,18 +261,32 @@ uint32_t sm_fault_return(acc_data_t *accData)
 		fault_table[6].data_1 = fault_data->min_voltage.val;
 	}
 
-	static uint32_t fault_status = 0;
 	int incr = 0;
 	while (fault_table[incr].id != NULL) {
-		fault_status |= sm_fault_eval(&fault_table[incr]);
+		uint32_t item_code = fault_table[incr].code;
+		if (sm_fault_eval(&fault_table[incr])) {
+			if (fault_table[incr].is_critical) {
+				fault_status_crit |= item_code;
+			} else {
+				fault_status_noncrit |= item_code;
+			}
+		} else {
+			// Clear bit for non-critical faults
+			if (!fault_table[incr].is_critical) {
+				fault_status_noncrit &= ~item_code;
+			}
+		}
 		incr++;
 	}
-	// TODO: Remove This !!!!
-	fault_status &= ~DISCHARGE_LIMIT_ENFORCEMENT_FAULT;
-	return fault_status;
+
+	// TODO: Remove This !!!! (because this is actually a non-critical fault?)
+	// fault_status &= ~DISCHARGE_LIMIT_ENFORCEMENT_FAULT;
+
+	*out_faults_crit = fault_status_crit;
+	*out_faults_noncrit = fault_status_noncrit;
 }
 
-uint32_t sm_fault_eval(fault_eval_t *item)
+bool sm_fault_eval(fault_eval_t *item)
 {
 	enum {
 		FAULT_STAT_TIMER_START = 1,
@@ -314,19 +337,10 @@ uint32_t sm_fault_eval(fault_eval_t *item)
 
 		if (is_timer_expired(&item->timer) && fault_present) {
 			printf("\t\t\t*******Faulted: %s\r\n", item->id);
-			compute_send_fault_message(FAULT_STAT_FAULTED, item->data_1,
-						   item->lim_1);
-			if (item->is_critical)
-			{
-				return item->code;
-			}
-			else
-			{
-				cancel_timer(&item->timer);
-				return 0;
-			}
-		}
-		else
+			// compute_send_fault_message(FAULT_STAT_FAULTED, item->data_1,
+			// 			   item->lim_1);
+			return 1;
+		} else
 			return 0;
 
 	}
@@ -334,10 +348,10 @@ uint32_t sm_fault_eval(fault_eval_t *item)
 	else if (!is_timer_active(&item->timer) && fault_present) {
 		printf("\t\t\t*******Starting fault timer: %s\r\n", item->id);
 		start_timer(&item->timer, item->timeout);
-		if (item->code == DISCHARGE_LIMIT_ENFORCEMENT_FAULT) {
-			compute_send_fault_message(FAULT_STAT_TIMER_START, item->data_1,
-						   item->lim_1);
-		}
+		// if (item->code == DISCHARGE_LIMIT_ENFORCEMENT_FAULT) {
+		// 	compute_send_fault_message(FAULT_STAT_TIMER_START, item->data_1,
+		// 				   item->lim_1);
+		// }
 
 		return 0;
 	}

@@ -253,7 +253,8 @@ int main(void)
 
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
   acc_data->is_charger_connected = false;
-  acc_data->fault_code = FAULTS_CLEAR;
+  acc_data->fault_code_crit = FAULTS_CLEAR;
+  acc_data->fault_code_noncrit = FAULTS_CLEAR;
   
   /* USER CODE END Init */
 
@@ -1204,6 +1205,7 @@ void StartDefaultTask(void *argument)
 
     compute_send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing());
+    compute_send_fault_status_message(bmsdata);
 
     HAL_IWDG_Refresh(&hiwdg);
 
