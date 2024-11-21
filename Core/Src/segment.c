@@ -14,6 +14,13 @@
 #include "adBms6830ParseCreate.h"
 #include "mcuWrapper.h"
 
+#define ALL_GPIOS_ARE_INPUTS 0x3FF
+
+typedef enum {
+	DISCHARGE_ENABLED = 0,
+	MUTE_ACTIVATED_DISCHARGE_DISABLED = 1
+} MUTE_ST;
+
 #define TOTAL_IC 1
 cell_asic IC[TOTAL_IC];
 
@@ -55,7 +62,6 @@ LOOP_MEASURMENT MEASURE_STAT =
 
 // TODO ensure spi 1 is correct for talking to segs
 extern SPI_HandleTypeDef hspi1;
-ltc_config *ltc68041;
 
 uint8_t local_config[NUM_CHIPS][6] = {};
 uint8_t therm_avg_counter = 0;
@@ -103,10 +109,20 @@ void discard_neutrals(void);
 void pull_chip_configuration(void);
 int16_t calc_average(void);
 int8_t calc_therm_standard_dev(int16_t avg_temp);
+void init_chip(cell_asic *chip);
+void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 
-void push_chip_configuration()
+/**
+ * @brief Set a bit in a uint16
+ *  
+ * @param number uint16 to change.
+ * @param n Nth bit to change.
+ * @param x true sets, false clears.
+ * @return uint16_t New uint16.
+ */
+inline uint16_t set_uint16_bit(uint16_t number, uint16_t n, bool x)
 {
-	LTC6804_wrcfg(ltc68041, NUM_CHIPS, local_config);
+	return (number & ~((uint16_t)1 << n)) | ((uint16_t)x << n);
 }
 
 void adbms_wake()
@@ -115,74 +131,163 @@ void adbms_wake()
 	adBmsCsHigh();
 }
 
-void adBms6830_init_config(uint8_t tIC, cell_asic *ic)
+/**
+ * @brief Initialize a chip with default values. 
+ * 
+ * @param chip Pointer to chip to initialize.
+ */
+void init_chip(cell_asic *chip)
 {
-	for (uint8_t cic = 0; cic < tIC; cic++) {
-		/* Init config A */
-		ic[cic].tx_cfga.refon = PWR_UP;
-		//    ic[cic].cfga.cth = CVT_8_1mV;
-		//    ic[cic].cfga.flag_d = ConfigA_Flag(FLAG_D0, FLAG_SET) | ConfigA_Flag(FLAG_D1, FLAG_SET);
-		ic[cic].tx_cfga.gpo = ConfigA_Gpo(GPO1, GPO_SET) |
-				      ConfigA_Gpo(GPO2, GPO_SET) |
-				      ConfigA_Gpo(GPO3, GPO_SET) |
-				      ConfigA_Gpo(GPO4, GPO_SET) |
-				      ConfigA_Gpo(GPO5, GPO_SET) |
-				      ConfigA_Gpo(GPO6, GPO_SET) |
-				      ConfigA_Gpo(GPO7, GPO_SET) |
-				      ConfigA_Gpo(GPO8, GPO_SET) |
-				      ConfigA_Gpo(GPO9, GPO_SET) |
-				      ConfigA_Gpo(GPO10, GPO_SET);
-		// ic[cic].tx_cfga.gpo = 0X3FF; /* All GPIO pull down off */
-		//    ic[cic].cfga.soakon = SOAKON_CLR;
-		//    ic[cic].cfga.fc = IIR_FPA256;
+	chip->tx_cfga.refon = PWR_UP;
+	chip->tx_cfga.cth = CVT_8_1mV;
+	chip->tx_cfga.flag_d = 0;
 
-		/* Init config B */
-		//    ic[cic].cfgb.dtmen = DTMEN_ON;
-		ic[cic].tx_cfgb.vov = SetOverVoltageThreshold(4.2);
-		ic[cic].tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
-		//    ic[cic].cfgb.dcc = ConfigB_DccBit(DCC16, DCC_BIT_SET);
-		//    SetConfigB_DischargeTimeOutValue(tIC, &ic[cic], RANG_0_TO_63_MIN, TIME_1MIN_OR_0_26HR);
-	}
-	adbms_wake();
-	adBmsWriteData(tIC, &ic[0], WRCFGA, Config, A);
-	adBmsWriteData(tIC, &ic[0], WRCFGB, Config, B);
+	// No soak on AUX ADCs
+	chip->tx_cfga.soakon = SOAKON_CLR;
+
+	// short soak time by default
+	chip->tx_cfga.owrng = TIME_32US_TO_4_1MS;
+
+	chip->tx_cfga.owa = OWA0;
+
+	// All GPIOs are inputs by default
+	chip->tx_cfga.gpo = ALL_GPIOS_ARE_INPUTS;
+
+	// Registers are unfrozen
+	chip->tx_cfga.snap = SNAP_OFF;
+
+	// Charging is deactivated
+	chip->tx_cfga.mute_st = MUTE_ACTIVATED_DISCHARGE_DISABLED;
+
+	// Not an endpoint in the daisy chain
+	chip->tx_cfga.comm_bk = false;
+
+	// IIR filter disabled
+	chip->tx_cfga.fc = IIR_FPA_OFF;
+
+	// Init config B
+	chip->tx_cfgb.vov = SetOverVoltageThreshold(4.2);
+	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
+
+	// Discharge timer monitor off
+	chip->tx_cfgb.dtmen = DTMEN_OFF;
+
+	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
+	chip->tx_cfgb.dtrng = RANG_0_TO_63_MIN;
+
+	// Disable discharge timer
+	chip->tx_cfgb.dcto = DCTO_TIMEOUT;
+
+	// Disable discharge for all cells
+	chip->tx_cfgb.dcc = 0;
 }
 
+/**
+ * @brief Set the status of the REFON bit.
+ * 
+ * @param chip Pointer to the chip to modify.
+ * @param state New state of the REFON bit.
+ */
+void set_REFON(cell_asic *chip, REFON state)
+{
+	chip->tx_cfga.refon = state;
+}
+
+/**
+ * @brief Set the C-ADC vs. S-ADC comparison voltage threshold 
+ * 
+ * @param chip Pointer to the chip to modify.
+ * @param threshold Threshold to set.
+ */
+void set_volt_adc_comp_thresh(cell_asic *chip, CTH threshold)
+{
+	chip->tx_cfga.cth = threshold;
+}
+
+/**
+ * @brief Set the discharge state of a cell.
+ * 
+ * @param chip Pointer to chip with cell to modify.
+ * @param cell ID of cell to modify.
+ * @param discharge Cell discharge state. true to discharge, false to disable discharge.
+ */
+void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge)
+{
+	chip->tx_cfgb.dcc = set_uint16_bit(chip->tx_cfgb.dcc, cell, discharge);
+}
+
+/**
+ * @brief Write data to a chip.
+ * 
+ * @param chip Chip to write to.
+ * @param command Command to issue to the chip.
+ * @param type Register type to write to.
+ * @param group Group of registers to write to.
+ */
+void write_adbms_data(cell_asic *chip, uint8_t command[2], TYPE type, GRP group)
+{
+	adBmsWriteData(0, chip, command, type, group);
+}
+
+/**
+ * @brief Write data to a chip.
+ * 
+ * @param chip Chip to write to.
+ * @param command Command to issue to the chip.
+ * @param type Register type to write to.
+ * @param group Group of registers to write to.
+ */
+void read_adbms_data(cell_asic *chip, uint8_t command[2], TYPE type, GRP group)
+{
+	adBmsReadData(0, chip, command, type, group);
+}
+
+/**
+ * @brief Chips go into sleep mode after the watchdog timeout period. When they sleep, they need to have their configuration registers set.
+ * 
+ * @param chip Chip to wake and reset.
+ */
+inline void wake_and_write_configs(cell_asic *chip)
+{
+	adbms_wake();
+	write_adbms_data(chip, WRCFGA, Config, A);
+	write_adbms_data(chip, WRCFGB, Config, B);
+}
+
+/**
+ * @brief Initialize chips with default values.
+ * 
+ */
 void segment_init()
 {
 	printf("Initializing Segments...");
-	adBms6830_init_config(TOTAL_IC, &IC[0]);
-	ltc68041 = malloc(sizeof(ltc_config));
-	LTC6804_initialize(ltc68041, &hspi1, GPIOA, SPI_1_CS_Pin);
-
-	pull_chip_configuration();
-
-	for (int c = 0; c < NUM_CHIPS; c++) {
-		local_config[c][0] = 0xF8;
-		local_config[c][1] = 0x19; /* VUV = 0x619 = 1561 -> 2.4992V */
-		local_config[c][2] = 0x06; /* VOV = 0xA60 = 2656 -> 4.2496V */
-		local_config[c][3] = 0xA6;
-		local_config[c][4] = 0x00;
-		local_config[c][5] = 0x00;
-	}
-	push_chip_configuration();
-
-	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-	start_timer(&therm_timer, THERM_WAIT_TIME);
-
-	uint8_t i2c_write_data[NUM_CHIPS][3];
-
-	// Set GPIO expander to output
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		i2c_write_data[chip][0] = 0x40; // GPIO expander addr
-		i2c_write_data[chip][1] = 0x00; // GPIO direction addr
-		i2c_write_data[chip][2] = 0x00; // Set all to output
+		init_chip(&IC[chip]);
+		adbms_wake();
+		write_adbms_data(&IC[chip], WRCFGA, Config, A);
+		write_adbms_data(&IC[chip], WRCFGB, Config, B);
 	}
-	uint8_t comm_reg_data[NUM_CHIPS][6];
+}
 
-	serialize_i2c_msg(i2c_write_data, comm_reg_data);
-	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-	LTC6804_stcomm(ltc68041, 24);
+/**
+ * @brief Get voltage readings from the C-ADCs.
+ * 
+ * @param chip Chip to get voltage readings from.
+ */
+void get_c_adc_voltages(cell_asic *chip)
+{
+	wake_and_write_configs(chip);
+	adbms_wake();
+	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLCADC);
+
+	adbms_wake();
+	read_adbms_data(chip, RDCVA, Cell, A);
+	read_adbms_data(chip, RDCVB, Cell, B);
+	read_adbms_data(chip, RDCVC, Cell, C);
+	read_adbms_data(chip, RDCVD, Cell, D);
+	read_adbms_data(chip, RDCVE, Cell, E);
+	read_adbms_data(chip, RDCVF, Cell, F);
 }
 
 void select_therm(uint8_t therm)
@@ -204,9 +309,9 @@ void select_therm(uint8_t therm)
 			 1); // 0-15, will change multiplexer to select thermistor
 	}
 	serialize_i2c_msg(i2c_write_data, comm_reg_data);
-	push_chip_configuration();
-	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-	LTC6804_stcomm(ltc68041, 24);
+	// push_chip_configuration();
+	// LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
+	// LTC6804_stcomm(ltc68041, 24);
 }
 
 void read_aux_voltages()
@@ -272,9 +377,6 @@ int pull_voltages()
    * just copy over the contents of the last good reading and the fault status
    * from the most recent attempt
    */
-
-	// int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
-	// 800};
 	if (!is_timer_expired(&voltage_reading_timer) &&
 	    voltage_reading_timer.active) {
 		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
@@ -287,31 +389,6 @@ int pull_voltages()
 
 	uint16_t raw_voltages[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 
-	IC[0].cell.c_codes[0] = 1;
-	IC[0].cell.c_codes[1] = 2;
-	IC[0].cell.c_codes[2] = 3;
-
-	adBmsWakeupIc(TOTAL_IC);
-	adBmsWriteData(TOTAL_IC, &IC[0], WRCFGA, Config, A);
-	adBmsWriteData(TOTAL_IC, &IC[0], WRCFGB, Config, B);
-	adBmsWakeupIc(TOTAL_IC);
-	adBms6830_Adcv(REDUNDANT_MEASUREMENT, CONTINUOUS, DISCHARGE_PERMITTED,
-		       RESET_FILTER, CELL_OPEN_WIRE_DETECTION);
-	HAL_Delay(1); // ADCs are updated at their conversion rate is 1ms
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DISCHARGE_PERMITTED, RESET_FILTER,
-		       CELL_OPEN_WIRE_DETECTION);
-	HAL_Delay(1); // ADCs are updated at their conversion rate is 1ms
-	adBms6830_Adsv(CONTINUOUS, DISCHARGE_PERMITTED,
-		       CELL_OPEN_WIRE_DETECTION);
-	HAL_Delay(8); // ADCs are updated at their conversion rate is 8ms
-
-	adBmsWakeupIc(TOTAL_IC);
-	adBmsReadData(TOTAL_IC, &IC[0], RDCVA, Cell, A);
-	adBmsReadData(TOTAL_IC, &IC[0], RDCVB, Cell, B);
-	adBmsReadData(TOTAL_IC, &IC[0], RDCVC, Cell, C);
-	adBmsReadData(TOTAL_IC, &IC[0], RDCVD, Cell, D);
-	adBmsReadData(TOTAL_IC, &IC[0], RDCVE, Cell, E);
-	adBmsReadData(TOTAL_IC, &IC[0], RDCVF, Cell, F);
 	// printVoltages(TOTAL_IC, &IC[0], Cell);
 
 	float voltage;
@@ -477,10 +554,8 @@ int pull_thermistors()
 	select_therm(current_therm);
 	HAL_Delay(200);
 	// push_chip_configuration();
-	LTC6804_clraux(ltc68041);
-	LTC6804_adax(ltc68041); /* Run ADC for AUX (GPIOs and refs) */
 	HAL_Delay(3);
-	LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages);
+	// LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages);
 	/* Rotate through all thermistor pairs (we can poll two at once) */
 	for (uint8_t therm = 1; therm <= (NUM_THERMS_PER_CHIP / 2); therm++) {
 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
@@ -631,13 +706,13 @@ void segment_enable_balancing(bool balance_enable)
 			configure_discharge(c, DICHARGE_ALL_COMMAND);
 			discharge_commands[c] = DICHARGE_ALL_COMMAND;
 		}
-		push_chip_configuration();
+		// push_chip_configuration();
 	} else {
 		for (int c = 0; c < NUM_CHIPS; c++) {
 			configure_discharge(c, 0);
 			discharge_commands[c] = 0;
 		}
-		push_chip_configuration();
+		// push_chip_configuration();
 	}
 }
 
@@ -654,7 +729,7 @@ void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num,
 
 	configure_discharge(chip_num, discharge_commands[chip_num]);
 
-	push_chip_configuration();
+	// push_chip_configuration();
 }
 
 void segment_configure_balancing(
@@ -672,7 +747,7 @@ void segment_configure_balancing(
 
 		configure_discharge(c, discharge_commands[c]);
 	}
-	push_chip_configuration();
+	// push_chip_configuration();
 }
 
 bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num)
@@ -711,7 +786,7 @@ bool segment_is_balancing()
 void pull_chip_configuration()
 {
 	uint8_t remote_config[NUM_CHIPS][8];
-	LTC6804_rdcfg(ltc68041, NUM_CHIPS, remote_config);
+	// LTC6804_rdcfg(ltc68041, NUM_CHIPS, remote_config);
 
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int index = 0; index < 6; index++) {
@@ -739,7 +814,7 @@ void disable_gpio_pulldowns()
 	for (int c = 0; c < NUM_CHIPS; c++) {
 		local_config[c][0] |= 0x18;
 	}
-	push_chip_configuration();
+	// push_chip_configuration();
 
 	pull_chip_configuration();
 	printf("Chip CFG:\n");
