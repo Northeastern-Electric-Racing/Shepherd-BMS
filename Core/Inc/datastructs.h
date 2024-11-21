@@ -37,10 +37,10 @@ typedef struct {
  *          to set or get the error codes
  */
 // clang-format off
-typedef enum {
+enum {
 	FAULTS_CLEAR = 0x0,
 
-	/* Orion BMS faults */
+	/* Shepherd BMS faults */
 	CELLS_NOT_BALANCING		            = 0x1,
 	CELL_VOLTAGE_TOO_HIGH	            = 0x4,
 	CELL_VOLTAGE_TOO_LOW	            = 0x2,
@@ -61,7 +61,33 @@ typedef enum {
 	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
-} bms_fault_t;
+};
+
+typedef union _bms_fault_crit_t {
+    uint32_t all;
+    struct {
+        uint32_t CellsNotBalancing              : 1; // bit 0
+        uint32_t CellVoltageTooLow              : 1; // bit 1
+        uint32_t CellVoltageTooHigh             : 1; // bit 2
+        uint32_t PackTooHot                     : 1; // bit 3
+        uint32_t OpenWiringFault                : 1; // bit 4
+        uint32_t InternalSoftwareFault          : 1; // bit 5
+        uint32_t InternalThermalError           : 1; // bit 6
+        uint32_t InternalCellCommFault          : 1; // bit 7
+        uint32_t CurrentSensorFault             : 1; // bit 8
+        uint32_t ChargeReadingMismatch          : 1; // bit 9
+        uint32_t LowCellVoltage                 : 1; // bit 10
+        uint32_t WeakPackFault                  : 1; // bit 11
+        uint32_t ExternalCanFault               : 1; // bit 12
+        uint32_t DischargeLimitEnforcementFault : 1; // bit 13
+        uint32_t ChargerSafetyRelay             : 1; // bit 14
+        uint32_t BatteryThermistor              : 1; // bit 15
+        uint32_t ChargerCanFault                : 1; // bit 16
+        uint32_t ChargeLimitEnforcementFault    : 1; // bit 17
+        uint32_t Extra                       : 14; // bits 18-31
+    } fields;
+} bms_fault_crit_t;
+
 // clang-format on
 
 /**
