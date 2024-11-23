@@ -535,6 +535,29 @@ void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 	queue_can_msg(bms_can_msgs[FAULT]);
 }
 
+void compute_send_fault_timer_message(uint8_t start_or_stop, uint16_t fault_code, uint16_t value)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t start_or_stop;
+		int16_t fault_code;
+		int16_t value;
+	} fault_timer_msg_data;
+
+	fault_timer_msg_data.start_or_stop = start_or_stop;
+	fault_timer_msg_data.fault_code = fault_code;
+	fault_timer_msg_data.value = value;
+
+	endian_swap(&fault_timer_msg_data.fault_code,
+		    sizeof(fault_timer_msg_data.fault_code));
+	endian_swap(&fault_timer_msg_data.value, sizeof(fault_timer_msg_data.value));
+
+	memcpy(bms_can_msgs[FAULT_TIMER].data, &fault_timer_msg_data,
+	       sizeof(fault_timer_msg_data));
+
+	queue_can_msg(bms_can_msgs[FAULT_TIMER]);
+	
+}
+
 void compute_send_voltage_noise_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {

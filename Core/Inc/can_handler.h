@@ -45,7 +45,8 @@ typedef enum {
 	FAULT,
 	NOISE,
 	DEBUG,
-	RL_MSG_COUNT
+	RL_MSG_COUNT,
+	FAULT_TIMER
 } rate_lim_t;
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);

@@ -303,6 +303,7 @@ uint32_t sm_fault_eval(fault_eval_t *index)
 		if (!fault_present) {
 			printf("\t\t\t*******Fault cleared: %s\r\n", index->id);
 			cancel_timer(&index->timer);
+			compute_send_fault_timer_message(0, index->code, index->data_1);
 			return 0;
 		}
 
@@ -321,6 +322,7 @@ uint32_t sm_fault_eval(fault_eval_t *index)
 	else if (!is_timer_active(&index->timer) && fault_present) {
 		printf("\t\t\t*******Starting fault timer: %s\r\n", index->id);
 		start_timer(&index->timer, index->timeout);
+		compute_send_fault_timer_message(1, index->code, index->data_1);
 		if (index->code == DISCHARGE_LIMIT_ENFORCEMENT_FAULT) {
 			compute_send_fault_message(1, index->data_1,
 						   index->lim_1);
