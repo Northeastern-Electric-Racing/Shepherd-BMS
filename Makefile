@@ -15,7 +15,25 @@
 ######################################
 TARGET = shepherd2
 
+######################################
+# git
+######################################
+GIT_MAJOR_VERSION := $(shell git describe --tags --abbrev=0 | cut -c2- | cut -d'.' -f1)
+GIT_MINOR_VERSION := $(shell git describe --tags --abbrev=0 | cut -c2- | cut -d'.' -f2)
+GIT_PATCH_VERSION := $(shell git describe --tags --abbrev=0 | cut -c2- | cut -d'.' -f3)
+GIT_IS_UPSTREAM_CLEAN := $(shell bash -c 'git merge-base --is-ancestor HEAD @{u} && echo 0 || echo 1')
+GIT_IS_LOCAL_CLEAN := $(shell bash -c 'test -z "$$(git status --porcelain)" && echo 0 || echo 1')
 
+
+
+all:
+	@echo "Version: $(GIT_MAJOR_VERSION).$(GIT_MINOR_VERSION).$(GIT_PATCH_VERSION)"
+
+CFLAGS += -DGIT_MAJOR_VERSION=$(GIT_MAJOR_VERSION) \
+		  -DGIT_MINOR_VERSION=$(GIT_MINOR_VERSION) \
+		  -DGIT_PATCH_VERSION=$(GIT_PATCH_VERSION) \
+		  -DGIT_IS_UPSTREAM_CLEAN=$(GIT_IS_UPSTREAM_CLEAN) \
+		  -DGIT_IS_LOCAL_CLEAN=$(GIT_IS_LOCAL_CLEAN)
 ######################################
 # building variables
 ######################################
