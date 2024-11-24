@@ -253,8 +253,6 @@ int16_t compute_get_pack_current()
 		return -low_current;
 	}
 
-	// printf("Low Current: %d\n", -low_current);
-	// printf("High Current: %d\n", -high_current);
 	return -high_current;
 }
 
