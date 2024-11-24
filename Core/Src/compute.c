@@ -17,6 +17,8 @@
 uint8_t fan_speed;
 bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
+uint32_t channel_1_buf[2];
+uint32_t raw_high_current_buf;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
@@ -61,7 +63,14 @@ uint8_t compute_init(acc_data_t *bmsdata)
 	// HAL_TIM_PWM_Start(&htim8, fan_channels[FAN6]);
 	bmsdata->is_charger_connected = false;
 
-	HAL_ADC_Start(&hadc2);
+	//DMA for first ADC channel -- raw_low_current and ref_5V
+	assert(!HAL_ADC_Start_DMA(&hadc1, channel_1_buf,
+				  sizeof(channel_1_buf) / sizeof(uint32_t)));
+
+	//DMA for second ADC channel -- raw_high_current
+	assert(!HAL_ADC_Start_DMA(&hadc2, &raw_high_current_buf,
+				  sizeof(raw_high_current_buf) /
+					  sizeof(uint32_t)));
 
 	return 0;
 }
@@ -196,20 +205,19 @@ int16_t compute_get_pack_current()
 		1 / 0.0041; // Calibrated with  current = 5A, 10A, 20A
 	static const float LOWCHANNEL_GAIN = 1 / 0.0267;
 	*/
-	// Change ADC channel to read the high current sensor
-	change_adc1_channel(VOUT_CHANNEL);
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	int raw_low_current = HAL_ADC_GetValue(&hadc1);
 
-	HAL_ADC_Start(&hadc2);
-	HAL_ADC_PollForConversion(&hadc2, HAL_MAX_DELAY);
-	int raw_high_current = HAL_ADC_GetValue(&hadc2);
+	uint32_t raw_high_current;
+	uint32_t raw_low_current;
+	uint32_t ref_5V;
 
-	change_adc1_channel(REF_CHANNEL);
-	HAL_ADC_Start(&hadc1);
-	HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-	int ref_5V = HAL_ADC_GetValue(&hadc1);
+	memcpy(&raw_high_current, &raw_high_current_buf,
+	       sizeof(raw_high_current_buf));
+
+	memcpy(&raw_low_current, &channel_1_buf[0],
+	       sizeof(channel_1_buf[0])); //From the rank of ADC_CHANNEL_15
+
+	memcpy(&ref_5V, &channel_1_buf[1],
+	       sizeof(channel_1_buf[1])); //From the rank of ADC_CHANNEL_9
 
 	int16_t ref_voltage_raw =
 		(int16_t)(1000.0f * ((float)ref_5V * CURRENT_ADC_RESOLUTION));
@@ -245,7 +253,8 @@ int16_t compute_get_pack_current()
 		return -low_current;
 	}
 
-	// printf("\rHigh Current: %d\n", -high_current);
+	// printf("Low Current: %d\n", -low_current);
+	// printf("High Current: %d\n", -high_current);
 	return -high_current;
 }
 
