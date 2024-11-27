@@ -13,8 +13,14 @@
 #include "serialPrintResult.h"
 #include "adBms6830ParseCreate.h"
 #include "mcuWrapper.h"
+#include "cmsis_os.h"
 
 #define ALL_GPIOS_ARE_INPUTS 0x3FF
+#define T_READY		     10 /* microseconds*/
+#define T_IDLE		     4.3 /* milliseconds, minimum. typ is 5.5, max is 6.7 */
+#define T_WAKE		     200 /* microseconds */
+#define T_SLEEP		     1.8 /* seconds minimum, typ is 2, max is 2.2 */
+#define T_REFUP		     2.7 /* milliseconds minimum, typ is 3.5, max is 4.4 */
 
 typedef enum {
 	DISCHARGE_ENABLED = 0,
@@ -127,8 +133,14 @@ inline uint16_t set_uint16_bit(uint16_t number, uint16_t n, bool x)
 
 void adbms_wake()
 {
-	adBmsCsLow();
-	adBmsCsHigh();
+	for (int i = 0; i < NUM_CHIPS; i++) {
+		/* Delay between pulses should be above T_WAKE but below T_IDLE */
+		// TODO: Use osDelays (might involve preemption lolz we'll figure that out later)
+		adBmsCsLow();
+		HAL_Delay(1);
+		adBmsCsHigh();
+		HAL_Delay(1);
+	}
 }
 
 /**
@@ -217,41 +229,44 @@ void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge)
 }
 
 /**
- * @brief Write data to a chip.
+ * @brief Write data to all chips.
  * 
- * @param chip Chip to write to.
+ * @param chip Array of chips to write data to.
  * @param command Command to issue to the chip.
  * @param type Register type to write to.
  * @param group Group of registers to write to.
  */
-void write_adbms_data(cell_asic *chip, uint8_t command[2], TYPE type, GRP group)
+void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
+		      GRP group)
 {
-	adBmsWriteData(0, chip, command, type, group);
+	adBmsWriteData(NUM_CHIPS, chips, command, type, group);
 }
 
 /**
- * @brief Write data to a chip.
+ * @brief Read data from all chips.
  * 
- * @param chip Chip to write to.
+ * @param chips Array of chips to rad data to.
  * @param command Command to issue to the chip.
  * @param type Register type to write to.
  * @param group Group of registers to write to.
  */
-void read_adbms_data(cell_asic *chip, uint8_t command[2], TYPE type, GRP group)
+
+void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
+		     GRP group)
 {
-	adBmsReadData(0, chip, command, type, group);
+	adBmsReadData(NUM_CHIPS, chips, command, type, group);
 }
 
 /**
- * @brief Chips go into sleep mode after the watchdog timeout period. When they sleep, they need to have their configuration registers set.
+ * @brief Write config registers. Wakes chips before writing.
  * 
- * @param chip Chip to wake and reset.
+ * @param chip Array of chips.
  */
-inline void wake_and_write_configs(cell_asic *chip)
+inline void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake();
-	write_adbms_data(chip, WRCFGA, Config, A);
-	write_adbms_data(chip, WRCFGB, Config, B);
+	write_adbms_data(chips, WRCFGA, Config, A);
+	write_adbms_data(chips, WRCFGB, Config, B);
 }
 
 /**
@@ -263,10 +278,8 @@ void segment_init()
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		init_chip(&IC[chip]);
-		adbms_wake();
-		write_adbms_data(&IC[chip], WRCFGA, Config, A);
-		write_adbms_data(&IC[chip], WRCFGB, Config, B);
 	}
+	write_config_regs(IC);
 }
 
 /**
@@ -276,18 +289,73 @@ void segment_init()
  */
 void get_c_adc_voltages(cell_asic *chip)
 {
-	wake_and_write_configs(chip);
+	write_config_regs(chip);
 	adbms_wake();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 
 	adbms_wake();
-	read_adbms_data(chip, RDCVA, Cell, A);
-	read_adbms_data(chip, RDCVB, Cell, B);
-	read_adbms_data(chip, RDCVC, Cell, C);
-	read_adbms_data(chip, RDCVD, Cell, D);
-	read_adbms_data(chip, RDCVE, Cell, E);
-	read_adbms_data(chip, RDCVF, Cell, F);
+	read_adbms_data(chip, RDCVALL, Rdcvall, ALL_GRP);
+	// read_adbms_data(chip, RDCVA, Cell, A);
+	// read_adbms_data(chip, RDCVB, Cell, B);
+	// read_adbms_data(chip, RDCVC, Cell, C);
+	// read_adbms_data(chip, RDCVD, Cell, D);
+	// read_adbms_data(chip, RDCVE, Cell, E);
+	// read_adbms_data(chip, RDCVF, Cell, F);
+}
+
+/**
+ * @brief Get voltages from the S-ADCs.
+ * 
+ * @param chip Chip to get voltage readings from.
+ */
+void get_s_adc_voltages(cell_asic *chip)
+{
+	write_config_regs(chip);
+	adbms_wake();
+	adBms6830_Adsv(CONTINUOUS, DCP_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLSADC);
+
+	adbms_wake();
+	read_adbms_data(chip, RDSALL, Rdsall, ALL_GRP);
+	// read_adbms_data(chip, RDSVA, S_volt, A);
+	// read_adbms_data(chip, RDSVB, S_volt, B);
+	// read_adbms_data(chip, RDSVC, S_volt, C);
+	// read_adbms_data(chip, RDSVD, S_volt, D);
+	// read_adbms_data(chip, RDSVE, S_volt, E);
+	// read_adbms_data(chip, RDSVF, S_volt, F);
+}
+
+/**
+ * @brief Get the avgeraged cell voltages.
+ * 
+ * @param chip Chip that is reading voltages.
+ */
+void get_avgd_cell_voltages(cell_asic *chip)
+{
+	write_config_regs(chip);
+	adbms_wake();
+	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLCADC);
+
+	adbms_wake();
+	read_adbms_data(chip, RDACALL, Rdacall, ALL_GRP);
+}
+
+/**
+ * @brief Get the filtered cell volrages.
+ * 
+ * @param chip Chip to read cell voltages of.
+ */
+void get_filtered_cell_volrages(cell_asic *chip)
+{
+	write_config_regs(chip);
+	adbms_wake();
+	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLCADC);
+
+	adbms_wake();
+	read_adbms_data(chip, RDFCALL, Rdfcall, ALL_GRP);
 }
 
 void select_therm(uint8_t therm)
@@ -348,18 +416,12 @@ void read_aux_voltages()
 	printVoltages(NUM_CHIPS, &IC[0], RAux);
 }
 
-void adBms6830_read_status_registers(uint8_t tIC, cell_asic *ic)
+void adBms6830_read_status_registers(cell_asic *chip)
 {
-	adBmsWakeupIc(tIC);
-	adBmsWriteData(tIC, &ic[0], WRCFGA, Config, A);
-	adBmsWriteData(tIC, &ic[0], WRCFGB, Config, B);
+	write_config_regs(chip);
 	adBms6830_Adax(AUX_OPEN_WIRE_DETECTION, OPEN_WIRE_CURRENT_SOURCE,
 		       AUX_CH_TO_CONVERT);
 	uint32_t pladc_count = adBmsPollAdc(PLADC);
-	adBms6830_Adcv(REDUNDANT_MEASUREMENT, CONTINUOUS_MEASUREMENT,
-		       DISCHARGE_PERMITTED, RESET_FILTER,
-		       CELL_OPEN_WIRE_DETECTION);
-	pladc_count = pladc_count + adBmsPollAdc(PLADC);
 
 	adBmsReadData(tIC, &ic[0], RDSTATA, Status, A);
 	adBmsReadData(tIC, &ic[0], RDSTATB, Status, B);
