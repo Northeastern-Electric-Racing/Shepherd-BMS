@@ -303,7 +303,8 @@ uint32_t sm_fault_eval(fault_eval_t *index)
 		if (!fault_present) {
 			printf("\t\t\t*******Fault cleared: %s\r\n", index->id);
 			cancel_timer(&index->timer);
-			compute_send_fault_timer_message(0, index->code, index->data_1);
+			compute_send_fault_timer_message(0, index->code,
+							 index->data_1);
 			return 0;
 		}
 
