@@ -185,6 +185,9 @@ void compute_send_segment_temp_message(acc_data_t *bmsdata);
 
 void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
 
+void compute_send_fault_timer_message(uint8_t start_stop, uint16_t fault_code,
+				      uint16_t data_1);
+
 /**
  * @brief Send CAN message for debugging the car on the fly.
  * 

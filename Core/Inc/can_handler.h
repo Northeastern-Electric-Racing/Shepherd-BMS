@@ -25,6 +25,7 @@
 #define FAULT_CANID	    0x703
 #define NOISE_CANID	    0x88
 #define DEBUG_CANID	    0x702
+#define FAULT_TIMER_CANID   0x701
 
 typedef struct {
 	uint32_t prev_tick;
@@ -45,8 +46,8 @@ typedef enum {
 	FAULT,
 	NOISE,
 	DEBUG,
-	RL_MSG_COUNT,
-	FAULT_TIMER
+	FAULT_TIMER,
+	RL_MSG_COUNT
 } rate_lim_t;
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
