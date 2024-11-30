@@ -535,17 +535,17 @@ void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 	queue_can_msg(bms_can_msgs[FAULT]);
 }
 
-void compute_send_fault_timer_message(uint8_t start_stop, uint16_t fault_code,
+void compute_send_fault_timer_message(uint8_t start_stop, int fault_code,
 				      uint16_t data_1)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t start_stop;
-		uint16_t fault_code;
+		uint8_t fault_code;
 		int16_t data_1;
 	} fault_timer_msg_data;
 
 	fault_timer_msg_data.start_stop = start_stop;
-	fault_timer_msg_data.fault_code = fault_code;
+	fault_timer_msg_data.fault_code = log2(fault_code);
 	fault_timer_msg_data.data_1 = data_1;
 
 	endian_swap(&fault_timer_msg_data.fault_code,

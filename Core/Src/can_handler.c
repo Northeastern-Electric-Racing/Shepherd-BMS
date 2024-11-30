@@ -98,7 +98,7 @@ void init_can_msg_config()
 
 	can_msg_t fault_timer_msg;
 	fault_timer_msg.id = FAULT_TIMER_CANID;
-	fault_timer_msg.len = 5;
+	fault_timer_msg.len = 4;
 
 	// rl_data_t rl_discharge_data = { .msg_rate = 5000 };
 	// rl_data_t rl_charge_data = { .msg_rate = 0 };
