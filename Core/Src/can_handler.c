@@ -268,7 +268,7 @@ void vCanDispatch(void *pv_params)
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
-				  osFlagsWaitAny);
+				  osWaitForever);
 
 		/* Send all CAN messages in the queue */
 		while (osOK == osMessageQueueGet(can_outbound_queue,
