@@ -38,11 +38,9 @@ bool sm_charging_check(acc_data_t *bmsdata);
  * @note Should be bitwise OR'ed with the current fault status
  *
  * @param accData
- * @param out_faults_crit
- * @param out_faults_noncrit
+ * @return uint64_t to be cast to a bms_fault_t
  */
-void sm_fault_return(acc_data_t *accData, uint32_t *out_faults_crit,
-		     uint32_t *out_faults_noncrit);
+uint64_t sm_fault_return(acc_data_t *accData);
 
 /**
  * @brief Used in parellel to faultReturn(), calculates each fault to append the

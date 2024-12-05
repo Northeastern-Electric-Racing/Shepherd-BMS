@@ -35,6 +35,14 @@ const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	{ true, false, false, true } /* FAULTED */
 };
 
+typedef union _bms_fault_t {
+	uint64_t all;
+	struct {
+		uint32_t fault_code_crit;
+		uint32_t fault_code_noncrit;
+	} fields;
+} bms_fault_t;
+
 /* private function prototypes */
 void init_boot(void);
 void init_ready(void);
@@ -170,11 +178,11 @@ void handle_faulted(acc_data_t *bmsdata)
 
 void sm_handle_state(acc_data_t *bmsdata)
 {
-	uint32_t fault_crit = 0, fault_noncrit = 0;
-	sm_fault_return(bmsdata, &fault_crit, &fault_noncrit);
+	bms_fault_t faults = { .all = 0 };
+	faults.all = sm_fault_return(bmsdata);
 
-	bmsdata->fault_code_crit = fault_crit;
-	bmsdata->fault_code_noncrit = fault_noncrit;
+	bmsdata->fault_code_crit = faults.fields.fault_code_crit;
+	bmsdata->fault_code_noncrit = faults.fields.fault_code_noncrit;
 
 	// calculate_pwm(bmsdata);
 
@@ -201,8 +209,7 @@ void request_transition(BMSState_t next_state)
 	current_state = next_state;
 }
 
-void sm_fault_return(acc_data_t *bmsdata, uint32_t *out_faults_crit,
-		     uint32_t *out_faults_noncrit)
+uint64_t sm_fault_return(acc_data_t *bmsdata)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
@@ -282,8 +289,11 @@ void sm_fault_return(acc_data_t *bmsdata, uint32_t *out_faults_crit,
 	// TODO: Remove This !!!! (because this is actually a non-critical fault?)
 	// fault_status &= ~DISCHARGE_LIMIT_ENFORCEMENT_FAULT;
 
-	*out_faults_crit = fault_status_crit;
-	*out_faults_noncrit = fault_status_noncrit;
+	bms_fault_t return_faults = { .all = 0 };
+	return_faults.fields.fault_code_crit = fault_status_crit;
+	return_faults.fields.fault_code_noncrit = fault_status_noncrit;
+
+	return return_faults.all;
 }
 
 bool sm_fault_eval(fault_eval_t *item)
