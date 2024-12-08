@@ -133,14 +133,7 @@ inline uint16_t set_uint16_bit(uint16_t number, uint16_t n, bool x)
 
 void adbms_wake()
 {
-	for (int i = 0; i < NUM_CHIPS; i++) {
-		/* Delay between pulses should be above T_WAKE but below T_IDLE */
-		// TODO: Use osDelays (might involve preemption lolz we'll figure that out later)
-		adBmsCsLow();
-		HAL_Delay(1);
-		adBmsCsHigh();
-		HAL_Delay(1);
-	}
+	adBmsWakeupIc(NUM_CHIPS);
 }
 
 /**
@@ -245,12 +238,11 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 /**
  * @brief Read data from all chips.
  * 
- * @param chips Array of chips to rad data to.
+ * @param chips Array of chips to read data to.
  * @param command Command to issue to the chip.
  * @param type Register type to write to.
  * @param group Group of registers to write to.
  */
-
 void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 		     GRP group)
 {
@@ -260,7 +252,7 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 /**
  * @brief Write config registers. Wakes chips before writing.
  * 
- * @param chip Array of chips.
+ * @param chips Array of chips to write config registers of.
  */
 inline void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
@@ -285,17 +277,17 @@ void segment_init()
 /**
  * @brief Get voltage readings from the C-ADCs.
  * 
- * @param chip Chip to get voltage readings from.
+ * @param chips Array of chips to get voltage readings from.
  */
-void get_c_adc_voltages(cell_asic *chip)
+void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
-	write_config_regs(chip);
+	write_config_regs(chips);
 	adbms_wake();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 
 	adbms_wake();
-	read_adbms_data(chip, RDCVALL, Rdcvall, ALL_GRP);
+	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
 	// read_adbms_data(chip, RDCVA, Cell, A);
 	// read_adbms_data(chip, RDCVB, Cell, B);
 	// read_adbms_data(chip, RDCVC, Cell, C);
@@ -307,17 +299,17 @@ void get_c_adc_voltages(cell_asic *chip)
 /**
  * @brief Get voltages from the S-ADCs.
  * 
- * @param chip Chip to get voltage readings from.
+ * @param chip Array of chips to get voltage readings from.
  */
-void get_s_adc_voltages(cell_asic *chip)
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
-	write_config_regs(chip);
+	write_config_regs(chips);
 	adbms_wake();
 	adBms6830_Adsv(CONTINUOUS, DCP_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLSADC);
 
 	adbms_wake();
-	read_adbms_data(chip, RDSALL, Rdsall, ALL_GRP);
+	read_adbms_data(chips, RDSALL, Rdsall, ALL_GRP);
 	// read_adbms_data(chip, RDSVA, S_volt, A);
 	// read_adbms_data(chip, RDSVB, S_volt, B);
 	// read_adbms_data(chip, RDSVC, S_volt, C);
@@ -329,107 +321,103 @@ void get_s_adc_voltages(cell_asic *chip)
 /**
  * @brief Get the avgeraged cell voltages.
  * 
- * @param chip Chip that is reading voltages.
+ * @param chip Array of chips to get voltage readings of.
  */
-void get_avgd_cell_voltages(cell_asic *chip)
+void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
-	write_config_regs(chip);
+	write_config_regs(chips);
 	adbms_wake();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 
 	adbms_wake();
-	read_adbms_data(chip, RDACALL, Rdacall, ALL_GRP);
+	read_adbms_data(chips, RDACALL, Rdacall, ALL_GRP);
 }
 
 /**
  * @brief Get the filtered cell volrages.
  * 
- * @param chip Chip to read cell voltages of.
+ * @param chip Array of chips to get voltage readings of.
  */
-void get_filtered_cell_volrages(cell_asic *chip)
+void get_filtered_cell_volrages(cell_asic chips[NUM_CHIPS])
 {
-	write_config_regs(chip);
+	write_config_regs(chips);
 	adbms_wake();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 
 	adbms_wake();
-	read_adbms_data(chip, RDFCALL, Rdfcall, ALL_GRP);
+	read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
 }
 
-void select_therm(uint8_t therm)
+/**
+ * @brief Get the c and s adc voltages. Does this with RDCSALL command.
+ * 
+ * @param chips Array of chips to get voltage readings of.
+ */
+void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
-	/* Exit if out of range values */
-	if (therm < 1 || therm > 16) {
-		return;
-	}
+	write_config_regs(chips);
+	adbms_wake();
+	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLCADC);
 
-	uint8_t i2c_write_data[NUM_CHIPS][3];
-	uint8_t comm_reg_data[NUM_CHIPS][6];
-
-	// select 0-16 on GPIO expander
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		i2c_write_data[chip][0] = GPIO_EXPANDER_ADDR;
-		i2c_write_data[chip][1] = GPIO_REGISTER_ADDR;
-		i2c_write_data[chip][2] =
-			(therm -
-			 1); // 0-15, will change multiplexer to select thermistor
-	}
-	serialize_i2c_msg(i2c_write_data, comm_reg_data);
-	// push_chip_configuration();
-	// LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-	// LTC6804_stcomm(ltc68041, 24);
+	adbms_wake();
+	read_adbms_data(chips, RDCSALL, Rdcsall, ALL_GRP);
 }
 
-void read_aux_voltages()
+/**
+ * @brief Read every register connected to the AUX ADC.
+ * 
+ * @param chips Array of chips to get voltage readings of.
+ */
+void read_aux_registers(cell_asic chips[NUM_CHIPS])
 {
-	adbms_wake();
-	adBmsWriteData(NUM_CHIPS, &IC[0], WRCFGA, Config, A);
-	adBms6830_Adax(AUX_OPEN_WIRE_DETECTION, OPEN_WIRE_CURRENT_SOURCE,
-		       AUX_CH_TO_CONVERT);
-	uint32_t pladc_count = adBmsPollAdc(PLAUX1);
-
-	printf("Aux voltage conversion completed\n");
-	printPollAdcConvTime(pladc_count);
+	write_config_regs(chips);
+	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
+	adBmsPollAdc(PLAUX1);
 
 	adbms_wake();
-	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXA, Aux, A);
-	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXB, Aux, B);
-	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXC, Aux, C);
-	adBmsReadData(NUM_CHIPS, &IC[0], RDAUXD, Aux, D);
-	printVoltages(NUM_CHIPS, &IC[0], Aux);
-
-	adbms_wake();
-	adBmsWriteData(NUM_CHIPS, &IC[0], WRCFGA, Config, A);
-	adBms6830_Adax2(AUX_CH_TO_CONVERT);
-	pladc_count = adBmsPollAdc(PLAUX2);
-
-	printf("RAux voltage conversion completed\n");
-	printPollAdcConvTime(pladc_count);
-
-	adbms_wake();
-	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXA, RAux, A);
-	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXB, RAux, B);
-	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXC, RAux, C);
-	adBmsReadData(NUM_CHIPS, &IC[0], RDRAXD, RAux, D);
-	printVoltages(NUM_CHIPS, &IC[0], RAux);
+	read_adbms_data(chips, RDAUXA, Aux, A);
+	read_adbms_data(chips, RDAUXB, Aux, B);
+	read_adbms_data(chips, RDAUXC, Aux, C);
+	read_adbms_data(chips, RDAUXD, Aux, D);
 }
 
-void adBms6830_read_status_registers(cell_asic *chip)
+/**
+ * @brief Read voltages in every register connected to AUX2 ADC.
+ * 
+ * @param chips Array of chips to get voltages of.
+ */
+void read_aux2_registers(cell_asic chips[NUM_CHIPS])
 {
-	write_config_regs(chip);
-	adBms6830_Adax(AUX_OPEN_WIRE_DETECTION, OPEN_WIRE_CURRENT_SOURCE,
-		       AUX_CH_TO_CONVERT);
-	uint32_t pladc_count = adBmsPollAdc(PLADC);
+	write_config_regs(chips);
+	adBms6830_Adax2(AUX_ALL);
+	adBmsPollAdc(PLAUX2);
 
-	adBmsReadData(tIC, &ic[0], RDSTATA, Status, A);
-	adBmsReadData(tIC, &ic[0], RDSTATB, Status, B);
-	adBmsReadData(tIC, &ic[0], RDSTATC, Status, C);
-	adBmsReadData(tIC, &ic[0], RDSTATD, Status, D);
-	adBmsReadData(tIC, &ic[0], RDSTATE, Status, E);
-	printPollAdcConvTime(pladc_count);
-	printStatus(tIC, &ic[0], Status, ALL_GRP);
+	adbms_wake();
+	read_adbms_data(chips, RDRAXA, RAux, A);
+	read_adbms_data(chips, RDRAXB, RAux, B);
+	read_adbms_data(chips, RDRAXC, RAux, C);
+	read_adbms_data(chips, RDRAXD, RAux, D);
+}
+
+/**
+ * @brief Read status registers.
+ * 
+ * @param chips Array of chips to read voltages of.
+ */
+void adBms6830_read_status_registers(cell_asic chips[NUM_CHIPS])
+{
+	write_config_regs(chips);
+	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
+	adBmsPollAdc(PLAUX1);
+
+	read_adbms_data(chips, RDSTATA, Status, A);
+	read_adbms_data(chips, RDSTATB, Status, B);
+	read_adbms_data(chips, RDSTATC, Status, C);
+	read_adbms_data(chips, RDSTATD, Status, D);
+	read_adbms_data(chips, RDSTATE, Status, E);
 }
 
 int pull_voltages()
@@ -448,6 +436,12 @@ int pull_voltages()
 		}
 		return voltage_error;
 	}
+
+	get_c_adc_voltages()
+
+	/*
+
+	OLD CODE THAT DID WORK FOR ADBMS
 
 	uint16_t raw_voltages[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 
@@ -490,6 +484,9 @@ int pull_voltages()
 		}
 	}
 	// printf("\n\n");
+
+	*/
+
 	/*
 	float total_volts = 0;
 	for (int i = 0; i < 16; i++) {
@@ -519,6 +516,7 @@ int pull_voltages()
 		printVoltages(TOTAL_IC, &IC[0], F_volt);
 	} */
 
+	/*
 	if (MEASURE_S_VOLTAGE == ENABLED) {
 		adBmsWakeupIc(TOTAL_IC);
 		adBmsReadData(TOTAL_IC, &IC[0], RDSVA, S_volt, A);
@@ -528,8 +526,9 @@ int pull_voltages()
 		adBmsReadData(TOTAL_IC, &IC[0], RDSVE, S_volt, E);
 		adBmsReadData(TOTAL_IC, &IC[0], RDSVF, S_volt, F);
 		printVoltages(TOTAL_IC, &IC[0], S_volt);
-	}
+	} */
 
+	/*
 	if (MEASURE_AUX == ENABLED) {
 		adBms6830_Adax(AUX_OPEN_WIRE_DETECTION,
 			       OPEN_WIRE_CURRENT_SOURCE, AUX_CH_TO_CONVERT);
@@ -539,7 +538,7 @@ int pull_voltages()
 		adBmsReadData(TOTAL_IC, &IC[0], RDAUXC, Aux, C);
 		adBmsReadData(TOTAL_IC, &IC[0], RDAUXD, Aux, D);
 		printVoltages(TOTAL_IC, &IC[0], Aux);
-	}
+	} */
 
 	/*
 	if (MEASURE_RAUX == ENABLED) {
@@ -553,6 +552,7 @@ int pull_voltages()
 		printVoltages(TOTAL_IC, &IC[0], RAux);
 	}	*/
 
+	/*
 	if (MEASURE_STAT == ENABLED) {
 		adBms6830_Adax(AUX_OPEN_WIRE_DETECTION,
 			       OPEN_WIRE_CURRENT_SOURCE, AUX_CH_TO_CONVERT);
@@ -563,29 +563,10 @@ int pull_voltages()
 		adBmsReadData(TOTAL_IC, &IC[0], RDSTATD, Status, D);
 		adBmsReadData(TOTAL_IC, &IC[0], RDSTATE, Status, E);
 		printStatus(TOTAL_IC, &IC[0], Status, ALL_GRP);
-	}
-
-	/**
-   * If we received an incorrect PEC indicating a bad read
-   * copy over the data from the last good read and indicate an error
-   */
-	/*
-	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
-		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage,
-			       previous_data[i].voltage,
-			       sizeof(segment_data[i].voltage));
-
-			crc_error_check++;
-			printf("Bad voltage read\n");
-		}
-		return 1;
 	}*/
 
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-
-	read_aux_voltages();
 
 	return 0;
 }
