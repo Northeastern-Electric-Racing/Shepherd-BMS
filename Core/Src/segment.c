@@ -601,13 +601,34 @@ bool segment_is_balancing()
 
 void segment_enable_balancing(bool balance_enable)
 {
-	// TODO: Change for new topology
+	if (!balance_enable) {
+		// Initializes all array elements to zero
+		bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP] = { 0 };
+		segment_configure_balancing(discharge_config);
+	} else {
+		/* this func is never called with an arg of true (and shouldn't be given its function) 
+		    TODO: change this func to just be "segment disable balancing". Kept for now for compatibility with old system
+		*/
+	}
 }
 
+/**
+ * @brief Configure which cells should discharge, and send configuration to ICs.
+ * 
+ * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.
+ */
 void segment_configure_balancing(
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP])
 {
-	// TODO: Change for new topology
+	// DEBUG: Untested
+	// TODO: Test
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+			set_cell_discharge(&IC[chip], cell,
+					   discharge_config[chip][cell]);
+		}
+	}
+	write_config_regs(IC);
 }
 
 int8_t steinhart_est(uint16_t V)
