@@ -29,7 +29,7 @@ void vGetSegmentData(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
-		segment_retrieve_data(bmsdata->chip_data);
+		segment_retrieve_data(bmsdata);
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
 	}
@@ -47,7 +47,7 @@ void vAnalyzer(void *pv_params)
 		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
 
 		osMutexAcquire(bmsdata->mutex, osWaitForever);
-		disable_therms(bmsdata);
+		// disable_therms(bmsdata);
 
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);

@@ -36,18 +36,18 @@ const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 };
 
 /* private function prototypes */
-void init_boot(void);
-void init_ready(void);
-void init_charging(void);
-void init_faulted(void);
+void init_boot(acc_data_t *bmsdata);
+void init_ready(acc_data_t *bmsdata);
+void init_charging(acc_data_t *bmsdata);
+void init_faulted(acc_data_t *bmsdata);
 void handle_boot(acc_data_t *bmsdata);
 void handle_ready(acc_data_t *bmsdata);
 void handle_charging(acc_data_t *bmsdata);
 void handle_faulted(acc_data_t *bmsdata);
-void request_transition(BMSState_t next_state);
+void request_transition(acc_data_t *bmsdata, BMSState_t next_state);
 
 typedef void (*HandlerFunction_t)(acc_data_t *bmsdata);
-typedef void (*InitFunction_t)();
+typedef void (*InitFunction_t)(acc_data_t *bmsdata);
 
 const InitFunction_t init_LUT[NUM_STATES] = { &init_boot, &init_ready,
 					      &init_charging, &init_faulted };
@@ -56,7 +56,7 @@ const HandlerFunction_t handler_LUT[NUM_STATES] = { &handle_boot, &handle_ready,
 						    &handle_charging,
 						    &handle_faulted };
 
-void init_boot()
+void init_boot(acc_data_t *bmsdata)
 {
 	return;
 }
@@ -64,7 +64,7 @@ void init_boot()
 void handle_boot(acc_data_t *bmsdata)
 {
 	prevAccData = NULL;
-	segment_enable_balancing(false);
+	segment_enable_balancing(bmsdata->chips, false);
 	compute_enable_charging(false);
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
@@ -72,13 +72,13 @@ void handle_boot(acc_data_t *bmsdata)
 	compute_set_fault(1);
 	// bmsdata->fault_code = FAULTS_CLEAR;
 
-	request_transition(READY_STATE);
+	request_transition(bmsdata, READY_STATE);
 	return;
 }
 
-void init_ready()
+void init_ready(acc_data_t *bmsdata)
 {
-	segment_enable_balancing(false);
+	segment_enable_balancing(bmsdata->chips, false);
 	compute_enable_charging(false);
 	return;
 }
@@ -88,14 +88,14 @@ void handle_ready(acc_data_t *bmsdata)
 	/* check for charger connection */
 	if (compute_charger_connected() &&
 	    is_timer_expired(&bootup_timer)) { // TODO Fix once charger works
-		request_transition(READY_STATE);
+		request_transition(bmsdata, READY_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
 		return;
 	}
 }
 
-void init_charging()
+void init_charging(acc_data_t *bmsdata)
 {
 	cancel_timer(&charger_settle_countup);
 	return;
@@ -104,7 +104,7 @@ void init_charging()
 void handle_charging(acc_data_t *bmsdata)
 {
 	if (!compute_charger_connected()) {
-		request_transition(READY_STATE);
+		request_transition(bmsdata, READY_STATE);
 		return;
 
 	} else {
@@ -120,7 +120,7 @@ void handle_charging(acc_data_t *bmsdata)
 		if (sm_balancing_check(bmsdata))
 			sm_balance_cells(bmsdata);
 		else
-			segment_enable_balancing(false);
+			segment_enable_balancing(bmsdata->chips, false);
 
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) ||
@@ -135,9 +135,9 @@ void handle_charging(acc_data_t *bmsdata)
 	}
 }
 
-void init_faulted()
+void init_faulted(acc_data_t *bmsdata)
 {
-	segment_enable_balancing(false);
+	segment_enable_balancing(bmsdata->chips, false);
 	compute_enable_charging(false);
 	entered_faulted = true;
 	return;
@@ -152,7 +152,7 @@ void handle_faulted(acc_data_t *bmsdata)
 
 	if (bmsdata->fault_code == FAULTS_CLEAR) {
 		compute_set_fault(1);
-		request_transition(BOOT_STATE);
+		request_transition(bmsdata, BOOT_STATE);
 		return;
 	}
 
@@ -173,7 +173,7 @@ void sm_handle_state(acc_data_t *bmsdata)
 
 	if (bmsdata->fault_code != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
-		request_transition(FAULTED_STATE);
+		request_transition(bmsdata, FAULTED_STATE);
 	}
 
 	handler_LUT[current_state](bmsdata);
@@ -183,14 +183,14 @@ void sm_handle_state(acc_data_t *bmsdata)
 	sm_broadcast_current_limit(bmsdata);
 }
 
-void request_transition(BMSState_t next_state)
+void request_transition(acc_data_t *bmsdata, BMSState_t next_state)
 {
 	if (current_state == next_state)
 		return;
 	if (!valid_transition_from_to[current_state][next_state])
 		return;
 
-	init_LUT[next_state]();
+	init_LUT[next_state](bmsdata);
 	current_state = next_state;
 }
 
@@ -472,7 +472,7 @@ void sm_balance_cells(acc_data_t *bms_data)
 	}
 #endif
 
-	segment_configure_balancing(balanceConfig);
+	segment_configure_balancing(bms_data->chips, balanceConfig);
 }
 
 void calculate_pwm(acc_data_t *bmsdata)

@@ -6,6 +6,7 @@
 #include "bmsConfig.h"
 #include "timer.h"
 #include "cmsis_os2.h"
+#include "adBms6830Data.h"
 
 /**
  * @brief Individual chip data
@@ -83,6 +84,9 @@ typedef struct {
 typedef struct {
 	/* Array of data from all chips in the system */
 	chipdata_t chip_data[NUM_CHIPS];
+
+	/* Array of structs containing raw data from and configurations for the ADBMS6830 chips */
+	cell_asic chips[NUM_CHIPS];
 
 	int fault_status;
 

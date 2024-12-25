@@ -122,22 +122,6 @@ const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 	{6 + MUX_OFFSET, 8 + MUX_OFFSET, NO_THERM},
 };
 
-uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP] =
-{
-	{1,0,1,0,0,1,0,1,1,1,0,1,0,0,1,0,0,0,1,0,0,0,0,1,1,1,0,0,0,0,1,0 },
-	{1,0,1,0,0,1,0,0,1,0,1,1,0,1,1,0,0,1,1,1,0,1,0,1,1,1,1,1,0,1,1,1 },
-	{1,0,1,0,0,1,0,0,1,0,0,1,1,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0 },
-	{1,0,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,0,0,0,1,1,1,0,1,0,0,1,0,0,0,0 },
-	{1,0,1,0,0,1,0,1,1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,1,1,1 },
-	{1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,0,0,0 },
-	{1,0,1,0,0,1,0,0,1,0,1,1,0,0,1,1,0,0,1,0,1,1,1,0,0,0,0,0,0,0,1,0 },
-	{1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,1,1,1,1,1,1 },
-	{1,1,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0 },
-	{1,0,1,0,0,0,0,0,1,0,0,1,0,0,1,0,1,0,0,1,0,1,0,0,1,0,0,1,0,0,0,0 },
-	{1,1,1,0,0,1,0,0,1,1,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,1,0 },
-	{1,1,1,0,0,1,0,1,1,0,0,1,1,0,1,0,0,0,0,0,0,1,0,1,1,1,0,1,0,1,0,0 }
-};
-
 /*
  * List of therms that we actually read from, NOT reordered by cell
  */
@@ -225,9 +209,11 @@ void calc_pack_temps(acc_data_t *bmsdata)
 	bmsdata->min_temp.val = MAX_TEMP;
 	bmsdata->min_temp.cellNum = 0;
 	bmsdata->min_temp.chipIndex = 0;
+
 	int total_temp = 0;
 	int total_seg_temp = 0;
 	int total_accepted = 0;
+	
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* finds out the maximum cell temp and location */
@@ -638,29 +624,29 @@ uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
 	       (2 * 5);
 }
 
-void disable_therms(acc_data_t *bmsdata)
-{
-	int8_t tmp_temp =
-		25; /* Iniitalize to room temp (necessary to stabilize when the BMS first boots up/has null values) */
-	if (!is_first_reading_)
-		tmp_temp =
-			bmsdata->avg_temp; /* Set to actual average temp of the pack */
+// void disable_therms(acc_data_t *bmsdata)
+// {
+// 	int8_t tmp_temp =
+// 		25; /* Iniitalize to room temp (necessary to stabilize when the BMS first boots up/has null values) */
+// 	if (!is_first_reading_)
+// 		tmp_temp =
+// 			bmsdata->avg_temp; /* Set to actual average temp of the pack */
 
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
-			/* If 2D LUT shows therm should be disable */
-			if (THERM_DISABLE[c][therm]) {
-				/* Nullify thermistor by setting to pack average */
-				bmsdata->chip_data[c].thermistor_value[therm] =
-					tmp_temp;
-			} else {
-				bmsdata->chip_data[c].thermistor_value[therm] =
-					bmsdata->chip_data[c]
-						.thermistor_reading[therm];
-			}
-		}
-	}
-}
+// 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+// 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
+// 			/* If 2D LUT shows therm should be disable */
+// 			if (THERM_DISABLE[c][therm]) {
+// 				/* Nullify thermistor by setting to pack average */
+// 				bmsdata->chip_data[c].thermistor_value[therm] =
+// 					tmp_temp;
+// 			} else {
+// 				bmsdata->chip_data[c].thermistor_value[therm] =
+// 					bmsdata->chip_data[c]
+// 						.thermistor_reading[therm];
+// 			}
+// 		}
+// 	}
+// }
 
 void calc_state_of_charge(acc_data_t *bmsdata)
 {

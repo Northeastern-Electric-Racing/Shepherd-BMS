@@ -15,14 +15,15 @@ void segment_init();
  *
  * @todo make sure that retrieving cell data doesn't block code too much
  */
-void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS]);
+void segment_retrieve_data(acc_data_t *bmsdata);
 
 /**
  * @brief Enables/disables balancing for all cells
  *
- * @param balance_enable
+ * @param chips Array of ADBMS6830 data structs.
+ * @param balance_enable False to disable balancing, true to enable.
  */
-void segment_enable_balancing(bool balance_enable);
+void segment_enable_balancing(cell_asic chips[NUM_CHIPS], bool balance_enable);
 
 /**
  * @brief Enables/disables balancing for a specific cell
@@ -35,11 +36,13 @@ void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num,
 			   bool balance_enable);
 
 /**
- * @brief Sets each cell to whatever state is passed in the boolean config area
- *
- * @param discharge_config
+ * @brief Set the cell balancing configuration and send it to the segments.
+ * 
+ * @param chips Array of ADBMS6830 data structs.
+ * @param discharge_config Configuration for which cells to discharge.
  */
 void segment_configure_balancing(
+	cell_asic chips[NUM_CHIPS],
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP]);
 
 /**
