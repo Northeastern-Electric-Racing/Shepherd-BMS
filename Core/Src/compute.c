@@ -332,7 +332,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
 	bms_status_msg_data.balance =
-		(uint8_t)(balance); // segment_is_balancing()
+		(uint8_t)(balance);
 
 	/* convert to big endian */
 	endian_swap(&bms_status_msg_data.fault,

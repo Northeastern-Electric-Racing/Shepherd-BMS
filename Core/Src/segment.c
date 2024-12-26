@@ -221,6 +221,22 @@ void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge)
 }
 
 /**
+ * @brief Set the mode of a GPIO pin on an ADBMS8630.
+ * 
+ * @param chip ADBMS6830 chip
+ * @param gpio Number of the GPIO pin to change (1-10)
+ * @param mode Whether the pin should be an input or an output. True is input, False is output.
+ */
+void set_gpio_mode(cell_asic *chip, uint8_t gpio, bool mode)
+{
+	if (gpio > 10 || gpio < 1) {
+		printf("ERROR: Invalid GPIO pin %d\n", gpio);
+		return;
+	}
+	chip->tx_cfga.gpo = set_uint16_bit(chip->tx_cfga.gpo, gpio - 1, mode);
+}
+
+/**
  * @brief Write data to all chips.
  * 
  * @param chip Array of chips to write data to.
@@ -439,10 +455,7 @@ int pull_voltages(acc_data_t *bmsdata)
 
 	get_c_adc_voltages(bmsdata->chips);
 
-	// TODO: Change number of cells per chip for alpha and beta
-	// or not cuz we can just copy all the values here and handle this in analyzer
-
-	// NOTE: Its kind of silly to just copy voltages like this. We should consolidate
+	// TODO: Its kind of silly to just copy voltages like this. We should consolidate
 	// chip data and chips later, or design analyzer to read voltages from chips rather
 	// than chipdata
 
@@ -598,23 +611,21 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	       sizeof(chipdata_t) * NUM_CHIPS);
 }
 
-bool segment_is_balancing()
+bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 {
-	// TODO: Change for new topology
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].tx_cfga.mute_st != MUTE_ACTIVATED_DISCHARGE_DISABLED) {
+			return true;
+		}
+	}
 	return false;
 }
 
-void segment_enable_balancing(cell_asic chips[NUM_CHIPS], bool balance_enable)
+void segment_disable_balancing(cell_asic chips[NUM_CHIPS])
 {
-	if (!balance_enable) {
-		// Initializes all array elements to zero
-		bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP] = { 0 };
-		segment_configure_balancing(chips, discharge_config);
-	} else {
-		/* this func is never called with an arg of true (and shouldn't be given its function) 
-		    TODO: change this func to just be "segment disable balancing". Kept for now for compatibility with old system
-		*/
-	}
+	// Initializes all array elements to zero
+	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP] = { 0 };
+	segment_configure_balancing(chips, discharge_config);
 }
 
 /**
@@ -626,7 +637,6 @@ void segment_configure_balancing(
 	cell_asic chips[NUM_CHIPS],
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP])
 {
-	// DEBUG: Untested
 	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {

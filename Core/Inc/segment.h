@@ -18,12 +18,11 @@ void segment_init();
 void segment_retrieve_data(acc_data_t *bmsdata);
 
 /**
- * @brief Enables/disables balancing for all cells
+ * @brief Disables balancing for all cells.
  *
  * @param chips Array of ADBMS6830 data structs.
- * @param balance_enable False to disable balancing, true to enable.
  */
-void segment_enable_balancing(cell_asic chips[NUM_CHIPS], bool balance_enable);
+void segment_disable_balancing(cell_asic chips[NUM_CHIPS]);
 
 /**
  * @brief Enables/disables balancing for a specific cell
@@ -55,12 +54,12 @@ void segment_configure_balancing(
 bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num);
 
 /**
- * @brief Returns if any cells are balancing
- * @todo This should just be a state variable -Scott
- *
- * @return true
- * @return false
+ * @brief Returns if any cells are balancing.
+ * 
+ * @param chips Array of ADBMS6830 chips.
+ * @return true 
+ * @return false 
  */
-bool segment_is_balancing();
+bool segment_is_balancing(cell_asic chips[NUM_CHIPS]);
 
 #endif

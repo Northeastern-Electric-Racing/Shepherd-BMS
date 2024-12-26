@@ -64,7 +64,7 @@ void init_boot(acc_data_t *bmsdata)
 void handle_boot(acc_data_t *bmsdata)
 {
 	prevAccData = NULL;
-	segment_enable_balancing(bmsdata->chips, false);
+	segment_disable_balancing(bmsdata->chips);
 	compute_enable_charging(false);
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
@@ -78,7 +78,7 @@ void handle_boot(acc_data_t *bmsdata)
 
 void init_ready(acc_data_t *bmsdata)
 {
-	segment_enable_balancing(bmsdata->chips, false);
+	segment_disable_balancing(bmsdata->chips);
 	compute_enable_charging(false);
 	return;
 }
@@ -120,7 +120,7 @@ void handle_charging(acc_data_t *bmsdata)
 		if (sm_balancing_check(bmsdata))
 			sm_balance_cells(bmsdata);
 		else
-			segment_enable_balancing(bmsdata->chips, false);
+			segment_disable_balancing(bmsdata->chips);
 
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) ||
@@ -137,7 +137,7 @@ void handle_charging(acc_data_t *bmsdata)
 
 void init_faulted(acc_data_t *bmsdata)
 {
-	segment_enable_balancing(bmsdata->chips, false);
+	segment_disable_balancing(bmsdata->chips);
 	compute_enable_charging(false);
 	entered_faulted = true;
 	return;

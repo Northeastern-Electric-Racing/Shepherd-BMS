@@ -172,7 +172,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("CCL: %d\n", acc_data->charge_limit);
   printf("Cont CCL %d\n", acc_data->cont_CCL);
   printf("SoC: %d\n", acc_data->soc);
-  printf("Is Balancing?: %d\n", segment_is_balancing());
+  printf("Is Balancing?: %d\n", segment_is_balancing(acc_data->chips));
   printf("State: ");
   if (current_state == 0) printf("BOOT\n");
   else if (current_state == 1) printf("READY\n");
@@ -1256,7 +1256,7 @@ void StartDefaultTask(void *argument)
     alt = !alt;
 
     compute_send_bms_status_message(bmsdata, current_state,
-					segment_is_balancing());
+					segment_is_balancing(bmsdata->chips));
 
     HAL_IWDG_Refresh(&hiwdg);
 
