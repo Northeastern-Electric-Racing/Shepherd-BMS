@@ -614,7 +614,8 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		if (chips[chip].tx_cfga.mute_st != MUTE_ACTIVATED_DISCHARGE_DISABLED) {
+		if (chips[chip].tx_cfga.mute_st !=
+		    MUTE_ACTIVATED_DISCHARGE_DISABLED) {
 			return true;
 		}
 	}
@@ -625,6 +626,9 @@ void segment_disable_balancing(cell_asic chips[NUM_CHIPS])
 {
 	// Initializes all array elements to zero
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP] = { 0 };
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		chips[chip].tx_cfga.mute_st = MUTE_ACTIVATED_DISCHARGE_DISABLED;
+	}
 	segment_configure_balancing(chips, discharge_config);
 }
 
@@ -642,6 +646,13 @@ void segment_configure_balancing(
 		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			set_cell_discharge(&chips[chip], cell,
 					   discharge_config[chip][cell]);
+
+			// Enable balancing for a chip if a cell is to be discharged
+			if (chips[chip].tx_cfga.mute_st ==
+				    MUTE_ACTIVATED_DISCHARGE_DISABLED &&
+			    discharge_config[chip][cell]) {
+				chips[chip].tx_cfga.mute_st = DISCHARGE_ENABLED;
+			}
 		}
 	}
 	write_config_regs(chips);

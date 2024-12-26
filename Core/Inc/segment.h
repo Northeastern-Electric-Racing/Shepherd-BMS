@@ -1,7 +1,6 @@
 #ifndef SEGMENT_H
 #define SEGMENT_H
 
-#include "ltc68041.h"
 #include "bmsConfig.h"
 #include "datastructs.h"
 
@@ -23,16 +22,6 @@ void segment_retrieve_data(acc_data_t *bmsdata);
  * @param chips Array of ADBMS6830 data structs.
  */
 void segment_disable_balancing(cell_asic chips[NUM_CHIPS]);
-
-/**
- * @brief Enables/disables balancing for a specific cell
- *
- * @param chip_num
- * @param cell_num
- * @param balance_enable
- */
-void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num,
-			   bool balance_enable);
 
 /**
  * @brief Set the cell balancing configuration and send it to the segments.
