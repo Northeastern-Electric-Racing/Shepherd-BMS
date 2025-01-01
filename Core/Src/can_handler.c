@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CAN_MSG_QUEUE_SIZE 50 /* messages */
 
@@ -15,8 +16,7 @@ static osMessageQueueId_t can_inbound_queue;
 can_t *can1;
 can_t *can2;
 
-can_msg_t bms_can_msgs[RL_MSG_COUNT];
-rl_data_t rl_data[RL_MSG_COUNT];
+struct rl_bms_msgs_t rl_bms_msgs;
 
 static uint32_t can1_id_list[] = {
 	//CANID_X,
@@ -40,130 +40,60 @@ osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
 	return status;
 }
 
-void init_can_msg_config()
+void init_can_msg(uint32_t id, uint8_t len)
 {
-	can_msg_t discharge_msg = { 0 };
-	discharge_msg.id =
-		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
-	discharge_msg.len = 8;
-
-	can_msg_t charge_msg = { 0 };
-	charge_msg.id =
-		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
-	charge_msg.len = 8;
-
-	can_msg_t acc_status_msg;
-	acc_status_msg.id = ACC_STATUS_CANID;
-	acc_status_msg.len = 8;
-
-	can_msg_t bms_status_msg;
-	bms_status_msg.id = BMS_STATUS_CANID;
-	bms_status_msg.len = 8;
-
-	can_msg_t shutdown_ctrl_msg;
-	shutdown_ctrl_msg.id = SHUTDOWN_CTRL_CANID;
-	shutdown_ctrl_msg.len = 1;
-
-	can_msg_t cell_data_msg;
-	cell_data_msg.id = CELL_DATA_CANID;
-	cell_data_msg.len = 8;
-
-	can_msg_t cell_voltage_msg;
-	cell_voltage_msg.id = CELL_VOLTAGE_CANID;
-	cell_voltage_msg.len = 8;
-
-	can_msg_t current_msg;
-	current_msg.id = CURRENT_CANID;
-	current_msg.len = 6;
-
-	can_msg_t cell_temp_msg;
-	cell_temp_msg.id = CELL_TEMP_CANID;
-	cell_temp_msg.len = 8;
-
-	can_msg_t segment_temp_msg;
-	segment_temp_msg.id = SEGMENT_TEMP_CANID;
-	segment_temp_msg.len = 6;
-
-	can_msg_t fault_msg;
-	fault_msg.id = FAULT_CANID;
-	fault_msg.len = 5;
-
-	can_msg_t noise_msg;
-	noise_msg.id = NOISE_CANID;
-	noise_msg.len = 6;
-
-	can_msg_t debug_msg;
-	debug_msg.id = DEBUG_CANID;
-	debug_msg.len = 8; // yaml decodes this to 8 bytes
-
-	// rl_data_t rl_discharge_data = { .msg_rate = 5000 };
-	// rl_data_t rl_charge_data = { .msg_rate = 0 };
-
-	bms_can_msgs[DISCHARGE] = discharge_msg;
-	bms_can_msgs[CHARGE] = charge_msg;
-	bms_can_msgs[ACC_STATUS] = acc_status_msg;
-	bms_can_msgs[BMS_STATUS] = bms_status_msg;
-	bms_can_msgs[SHUTDOWN_CTRL] = shutdown_ctrl_msg;
-	bms_can_msgs[CELL_DATA] = cell_data_msg;
-	bms_can_msgs[CELL_VOLTAGE] = cell_voltage_msg;
-	bms_can_msgs[CURRENT] = current_msg;
-	bms_can_msgs[CELL_TEMP] = cell_temp_msg;
-	bms_can_msgs[SEGMENT_TEMP] = segment_temp_msg;
-	bms_can_msgs[FAULT] = fault_msg;
-	bms_can_msgs[NOISE] = noise_msg;
-	bms_can_msgs[DEBUG] = debug_msg;
-
-	// rl_data[DISCHARGE] = rl_discharge_data;
-	// rl_data[CHARGE] = rl_charge_data;
+	init_rl_can_msg(id, len, 0);
 }
 
-rl_data_t *get_rl_msg(uint32_t can_id)
+void init_rl_can_msg(uint32_t id, uint8_t len, uint32_t msg_rate)
 {
-	switch (can_id) {
-	case CHARGE_CANID:
-		return &rl_data[CHARGE];
-		break;
-	case DISCHARGE_CANID:
-		return &rl_data[DISCHARGE];
-		break;
-	case ACC_STATUS_CANID:
-		return &rl_data[ACC_STATUS];
-		break;
-	case BMS_STATUS_CANID:
-		return &rl_data[BMS_STATUS];
-		break;
-	case SHUTDOWN_CTRL_CANID:
-		return &rl_data[SHUTDOWN_CTRL];
-		break;
-	case CELL_DATA_CANID:
-		return &rl_data[CELL_DATA];
-		break;
-	case CELL_VOLTAGE_CANID:
-		return &rl_data[CELL_VOLTAGE];
-		break;
-	case CURRENT_CANID:
-		return &rl_data[CURRENT];
-		break;
-	case CELL_TEMP_CANID:
-		return &rl_data[CELL_TEMP];
-		break;
-	case SEGMENT_TEMP_CANID:
-		return &rl_data[SEGMENT_TEMP];
-		break;
-	case FAULT_CANID:
-		return &rl_data[FAULT];
-		break;
-	case NOISE_CANID:
-		return &rl_data[NOISE];
-		break;
-	case DEBUG_CANID:
-		return &rl_data[DEBUG];
-		break;
-	default:
-		break;
-	}
+	if (rl_bms_msgs.num_elements == rl_bms_msgs.capacity) {
+		rl_can_msg_t *temp = (rl_can_msg_t *)malloc(
+			sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
 
-	return NULL;
+		memcpy(temp, rl_bms_msgs.bms_can_msgs,
+		       sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
+
+		// do you even gotta do this if ur mallocing later
+		free(rl_bms_msgs.bms_can_msgs);
+
+		rl_bms_msgs.capacity *= 2;
+		rl_bms_msgs.bms_can_msgs =
+			malloc(sizeof(rl_can_msg_t) * rl_bms_msgs.capacity);
+
+		memcpy(rl_bms_msgs.bms_can_msgs, temp,
+		       sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
+		free(temp);
+	}
+	rl_can_msg_t *msgptr =
+		&rl_bms_msgs.bms_can_msgs[rl_bms_msgs.num_elements];
+	msgptr->msg.id = id;
+	msgptr->msg.len = len;
+	msgptr->msg_rate = msg_rate;
+}
+
+void init_can_msg_config()
+{
+	rl_bms_msgs.bms_can_msgs = (rl_can_msg_t *)malloc(sizeof(rl_can_msg_t));
+	rl_bms_msgs.capacity = 1;
+	rl_bms_msgs.num_elements = 0;
+
+	init_can_msg(DISCHARGE_CANID, 8);
+	init_can_msg(CHARGE_CANID, 8);
+	init_can_msg(ACC_STATUS_CANID, 8);
+	init_can_msg(BMS_STATUS_CANID, 8);
+	init_can_msg(SHUTDOWN_CTRL_CANID, 1);
+	init_can_msg(CELL_DATA_CANID, 8);
+	init_can_msg(CELL_VOLTAGE_CANID, 8);
+	init_can_msg(CURRENT_CANID, 6);
+	init_can_msg(CELL_TEMP_CANID, 8);
+	init_can_msg(SEGMENT_TEMP_CANID, 6);
+	init_can_msg(FAULT_CANID, 5);
+	init_can_msg(NOISE_CANID, 6);
+	init_can_msg(DEBUG_CANID, 8); // yaml decodes this to 8 bytes
+
+	// TODO: Test
+	init_rl_can_msg(DISCHARGE_CANID, 8, 5000);
 }
 
 void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)

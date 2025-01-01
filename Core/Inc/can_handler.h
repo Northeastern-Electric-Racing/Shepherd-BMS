@@ -26,27 +26,22 @@
 #define NOISE_CANID	    0x88
 #define DEBUG_CANID	    0x702
 
+/**
+ * @brief Wrapper around can_msg_t that allows for rate limiting.
+ * 
+ */
 typedef struct {
+	can_msg_t msg;
 	uint32_t prev_tick;
 	uint32_t msg_rate; /* in milliseconds */
-} rl_data_t;
+} rl_can_msg_t;
 
-typedef enum {
-	CHARGE,
-	DISCHARGE,
-	ACC_STATUS,
-	BMS_STATUS,
-	SHUTDOWN_CTRL,
-	CELL_DATA,
-	CELL_VOLTAGE,
-	CURRENT,
-	CELL_TEMP,
-	SEGMENT_TEMP,
-	FAULT,
-	NOISE,
-	DEBUG,
-	RL_MSG_COUNT
-} rate_lim_t;
+/* Implemented as a dynamically growing array */
+typedef struct {
+	rl_can_msg_t *bms_can_msgs;
+	uint32_t num_elements;
+	uint32_t capacity;
+} rl_bms_msgs_t;
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 

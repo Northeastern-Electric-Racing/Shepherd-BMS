@@ -26,7 +26,11 @@ extern TIM_HandleTypeDef htim8;
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 
-extern can_msg_t bms_can_msgs[RL_MSG_COUNT];
+extern rl_bms_msgs_t bms_can_msgs;
+
+// Array storing mapping of CAN message type to index in bms_can_msgs
+uint32_t *rl_bms_msgs_mapping;
+uint32_t rl_bms_msgs_size = 0;
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
@@ -40,6 +44,20 @@ uint32_t adc_values[2] = { 0 };
 float read_ref_voltage();
 float read_vout();
 void change_adc1_channel(uint8_t channel);
+
+void make_rl_can_mapping(uint32_t can_id)
+{
+	int i = 0;
+	while (i < bms_can_msgs.num_elements) {
+		if (bms_can_msgs.bms_can_msgs[i].msg.id == can_id) {
+			rl_bms_msgs_mapping[rl_bms_msgs_size] = i;
+			return;
+		}
+		i += 1;
+	}
+	// DEBUG
+	printf("You messed up\n");
+}
 
 uint8_t compute_init(acc_data_t *bmsdata)
 {
@@ -71,6 +89,23 @@ uint8_t compute_init(acc_data_t *bmsdata)
 	assert(!HAL_ADC_Start_DMA(&hadc2, &raw_high_current_buf,
 				  sizeof(raw_high_current_buf) /
 					  sizeof(uint32_t)));
+
+	rl_bms_msgs_mapping = (uint32_t *)malloc(sizeof(uint32_t) *
+						 bms_can_msgs.num_elements);
+
+	make_rl_can_mapping(CHARGE_CANID);
+	make_rl_can_mapping(DISCHARGE_CANID);
+	make_rl_can_mapping(ACC_STATUS_CANID);
+	make_rl_can_mapping(BMS_STATUS_CANID);
+	make_rl_can_mapping(SHUTDOWN_CTRL_CANID);
+	make_rl_can_mapping(CELL_DATA_CANID);
+	make_rl_can_mapping(CELL_VOLTAGE_CANID);
+	make_rl_can_mapping(CURRENT_CANID);
+	make_rl_can_mapping(CELL_TEMP_CANID);
+	make_rl_can_mapping(SEGMENT_TEMP_CANID);
+	make_rl_can_mapping(FAULT_CANID);
+	make_rl_can_mapping(NOISE_CANID);
+	make_rl_can_mapping(DEBUG_CANID);
 
 	return 0;
 }
@@ -269,10 +304,10 @@ void compute_send_mc_discharge_message(acc_data_t *bmsdata)
 	endian_swap(&discharge_data.max_discharge,
 		    sizeof(discharge_data.max_discharge));
 
-	memcpy(bms_can_msgs[DISCHARGE].data, &discharge_data,
-	       sizeof(discharge_data));
+	memcpy(bms_can_msgs.bms_can_msgs[rl_bms_msgs_mapping[1]].msg.data,
+	       &discharge_data, sizeof(discharge_data));
 
-	queue_can_msg(bms_can_msgs[DISCHARGE]);
+	queue_can_msg(bms_can_msgs.bms_can_msgs[rl_bms_msgs_mapping[1]].msg);
 }
 
 void compute_send_mc_charge_message(acc_data_t *bmsdata)
