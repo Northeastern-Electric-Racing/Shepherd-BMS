@@ -5,8 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-// TEMPORARY
-
 #include "common.h"
 #include "adBms6830CmdList.h"
 #include "adBms6830GenericType.h"
@@ -26,34 +24,6 @@ typedef enum {
 	DISCHARGE_ENABLED = 0,
 	MUTE_ACTIVATED_DISCHARGE_DISABLED = 1
 } MUTE_ST;
-
-RD REDUNDANT_MEASUREMENT = RD_OFF;
-CH AUX_CH_TO_CONVERT = AUX_ALL;
-CONT CONTINUOUS_MEASUREMENT = SINGLE;
-OW_C_S CELL_OPEN_WIRE_DETECTION = OW_OFF_ALL_CH;
-OW_AUX AUX_OPEN_WIRE_DETECTION = AUX_OW_OFF;
-PUP OPEN_WIRE_CURRENT_SOURCE = PUP_DOWN;
-DCP DISCHARGE_PERMITTED = DCP_OFF;
-RSTF RESET_FILTER = RSTF_OFF;
-ERR INJECT_ERR_SPI_READ = WITHOUT_ERR;
-
-/*Loop Measurement Setup These Variables are ENABLED or DISABLED Remember ALL CAPS*/
-LOOP_MEASURMENT MEASURE_CELL =
-	ENABLED; /*   This is ENABLED or DISABLED       */
-LOOP_MEASURMENT MEASURE_AVG_CELL =
-	ENABLED; /*   This is ENABLED or DISABLED       */
-LOOP_MEASURMENT MEASURE_F_CELL =
-	ENABLED; /*   This is ENABLED or DISABLED       */
-LOOP_MEASURMENT MEASURE_S_VOLTAGE =
-	DISABLED; /*   This is ENABLED or DISABLED       */
-LOOP_MEASURMENT MEASURE_AUX =
-	DISABLED; /*   This is ENABLED or DISABLED       */
-LOOP_MEASURMENT MEASURE_RAUX =
-	DISABLED; /*   This is ENABLED or DISABLED       */
-LOOP_MEASURMENT MEASURE_STAT =
-	ENABLED; /*   This is ENABLED or DISABLED       */
-
-// END
 
 #define THERM_WAIT_TIME	   500 /* ms */
 #define VOLTAGE_WAIT_TIME  500 /* ms */
@@ -75,7 +45,6 @@ nertimer_t therm_timer;
 nertimer_t voltage_reading_timer;
 nertimer_t variance_timer;
 
-int voltage_error = 0; // not faulted
 int therm_error = 0; // not faulted
 uint16_t crc_error_check = 0;
 
@@ -85,6 +54,7 @@ const int mapping_correction[12] = { 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10 };
 
 uint16_t therm_settle_time_ = 0;
 
+// TODO: replace for new thermistors
 const uint32_t VOLT_TEMP_CONV[106] = {
 	157300, 148800, 140300, 131800, 123300, 114800, 108772, 102744, 96716,
 	90688,	84660,	80328,	75996,	71664,	67332,	63000,	59860,	56720,
@@ -103,7 +73,6 @@ const uint32_t VOLT_TEMP_CONV[106] = {
 const int32_t VOLT_TEMP_CALIB_OFFSET = 0;
 
 /* private function prototypes */
-void serialize_i2c_msg(uint8_t data_to_write[][3], uint8_t comm_output[][6]);
 int8_t steinhart_est(uint16_t V);
 void variance_therm_check(void);
 void discard_neutrals(chipdata_t segment_data[NUM_CHIPS]);
@@ -170,6 +139,8 @@ void init_chip(cell_asic *chip)
 	chip->tx_cfga.fc = IIR_FPA_OFF;
 
 	// Init config B
+
+	// If the corresponding fault bits are sent high, it does not affect the IC
 	chip->tx_cfgb.vov = SetOverVoltageThreshold(4.2);
 	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
 
@@ -280,11 +251,13 @@ inline void write_config_regs(cell_asic chips[NUM_CHIPS])
  * @brief Initialize chips with default values.
  * 
  */
-void segment_init(cell_asic chips[NUM_CHIPS])
+void segment_init(acc_data_t *bmsdata)
 {
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		init_chip(&chips[chip]);
+		init_chip(&bmsdata->chips[chip]);
+		// TODO: Make sure this is accurate
+		bmsdata->chip_data->alpha = chip % 2 == 0;
 	}
 	write_config_regs(chips);
 }
@@ -435,7 +408,7 @@ void adBms6830_read_status_registers(cell_asic chips[NUM_CHIPS])
 	read_adbms_data(chips, RDSTATE, Status, E);
 }
 
-int pull_voltages(acc_data_t *bmsdata)
+void pull_voltages(acc_data_t *bmsdata)
 {
 	/**
    * If we haven't waited long enough between pulling voltage data
@@ -450,7 +423,6 @@ int pull_voltages(acc_data_t *bmsdata)
 			memcpy(&bmsdata->chips[i], &previous_data[i],
 			       sizeof(bmsdata->chips[i]));
 		}
-		return voltage_error;
 	}
 
 	get_c_adc_voltages(bmsdata->chips);
@@ -468,7 +440,7 @@ int pull_voltages(acc_data_t *bmsdata)
 
 	/*
 
-	OLD CODE THAT DID WORK FOR ADBMS
+	OLD CODE THAT DID WORK FOR ADBMS. KEEPING IN FOR DEBUGGING.
 
 	uint16_t raw_voltages[NUM_CHIPS][NUM_CELLS_PER_CHIP];
 
@@ -557,8 +529,8 @@ int pull_voltages(acc_data_t *bmsdata)
 
 	/*
 	if (MEASURE_AUX == ENABLED) {
-		adBms6830_Adax(AUX_OPEN_WIRE_DETECTION,
-			       OPEN_WIRE_CURRENT_SOURCE, AUX_CH_TO_CONVERT);
+		adBms6830_Adax(AUX_OW_OFF,
+			       PUP_DOWN, AUX_ALL);
 		adBmsPollAdc(PLAUX1);
 		adBmsReadData(TOTAL_IC, &IC[0], RDAUXA, Aux, A);
 		adBmsReadData(TOTAL_IC, &IC[0], RDAUXB, Aux, B);
@@ -570,7 +542,7 @@ int pull_voltages(acc_data_t *bmsdata)
 	/*
 	if (MEASURE_RAUX == ENABLED) {
 		adBmsWakeupIc(TOTAL_IC);
-		adBms6830_Adax2(AUX_CH_TO_CONVERT);
+		adBms6830_Adax2(AUX_ALL);
 		adBmsPollAdc(PLAUX2);
 		adBmsReadData(TOTAL_IC, &IC[0], RDRAXA, RAux, A);
 		adBmsReadData(TOTAL_IC, &IC[0], RDRAXB, RAux, B);
@@ -581,8 +553,8 @@ int pull_voltages(acc_data_t *bmsdata)
 
 	/*
 	if (MEASURE_STAT == ENABLED) {
-		adBms6830_Adax(AUX_OPEN_WIRE_DETECTION,
-			       OPEN_WIRE_CURRENT_SOURCE, AUX_CH_TO_CONVERT);
+		adBms6830_Adax(AUX_OW_OFF,
+			       PUP_DOWN, AUX_ALL);
 		adBmsPollAdc(PLAUX1);
 		adBmsReadData(TOTAL_IC, &IC[0], RDSTATA, Status, A);
 		adBmsReadData(TOTAL_IC, &IC[0], RDSTATB, Status, B);
@@ -594,16 +566,18 @@ int pull_voltages(acc_data_t *bmsdata)
 
 	/* Start the timer between readings if successful */
 	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-
-	return 0;
 }
 
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
 	/* Pull voltages and thermistors and indiacate if there was a problem during
    * retrieval */
-	voltage_error = pull_voltages(bmsdata);
+	pull_voltages(bmsdata);
+
+	// The GPIOs in the AUX registers contain voltage readings from the therms.
 	read_aux_registers(bmsdata->chips);
+	// If you want redundant Thermistor readings, uncomment the following.
+	read_aux2_registers(bmsdata->chips);
 
 	/* Save the contents of the reading so that we can use it to fill in missing
    * data */

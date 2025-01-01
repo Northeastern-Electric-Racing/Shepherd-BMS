@@ -7,6 +7,17 @@
 
 #include "serialPrintResult.h"
 
+#define GPIO1  0
+#define GPIO2  1
+#define GPIO3  2
+#define GPIO4  3
+#define GPIO5  4
+#define GPIO6  5
+#define GPIO7  6
+#define GPIO8  7
+#define GPIO9  8
+#define GPIO10 9
+
 // clang-format off
 /**
  * @brief Mapping Cell temperature to the cell resistance based on the
@@ -84,6 +95,8 @@ const uint8_t FAN_CURVE[16] =
 const uint8_t NO_THERM = 0xFF;
 const uint8_t MUX_OFFSET = 16;
 
+//TODO: MAKE THESE THERM MAPPINGS CORRECT
+
 /**
  * @brief Mapping the Relevant Thermistors for each cell based on cell #
  * @note 0xFF indicates the end of the relevant therms
@@ -91,16 +104,22 @@ const uint8_t MUX_OFFSET = 16;
  */
 const uint8_t RELEVANT_THERM_MAP_H[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 {
-	{5, 3, NO_THERM},
-	{12 + MUX_OFFSET, 14 + MUX_OFFSET, NO_THERM},
-	{2, 0, 1},
-	{9 + MUX_OFFSET, 11 + MUX_OFFSET, NO_THERM},
-	{8, 6, NO_THERM},
-	{0 + MUX_OFFSET, 2 + MUX_OFFSET, NO_THERM},
-	{12, 14, 13},
-	{3 + MUX_OFFSET, 5 + MUX_OFFSET, NO_THERM},
-	{11, 9, NO_THERM},
-	{6 + MUX_OFFSET, 8 + MUX_OFFSET, NO_THERM},
+	{GPIO1},
+	{GPIO1},
+	{GPIO2},
+	{GPIO2},
+	{GPIO3},
+	{GPIO3},
+	{GPIO4},
+	{GPIO4},
+	{GPIO5},
+	{GPIO6},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
 };
 
 /**
@@ -110,55 +129,23 @@ const uint8_t RELEVANT_THERM_MAP_H[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
  */
 const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
 {
-	{5, 3, 4},
-	{12 + MUX_OFFSET, 14 + MUX_OFFSET, NO_THERM},
-	{2, 0, NO_THERM},
-	{11 + MUX_OFFSET, 9 + MUX_OFFSET, NO_THERM},
-	{6, 7, 8},
-	{0 + MUX_OFFSET, 2 + MUX_OFFSET, NO_THERM},
-	{14, 12, NO_THERM},
-	{5 + MUX_OFFSET, 3 + MUX_OFFSET, NO_THERM},
-	{9, 10, 11},
-	{6 + MUX_OFFSET, 8 + MUX_OFFSET, NO_THERM},
+	{GPIO1},
+	{GPIO1},
+	{GPIO2},
+	{GPIO2},
+	{GPIO3},
+	{GPIO3},
+	{GPIO4},
+	{GPIO4},
+	{GPIO5},
+	{GPIO6},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
+	{GPIO7},
 };
-
-/*
- * List of therms that we actually read from, NOT reordered by cell
- */
-const uint8_t POPULATED_THERM_LIST_H[NUM_THERMS_PER_CHIP] =
-{
-	true, false, true,
-	true, true, true,
-	true, true, true,
-	true, true, true,
-	true, false, true, false,
-	true, false, true,
-	true, false, true,
-	true, false, true,
-	true, false, true,
-	true, false, true, false
-};
-
-const uint8_t POPULATED_THERM_LIST_L[NUM_THERMS_PER_CHIP] =
-{
-	true, true, true,
-	true, false, true,
-	true, false, true,
-	true, false, true,
-	true, true, true, false,
-	true, false, true,
-	true, false, true,
-	true, false, true,
-	true, false, true,
-	true, false, true, false
-};
-
-/**
- * @brief Selecting thermistors to ignore
- *
- * @note True / 1 will disable the thermistor
- * @note disabling both unpopulaed (see above) and populated but bad cells ( not great permanent solution)
- */
 
 // clang-format on
 
@@ -167,11 +154,43 @@ nertimer_t ocvTimer;
 
 bool is_first_reading_ = true;
 
+void calc_alpha_temps(acc_data_t *bmsdata)
+{
+	for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
+		bmsdata->chip_data
+	}
+}
+
+void calc_beta_temps(acc_data_t *bmsdata)
+{
+}
+
 /* we are not corrctly mapping each therm reading to the correct cell. So, we are taking the average of all good readings (not disabled) for a given chip, 
  and assigning that to be the cell val for every cell in the chip*/
 
 void calc_cell_temps(acc_data_t *bmsdata)
 {
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (bmsdata->chip_data[chip]->alpha) {
+			for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
+				int sum = 0;
+				for (int therm = 0; therm < NUM_RELEVANT_THERMS;
+				     therm++) {
+					sum += bmsdata->chips[chip].aux.a_codes
+						       [RELEVANT_THERM_MAP_H
+								[cell][therm]]
+				}
+				bmsdata->chip_data[chip].cell_temp[cell].
+			}
+		} else {
+			calc_beta_temps(bmsdata);
+		}
+	}
+
+	/*
+
+	22A CODE FOR REFERENC
+
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			const uint8_t(*therm_map)[NUM_RELEVANT_THERMS] =
@@ -193,11 +212,11 @@ void calc_cell_temps(acc_data_t *bmsdata)
 			}
 			//printf("\r\n");
 			/* Takes the average temperature of all the relevant thermistors */
-			bmsdata->chip_data[c].cell_temp[cell] =
-				temp_sum / therm_count;
-			therm_count = 0;
-		}
-	}
+	bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
+	therm_count = 0;
+}
+}
+* /
 }
 
 void calc_pack_temps(acc_data_t *bmsdata)
@@ -213,7 +232,7 @@ void calc_pack_temps(acc_data_t *bmsdata)
 	int total_temp = 0;
 	int total_seg_temp = 0;
 	int total_accepted = 0;
-	
+
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
 			/* finds out the maximum cell temp and location */

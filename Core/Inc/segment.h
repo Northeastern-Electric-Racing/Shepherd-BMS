@@ -7,7 +7,7 @@
 /**
  * @brief Initializes the segments
  */
-void segment_init();
+void segment_init(acc_data_t *bmsdata);
 
 /**
  * @brief Pulls all cell data from the segments and returns all cell data

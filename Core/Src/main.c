@@ -347,7 +347,7 @@ int main(void)
 
   HAL_Delay(500);
 	init_both_can(&hcan1, &hcan2);
-  segment_init(acc_data->chip_data);
+  segment_init(acc_data);
   compute_init();
   printf("Init passed\n");
   /* USER CODE END 2 */

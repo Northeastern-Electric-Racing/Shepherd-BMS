@@ -30,6 +30,9 @@ typedef struct {
 		[NUM_CELLS_PER_CHIP]; /* bool representing noise ignored read */
 	uint8_t consecutive_noise
 		[NUM_CELLS_PER_CHIP]; /* count representing consecutive noisy reads */
+
+	/* True if chip is alpha, False if Chip is Beta */
+	bool alpha;
 } chipdata_t;
 
 /**
@@ -82,6 +85,8 @@ typedef struct {
 #define ACCUMULATOR_FRAME_SIZE sizeof(acc_data_t);
 
 typedef struct {
+	/* chip_data and chips are parallel arrays. */
+
 	/* Array of data from all chips in the system */
 	chipdata_t chip_data[NUM_CHIPS];
 
