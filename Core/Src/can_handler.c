@@ -158,8 +158,8 @@ int8_t queue_can_msg(can_msg_t msg)
 	while (curr != NULL) {
 		if (curr->val.id == msg.id) {
 			if (HAL_GetTick() <=
-			    pdMS_TO_TICKS(curr->val.prev_tick) +
-				    curr->val.msg_rate) {
+			    curr->val.prev_tick +
+				    pdMS_TO_TICKS(curr->val.msg_rate)) {
 				// block message
 				return 0;
 			} else {
