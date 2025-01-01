@@ -13,10 +13,25 @@
 static osMessageQueueId_t can_outbound_queue;
 static osMessageQueueId_t can_inbound_queue;
 
+/**
+ * @brief Datastructure for keeping track of the last time a CAN message was transmitted.
+ * 
+ */
+typedef struct {
+	uint32_t id;
+	uint32_t prev_tick;
+	uint32_t msg_rate; /* in milliseconds */
+} rl_can_msg_t;
+
+struct node_t {
+	rl_can_msg_t val;
+	struct node_t *next;
+};
+
+struct node_t *rl_bms_msgs = NULL;
+
 can_t *can1;
 can_t *can2;
-
-rl_bms_msgs_t rl_bms_msgs;
 
 static uint32_t can1_id_list[] = {
 	//CANID_X,
@@ -40,40 +55,40 @@ osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
 	return status;
 }
 
+/**
+ * @brief Add a CAN message to the list of rate limited CAN messages.
+ * 
+ * @param id ID of the CAN message to rate limit.
+ * @param msg_rate The amount of time that must pass before this CAN message can be ttansmitted again.
+ */
 void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
 {
-	if (rl_bms_msgs.num_elements == rl_bms_msgs.capacity) {
-		rl_can_msg_t *temp = (rl_can_msg_t *)malloc(
-			sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
-
-		memcpy(temp, rl_bms_msgs.msgs,
-		       sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
-
-		// do you even gotta do this if ur mallocing later?
-		free(rl_bms_msgs.msgs);
-
-		rl_bms_msgs.capacity += 1;
-		rl_bms_msgs.msgs =
-			malloc(sizeof(rl_can_msg_t) * rl_bms_msgs.capacity);
-
-		memcpy(rl_bms_msgs.msgs, temp,
-		       sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
-		free(temp);
+	if (rl_bms_msgs == NULL) {
+		rl_bms_msgs = malloc(sizeof(struct node_t));
+		rl_bms_msgs->val.id = id;
+		rl_bms_msgs->val.msg_rate = msg_rate;
+		return;
 	}
 
-	rl_can_msg_t *msgptr = &rl_bms_msgs.msgs[rl_bms_msgs.num_elements];
-	msgptr->id = id;
-	msgptr->msg_rate = msg_rate;
+	struct node_t *curr = rl_bms_msgs;
 
-	rl_bms_msgs.num_elements += 1;
+	while (curr->next != NULL) {
+		curr = curr->next;
+	}
+
+	curr->next = malloc(sizeof(struct node_t));
+	curr = curr->next;
+
+	curr->val.id = id;
+	curr->val.msg_rate = msg_rate;
 }
 
+/**
+ * @brief Initialize any per message configurations.
+ * 
+ */
 void init_can_msg_config()
 {
-	rl_bms_msgs.msgs = (rl_can_msg_t *)malloc(sizeof(rl_can_msg_t));
-	rl_bms_msgs.capacity = 1;
-	rl_bms_msgs.num_elements = 0;
-
 	init_rl_can_msg(DISCHARGE_CANID, 5000);
 }
 
@@ -138,18 +153,21 @@ int8_t queue_can_msg(can_msg_t msg)
 	if (!can_outbound_queue)
 		return -1;
 
-	for (int i = 0; i < rl_bms_msgs.num_elements; i++) {
-		if (rl_bms_msgs.msgs[i].id == msg.id) {
+	struct node_t *curr = rl_bms_msgs;
+
+	while (curr != NULL) {
+		if (curr->val.id == msg.id) {
 			if (HAL_GetTick() <=
-			    pdMS_TO_TICKS(rl_bms_msgs.msgs[i].prev_tick) +
-				    rl_bms_msgs.msgs[i].msg_rate) {
+			    pdMS_TO_TICKS(curr->val.prev_tick) +
+				    curr->val.msg_rate) {
 				// block message
 				return 0;
 			} else {
-				rl_bms_msgs.msgs[i].prev_tick = HAL_GetTick();
+				curr->val.prev_tick = HAL_GetTick();
 				break;
 			}
 		}
+		curr = curr->next;
 	}
 
 	return queue_and_set_flag(can_outbound_queue, &msg, can_dispatch_handle,

@@ -39,23 +39,6 @@
 #define DEBUG_CANID	    0x702
 #define DEBUG_SIZE	    8
 
-/**
- * @brief Datastructure for keeping track of the last time a CAN message was transmitted.
- * 
- */
-typedef struct {
-	uint32_t id;
-	uint32_t prev_tick;
-	uint32_t msg_rate; /* in milliseconds */
-} rl_can_msg_t;
-
-/* Implemented as a dynamically growing array */
-typedef struct {
-	rl_can_msg_t *msgs;
-	uint32_t num_elements;
-	uint32_t capacity;
-} rl_bms_msgs_t;
-
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 
 /**
