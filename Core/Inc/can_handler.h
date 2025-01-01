@@ -12,33 +12,46 @@
 #define NUM_INBOUND_CAN1_IDS 1
 #define NUM_INBOUND_CAN2_IDS 1
 
-#define CHARGE_CANID	    0x176
+#define CHARGE_CANID 0x176
+#define CHARGE_SIZE
 #define DISCHARGE_CANID	    0x156
+#define DISCHARGE_SIZE	    8
 #define ACC_STATUS_CANID    0x80
+#define ACC_STATUS_SIZE	    8
 #define BMS_STATUS_CANID    0x81
+#define BMS_STATUS_SIZE	    8
 #define SHUTDOWN_CTRL_CANID 0x82
+#define SHUTDOWN_CTRL_SIZE  1
 #define CELL_DATA_CANID	    0x83
+#define CELL_DATA_SIZE	    8
 #define CELL_VOLTAGE_CANID  0x87
+#define CELL_VOLTAGE_SIZE   8
 #define CURRENT_CANID	    0x86
+#define CURRENT_SIZE	    6
 #define CELL_TEMP_CANID	    0x84
+#define CELL_TEMP_SIZE	    8
 #define SEGMENT_TEMP_CANID  0x85
+#define SEGMENT_TEMP_SIZE   6
 #define FAULT_CANID	    0x703
+#define FAULT_SIZE	    6
 #define NOISE_CANID	    0x88
+#define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
+#define DEBUG_SIZE 8
 
 /**
- * @brief Wrapper around can_msg_t that allows for rate limiting.
+ * @brief Datastructure for keeping track of the last time a CAN message was transmitted.
  * 
  */
 typedef struct {
-	can_msg_t msg;
+	uint32_t id;
 	uint32_t prev_tick;
 	uint32_t msg_rate; /* in milliseconds */
 } rl_can_msg_t;
 
 /* Implemented as a dynamically growing array */
 typedef struct {
-	rl_can_msg_t *bms_can_msgs;
+	rl_can_msg_t *msgs;
 	uint32_t num_elements;
 	uint32_t capacity;
 } rl_bms_msgs_t;

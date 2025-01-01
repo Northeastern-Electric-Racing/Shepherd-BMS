@@ -16,7 +16,7 @@ static osMessageQueueId_t can_inbound_queue;
 can_t *can1;
 can_t *can2;
 
-struct rl_bms_msgs_t rl_bms_msgs;
+rl_bms_msgs_t rl_bms_msgs;
 
 static uint32_t can1_id_list[] = {
 	//CANID_X,
@@ -40,60 +40,43 @@ osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
 	return status;
 }
 
-void init_can_msg(uint32_t id, uint8_t len)
-{
-	init_rl_can_msg(id, len, 0);
-}
-
-void init_rl_can_msg(uint32_t id, uint8_t len, uint32_t msg_rate)
+void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
 {
 	if (rl_bms_msgs.num_elements == rl_bms_msgs.capacity) {
 		rl_can_msg_t *temp = (rl_can_msg_t *)malloc(
 			sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
 
-		memcpy(temp, rl_bms_msgs.bms_can_msgs,
+		memcpy(temp, rl_bms_msgs.msgs,
 		       sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
 
-		// do you even gotta do this if ur mallocing later
-		free(rl_bms_msgs.bms_can_msgs);
+		// do you even gotta do this if ur mallocing later?
+		free(rl_bms_msgs.msgs);
 
-		rl_bms_msgs.capacity *= 2;
-		rl_bms_msgs.bms_can_msgs =
+		rl_bms_msgs.capacity += 1;
+		rl_bms_msgs.msgs =
 			malloc(sizeof(rl_can_msg_t) * rl_bms_msgs.capacity);
 
-		memcpy(rl_bms_msgs.bms_can_msgs, temp,
+		memcpy(rl_bms_msgs.msgs, temp,
 		       sizeof(rl_can_msg_t) * rl_bms_msgs.num_elements);
 		free(temp);
 	}
-	rl_can_msg_t *msgptr =
-		&rl_bms_msgs.bms_can_msgs[rl_bms_msgs.num_elements];
-	msgptr->msg.id = id;
-	msgptr->msg.len = len;
+
+	rl_can_msg_t *msgptr = &rl_bms_msgs.msgs[rl_bms_msgs.num_elements];
+	msgptr->id = id;
 	msgptr->msg_rate = msg_rate;
+
+	rl_bms_msgs.num_elements += 1;
 }
 
 void init_can_msg_config()
 {
-	rl_bms_msgs.bms_can_msgs = (rl_can_msg_t *)malloc(sizeof(rl_can_msg_t));
+	rl_bms_msgs.msgs = (rl_can_msg_t *)malloc(sizeof(rl_can_msg_t));
 	rl_bms_msgs.capacity = 1;
 	rl_bms_msgs.num_elements = 0;
 
-	init_can_msg(DISCHARGE_CANID, 8);
-	init_can_msg(CHARGE_CANID, 8);
-	init_can_msg(ACC_STATUS_CANID, 8);
-	init_can_msg(BMS_STATUS_CANID, 8);
-	init_can_msg(SHUTDOWN_CTRL_CANID, 1);
-	init_can_msg(CELL_DATA_CANID, 8);
-	init_can_msg(CELL_VOLTAGE_CANID, 8);
-	init_can_msg(CURRENT_CANID, 6);
-	init_can_msg(CELL_TEMP_CANID, 8);
-	init_can_msg(SEGMENT_TEMP_CANID, 6);
-	init_can_msg(FAULT_CANID, 5);
-	init_can_msg(NOISE_CANID, 6);
-	init_can_msg(DEBUG_CANID, 8); // yaml decodes this to 8 bytes
-
+	// init_can_msg(DISCHARGE_CANID, 8);
 	// TODO: Test
-	init_rl_can_msg(DISCHARGE_CANID, 8, 5000);
+	init_rl_can_msg(DISCHARGE_CANID, 5000);
 }
 
 void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
@@ -157,15 +140,17 @@ int8_t queue_can_msg(can_msg_t msg)
 	if (!can_outbound_queue)
 		return -1;
 
-	rl_data_t *rl_data = get_rl_msg(msg.id);
-
-	if (rl_data != NULL && rl_data->msg_rate != 0) {
-		if (HAL_GetTick() <=
-		    pdMS_TO_TICKS(rl_data->prev_tick) + rl_data->msg_rate) {
-			// block message
-			return 0;
-		} else {
-			rl_data->prev_tick = HAL_GetTick();
+	for (int i = 0; i < rl_bms_msgs.num_elements; i++) {
+		if (rl_bms_msgs.msgs[i].id == msg.id) {
+			if (HAL_GetTick() <=
+			    pdMS_TO_TICKS(rl_bms_msgs.msgs[i].prev_tick) +
+				    rl_bms_msgs.msgs[i].msg_rate) {
+				// block message
+				return 0;
+			} else {
+				rl_bms_msgs.msgs[i].prev_tick = HAL_GetTick();
+				break;
+			}
 		}
 	}
 
