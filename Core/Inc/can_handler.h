@@ -12,8 +12,8 @@
 #define NUM_INBOUND_CAN1_IDS 1
 #define NUM_INBOUND_CAN2_IDS 1
 
-#define CHARGE_CANID 0x176
-#define CHARGE_SIZE
+#define CHARGE_CANID	    0x176
+#define CHARGE_SIZE	    8
 #define DISCHARGE_CANID	    0x156
 #define DISCHARGE_SIZE	    8
 #define ACC_STATUS_CANID    0x80
@@ -37,7 +37,7 @@
 #define NOISE_CANID	    0x88
 #define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
-#define DEBUG_SIZE 8
+#define DEBUG_SIZE	    8
 
 /**
  * @brief Datastructure for keeping track of the last time a CAN message was transmitted.

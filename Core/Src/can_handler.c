@@ -74,8 +74,6 @@ void init_can_msg_config()
 	rl_bms_msgs.capacity = 1;
 	rl_bms_msgs.num_elements = 0;
 
-	// init_can_msg(DISCHARGE_CANID, 8);
-	// TODO: Test
 	init_rl_can_msg(DISCHARGE_CANID, 5000);
 }
 
