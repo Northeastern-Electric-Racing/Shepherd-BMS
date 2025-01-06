@@ -183,12 +183,45 @@ void set_volt_adc_comp_thresh(cell_asic *chip, CTH threshold)
  * @brief Set the discharge state of a cell.
  * 
  * @param chip Pointer to chip with cell to modify.
- * @param cell ID of cell to modify.
+ * @param cell ID of cell to modify. Cell indexes start are from 1-16 (NOT ZERO INDEXED).
  * @param discharge Cell discharge state. true to discharge, false to disable discharge.
  */
 void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge)
 {
 	chip->tx_cfgb.dcc = set_uint16_bit(chip->tx_cfgb.dcc, cell, discharge);
+}
+
+/**
+ * @brief Set the state of the SOAKON bit to either enable or disable soak times.
+ * 
+ * @param chip Pointer to chip to configure
+ * @param state Enable or disable SOAKON
+ */
+void set_soak_on(cell_asic *chip, SOAKON state)
+{
+	chip->tx_cfga.soakon = state;
+}
+
+/**
+ * @brief Set the open wire detection soak time range.
+ * 
+ * @param chip Pointer to chip to configure
+ * @param range The range of time over which to soak for open wire detection
+ */
+void set_open_wire_soak_range(cell_asic *chip, OWRNG range)
+{
+	chip->tx_cfga.owrng = range;
+}
+
+/**
+ * @brief Set the open wire soak time. See data sheet for formula.
+ * 
+ * @param chip Pointer to chip configuration
+ * @param time The amount of time to soak for. Higher OWA is a higher soak time.
+ */
+void set_open_wire_soak_time(cell_asic *chip, OWA time)
+{
+	chip->tx_cfga.owa = time;
 }
 
 /**
@@ -205,6 +238,77 @@ void set_gpio_mode(cell_asic *chip, uint8_t gpio, bool mode)
 		return;
 	}
 	chip->tx_cfga.gpo = set_uint16_bit(chip->tx_cfga.gpo, gpio - 1, mode);
+}
+
+/**
+ * @brief Set the corner frequency of the IIR filter.
+ * 
+ * @param chip Pointer to chip config
+ * @param freq Corner frequency (see IIR_FPA enum for frequencies)
+ */
+void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq)
+{
+	chip->tx_cfga.fc = freq;
+}
+
+/**
+ * @brief Configure a chip as a break in the isoSPI daisy chain.
+ * 
+ * @param chip Pointer to chip config
+ * @param is_break True if chip is break, false if chip is not break
+ */
+void set_comm_break(cell_asic *chip, bool is_break)
+{
+	chip->tx_cfga.comm_bk = is_break;
+}
+
+/**
+ * @brief Set whether or not this chip is taking a snapshot. The chip will not begin reading new values unless the snapshot bit is cleared.
+ * 
+ * @param chip Pointer to chip config
+ * @param take_snapshot True to take a snapshot, false to end the snapshot
+ */
+void set_snapshot(cell_asic *chip, bool take_snapshot)
+{
+	chip->tx_cfga.snap = take_snapshot;
+}
+
+/**
+ * @brief Enable/disable the discharge timer monitor.
+ * 
+ * @param chip Pointer to chip config
+ * @param enabled True if discharge timer monitor is enabled, false if otherwise
+ */
+void set_discharge_timer_monitor(cell_asic *chip, bool enabled)
+{
+	chip->tx_cfgb.dtmen = enabled;
+}
+
+/**
+ * @brief Configure the discharge timer range, which affects the resolution.
+ * 
+ * @param chip Pointer to chip config
+ * @param large True for large range, False for small range
+ */
+void set_discharge_timer_range(cell_asic *chip, bool large)
+{
+	chip->tx_cfgb.dtrng = large;
+}
+
+/**
+ * @brief Set the discharge monitor timeout, which is dependent on the discharge timer range.
+ * 
+ * @param chip Pointer to chip config
+ * @param timeout Base for timeout multiplicaiton. Must be below six bits.
+ */
+void set_discharge_timeout(cell_asic *chip, uint8_t timeout)
+{
+	if (timeout >> 6 > 0) {
+		printf("Invalid discharge time\n");
+		return;
+		//TODO: Non-critical fault
+	}
+	chip->tx_cfgb.dcto = timeout;
 }
 
 /**
@@ -327,7 +431,7 @@ void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
  * 
  * @param chip Array of chips to get voltage readings of.
  */
-void get_filtered_cell_volrages(cell_asic chips[NUM_CHIPS])
+void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
 	write_config_regs(chips);
 	adbms_wake();
@@ -559,9 +663,9 @@ void pull_voltages(acc_data_t *bmsdata)
 
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
-	/* Pull voltages and thermistors and indiacate if there was a problem during
-   * retrieval */
-	pull_voltages(bmsdata);
+	get_c_adc_voltages(bmsdata->chips);
+
+	// get_s_adc_voltages(bmsdata->chips);
 
 	// The GPIOs in the AUX registers contain voltage readings from the therms.
 	read_aux_registers(bmsdata->chips);
@@ -607,7 +711,7 @@ void segment_configure_balancing(
 	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			set_cell_discharge(&chips[chip], cell,
+			set_cell_discharge(&chips[chip], cell + 1,
 					   discharge_config[chip][cell]);
 
 			// Enable balancing for a chip if a cell is to be discharged
