@@ -154,42 +154,45 @@ nertimer_t ocvTimer;
 
 bool is_first_reading_ = true;
 
-void calc_alpha_temps(acc_data_t *bmsdata)
+/**
+ * @brief Calcualte the cell temperatures for a chip.
+ * 
+ * @param chip_data Pointer to processed chip data.
+ * @param chip Pointer to raw chip data.
+ * @param num_cells The number of cells connected to the chip.
+ */
+void calc_chip_temps(chipdata_t *chip_data, cell_asic *chip, int num_cells)
 {
-	for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
-		bmsdata->chip_data
+	for (int cell = 0; cell < num_cells; cell++) {
+		int sum = 0;
+		for (int therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
+			// TODO: use the correct relevant therm map
+			sum += chip->aux.a_codes[RELEVANT_THERM_MAP_H[cell]
+								     [therm]];
+		}
+		chip_data->cell_temp[cell] = sum / NUM_RELEVANT_THERMS;
 	}
 }
-
-void calc_beta_temps(acc_data_t *bmsdata)
-{
-}
-
-/* we are not corrctly mapping each therm reading to the correct cell. So, we are taking the average of all good readings (not disabled) for a given chip, 
- and assigning that to be the cell val for every cell in the chip*/
 
 void calc_cell_temps(acc_data_t *bmsdata)
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		if (bmsdata->chip_data[chip]->alpha) {
-			for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
-				int sum = 0;
-				for (int therm = 0; therm < NUM_RELEVANT_THERMS;
-				     therm++) {
-					sum += bmsdata->chips[chip].aux.a_codes
-						       [RELEVANT_THERM_MAP_H
-								[cell][therm]]
-				}
-				bmsdata->chip_data[chip].cell_temp[cell].
-			}
+		if (bmsdata->chip_data[chip].alpha) {
+			calc_chip_temps(&bmsdata->chip_data[chip],
+					&bmsdata->chips[chip], NUM_CELLS_ALPHA);
 		} else {
-			calc_beta_temps(bmsdata);
+			calc_chip_temps(&bmsdata->chip_data[chip],
+					&bmsdata->chips[chip], NUM_CELLS_BETA);
 		}
 	}
 
 	/*
+	
 
-	22A CODE FOR REFERENC
+	22A CODE FOR REFERENCE
+
+	//we are not corrctly mapping each therm reading to the correct cell. So, we are taking the average of all good readings (not disabled) for a given chip, 
+    //and assigning that to be the cell val for every cell in the chip
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
@@ -211,12 +214,12 @@ void calc_cell_temps(acc_data_t *bmsdata)
 				}
 			}
 			//printf("\r\n");
-			/* Takes the average temperature of all the relevant thermistors */
-	bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
-	therm_count = 0;
-}
-}
-* /
+
+			// Takes the average temperature of all the relevant thermistors
+			bmsdata->chip_data[c].cell_temp[cell] = temp_sum / therm_count;
+			therm_count = 0;
+	}
+	*/
 }
 
 void calc_pack_temps(acc_data_t *bmsdata)
@@ -311,18 +314,19 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->min_ocv.cellNum = 0;
 	bmsdata->min_ocv.chipIndex = 0;
 
-	uint32_t total_volt = 0;
-	uint32_t total_ocv = 0;
+	float total_volt = 0;
+	float total_ocv = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			/* fings out the maximum cell voltage and location */
-			if (getVoltage(bmsdata->chip_data[c].voltage[cell]) *
+			if (getVoltage(bmsdata->chips[c].cell.c_codes[cell]) *
 				    10000 >
 			    bmsdata->max_voltage.val) {
 				bmsdata->max_voltage.val =
-					getVoltage(bmsdata->chip_data[c]
-							   .voltage[cell]) *
+					getVoltage(
+						bmsdata->chips[c]
+							.cell.c_codes[cell]) *
 					10000;
 				bmsdata->max_voltage.chipIndex = c;
 				bmsdata->max_voltage.cellNum = cell;
@@ -338,12 +342,13 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			}
 
 			/* finds out the minimum cell voltage and location */
-			if (getVoltage(bmsdata->chip_data[c].voltage[cell]) *
+			if (getVoltage(bmsdata->chips[c].cell.c_codes[cell]) *
 				    10000 <
 			    bmsdata->min_voltage.val) {
 				bmsdata->min_voltage.val =
-					getVoltage(bmsdata->chip_data[c]
-							   .voltage[cell]) *
+					getVoltage(
+						bmsdata->chips[c]
+							.cell.c_codes[cell]) *
 					10000;
 				bmsdata->min_voltage.chipIndex = c;
 				bmsdata->min_voltage.cellNum = cell;
@@ -358,31 +363,22 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 				bmsdata->min_ocv.cellNum = cell;
 			}
 
-			total_volt += bmsdata->chip_data[c].voltage[cell];
+			total_volt += getVoltage(
+				bmsdata->chips[c].cell.c_codes[cell]);
 			total_ocv +=
 				bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
 	}
 
-	float real_total_volt = 0;
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int i = 0; i < NUM_CELLS_PER_CHIP; i++) {
-			real_total_volt +=
-				getVoltage(bmsdata->chip_data[chip].voltage[i]);
-		}
-	}
-
 	/* calculate some voltage stats */
-	bmsdata->avg_voltage =
-		10000 * (real_total_volt / (NUM_CELLS_PER_CHIP * NUM_CHIPS));
+	bmsdata->avg_voltage = total_volt / NUM_CELLS;
 
-	bmsdata->pack_voltage =
-		real_total_volt * 10; /* convert to voltage * 10 */
+	bmsdata->pack_voltage = total_volt * 10; /* convert to voltage * 10 */
 
 	bmsdata->delt_voltage =
 		bmsdata->max_voltage.val - bmsdata->min_voltage.val;
 
-	bmsdata->avg_ocv = total_ocv / (NUM_CELLS_PER_CHIP * NUM_CHIPS);
+	bmsdata->avg_ocv = total_ocv / NUM_CELLS;
 	bmsdata->pack_ocv = total_ocv / 1000; /* convert to voltage * 10 */
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
 

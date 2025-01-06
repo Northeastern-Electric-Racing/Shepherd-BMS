@@ -259,7 +259,7 @@ void segment_init(acc_data_t *bmsdata)
 		// TODO: Make sure this is accurate
 		bmsdata->chip_data->alpha = chip % 2 == 0;
 	}
-	write_config_regs(chips);
+	write_config_regs(bmsdata->chips);
 }
 
 /**
@@ -426,17 +426,6 @@ void pull_voltages(acc_data_t *bmsdata)
 	}
 
 	get_c_adc_voltages(bmsdata->chips);
-
-	// TODO: Its kind of silly to just copy voltages like this. We should consolidate
-	// chip data and chips later, or design analyzer to read voltages from chips rather
-	// than chipdata
-
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			bmsdata->chip_data->voltage[cell] =
-				bmsdata->chips->cell.c_codes[cell];
-		}
-	}
 
 	/*
 
@@ -644,78 +633,78 @@ int8_t steinhart_est(uint16_t V)
 	return 80;
 }
 
-void averaging_therm_check(chipdata_t segment_data[NUM_CHIPS])
-{
-	for (int therm = 1; therm <= 16; therm++) {
-		for (int c = 0; c < NUM_CHIPS; c++) {
-			/* Directly update for a set time from start up due to therm voltages
-       * needing to settle */
-			if (therm_avg_counter < THERM_AVG * 10) {
-				segment_data[c].thermistor_value[therm - 1] =
-					segment_data[c]
-						.thermistor_reading[therm - 1];
-				segment_data[c].thermistor_value[therm + 15] =
-					segment_data[c]
-						.thermistor_reading[therm + 15];
-				therm_avg_counter++;
-			} else {
-				/* We need to investigate this. Very sloppy */
-				/* Discard if reading is 33C */
-				if (segment_data[c]
-					    .thermistor_reading[therm - 1] !=
-				    33) {
-					/* If measured value is larger than current "averaged" value,
-           * increment value */
-					if (segment_data[c]
-						    .thermistor_reading[therm -
-									1] >
-					    segment_data[c]
-						    .thermistor_value[therm -
-								      1]) {
-						segment_data[c]
-							.thermistor_value[therm -
-									  1]++;
-						/* If measured value is smaller than current "averaged" value,
-             * decrement value */
-					} else if (segment_data[c]
-							   .thermistor_reading
-								   [therm - 1] <
-						   segment_data[c]
-							   .thermistor_value
-								   [therm - 1]) {
-						segment_data[c]
-							.thermistor_value[therm -
-									  1]--;
-					}
-				}
+// void averaging_therm_check(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	for (int therm = 1; therm <= 16; therm++) {
+// 		for (int c = 0; c < NUM_CHIPS; c++) {
+// 			/* Directly update for a set time from start up due to therm voltages
+//        * needing to settle */
+// 			if (therm_avg_counter < THERM_AVG * 10) {
+// 				segment_data[c].thermistor_value[therm - 1] =
+// 					segment_data[c]
+// 						.thermistor_reading[therm - 1];
+// 				segment_data[c].thermistor_value[therm + 15] =
+// 					segment_data[c]
+// 						.thermistor_reading[therm + 15];
+// 				therm_avg_counter++;
+// 			} else {
+// 				/* We need to investigate this. Very sloppy */
+// 				/* Discard if reading is 33C */
+// 				if (segment_data[c]
+// 					    .thermistor_reading[therm - 1] !=
+// 				    33) {
+// 					/* If measured value is larger than current "averaged" value,
+//            * increment value */
+// 					if (segment_data[c]
+// 						    .thermistor_reading[therm -
+// 									1] >
+// 					    segment_data[c]
+// 						    .thermistor_value[therm -
+// 								      1]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm -
+// 									  1]++;
+// 						/* If measured value is smaller than current "averaged" value,
+//              * decrement value */
+// 					} else if (segment_data[c]
+// 							   .thermistor_reading
+// 								   [therm - 1] <
+// 						   segment_data[c]
+// 							   .thermistor_value
+// 								   [therm - 1]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm -
+// 									  1]--;
+// 					}
+// 				}
 
-				/* See comments above. Identical but for the upper 16 therms */
-				if (segment_data[c]
-					    .thermistor_reading[therm + 15] !=
-				    33) {
-					if (segment_data[c]
-						    .thermistor_reading[therm +
-									15] >
-					    segment_data[c]
-						    .thermistor_value[therm +
-								      15]) {
-						segment_data[c]
-							.thermistor_value[therm +
-									  15]++;
-					} else if (segment_data[c]
-							   .thermistor_reading
-								   [therm + 15] <
-						   segment_data[c].thermistor_value
-							   [therm + 15]) {
-						segment_data[c]
-							.thermistor_value[therm +
-									  15]--;
-					}
-				}
-			}
-		}
-	}
-}
+// 				/* See comments above. Identical but for the upper 16 therms */
+// 				if (segment_data[c]
+// 					    .thermistor_reading[therm + 15] !=
+// 				    33) {
+// 					if (segment_data[c]
+// 						    .thermistor_reading[therm +
+// 									15] >
+// 					    segment_data[c]
+// 						    .thermistor_value[therm +
+// 								      15]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm +
+// 									  15]++;
+// 					} else if (segment_data[c]
+// 							   .thermistor_reading
+// 								   [therm + 15] <
+// 						   segment_data[c].thermistor_value
+// 							   [therm + 15]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm +
+// 									  15]--;
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 // void standard_dev_therm_check(chipdata_t segment_data[NUM_CHIPS])
 // {
@@ -804,14 +793,14 @@ int16_t calc_average(chipdata_t segment_data[NUM_CHIPS])
 // 	}
 // }
 
-void discard_neutrals(chipdata_t segment_data[NUM_CHIPS])
-{
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 17; therm < 28; therm++) {
-			if (segment_data[c].thermistor_reading[therm] == 33) {
-				segment_data[c].thermistor_reading[therm] = 25;
-				segment_data[c].thermistor_value[therm] = 25;
-			}
-		}
-	}
-}
+// void discard_neutrals(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+// 		for (uint8_t therm = 17; therm < 28; therm++) {
+// 			if (segment_data[c].thermistor_reading[therm] == 33) {
+// 				segment_data[c].thermistor_reading[therm] = 25;
+// 				segment_data[c].thermistor_value[therm] = 25;
+// 			}
+// 		}
+// 	}
+// }

@@ -16,8 +16,6 @@ typedef struct {
 	/* These are retrieved from the initial LTC comms */
 	uint16_t voltage
 		[NUM_CELLS_PER_CHIP]; /* store voltage readings from each chip */
-	int8_t thermistor_reading
-		[NUM_THERMS_PER_CHIP]; /* store all therm readings from each chip */
 	int8_t thermistor_value[NUM_THERMS_PER_CHIP];
 	int error_reading;
 
