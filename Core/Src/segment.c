@@ -13,17 +13,11 @@
 #include "mcuWrapper.h"
 #include "cmsis_os.h"
 
-#define ALL_GPIOS_ARE_INPUTS 0x3FF
-#define T_READY		     10 /* microseconds*/
-#define T_IDLE		     4.3 /* milliseconds, minimum. typ is 5.5, max is 6.7 */
-#define T_WAKE		     200 /* microseconds */
-#define T_SLEEP		     1.8 /* seconds minimum, typ is 2, max is 2.2 */
-#define T_REFUP		     2.7 /* milliseconds minimum, typ is 3.5, max is 4.4 */
-
-typedef enum {
-	DISCHARGE_ENABLED = 0,
-	MUTE_ACTIVATED_DISCHARGE_DISABLED = 1
-} MUTE_ST;
+#define T_READY 10 /* microseconds*/
+#define T_IDLE	4.3 /* milliseconds, minimum. typ is 5.5, max is 6.7 */
+#define T_WAKE	200 /* microseconds */
+#define T_SLEEP 1.8 /* seconds minimum, typ is 2, max is 2.2 */
+#define T_REFUP 2.7 /* milliseconds minimum, typ is 3.5, max is 4.4 */
 
 #define THERM_WAIT_TIME	   500 /* ms */
 #define VOLTAGE_WAIT_TIME  500 /* ms */
@@ -105,59 +99,6 @@ void adbms_wake()
 }
 
 /**
- * @brief Initialize a chip with default values. 
- * 
- * @param chip Pointer to chip to initialize.
- */
-void init_chip(cell_asic *chip)
-{
-	chip->tx_cfga.refon = PWR_UP;
-	chip->tx_cfga.cth = CVT_8_1mV;
-	chip->tx_cfga.flag_d = 0;
-
-	// No soak on AUX ADCs
-	chip->tx_cfga.soakon = SOAKON_CLR;
-
-	// short soak time by default
-	chip->tx_cfga.owrng = TIME_32US_TO_4_1MS;
-
-	chip->tx_cfga.owa = OWA0;
-
-	// All GPIOs are inputs by default
-	chip->tx_cfga.gpo = ALL_GPIOS_ARE_INPUTS;
-
-	// Registers are unfrozen
-	chip->tx_cfga.snap = SNAP_OFF;
-
-	// Charging is deactivated
-	chip->tx_cfga.mute_st = MUTE_ACTIVATED_DISCHARGE_DISABLED;
-
-	// Not an endpoint in the daisy chain
-	chip->tx_cfga.comm_bk = false;
-
-	// IIR filter disabled
-	chip->tx_cfga.fc = IIR_FPA_OFF;
-
-	// Init config B
-
-	// If the corresponding fault bits are sent high, it does not affect the IC
-	chip->tx_cfgb.vov = SetOverVoltageThreshold(4.2);
-	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
-
-	// Discharge timer monitor off
-	chip->tx_cfgb.dtmen = DTMEN_OFF;
-
-	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
-	chip->tx_cfgb.dtrng = RANG_0_TO_63_MIN;
-
-	// Disable discharge timer
-	chip->tx_cfgb.dcto = DCTO_TIMEOUT;
-
-	// Disable discharge for all cells
-	chip->tx_cfgb.dcc = 0;
-}
-
-/**
  * @brief Set the status of the REFON bit.
  * 
  * @param chip Pointer to the chip to modify.
@@ -177,6 +118,12 @@ void set_REFON(cell_asic *chip, REFON state)
 void set_volt_adc_comp_thresh(cell_asic *chip, CTH threshold)
 {
 	chip->tx_cfga.cth = threshold;
+}
+
+void set_diagnostic_flags(cell_asic *chip, FLAG_D config)
+{
+	chip->tx_cfga.flag_d =
+		(uint8_t)set_uint16_bit(chip->tx_cfga.flag_d, config, true);
 }
 
 /**
@@ -229,15 +176,15 @@ void set_open_wire_soak_time(cell_asic *chip, OWA time)
  * 
  * @param chip ADBMS6830 chip
  * @param gpio Number of the GPIO pin to change (1-10)
- * @param mode Whether the pin should be an input or an output. True is input, False is output.
+ * @param input True is input, False is output.
  */
-void set_gpio_mode(cell_asic *chip, uint8_t gpio, bool mode)
+void set_gpio_mode(cell_asic *chip, uint8_t gpio, bool input)
 {
 	if (gpio > 10 || gpio < 1) {
 		printf("ERROR: Invalid GPIO pin %d\n", gpio);
 		return;
 	}
-	chip->tx_cfga.gpo = set_uint16_bit(chip->tx_cfga.gpo, gpio - 1, mode);
+	chip->tx_cfga.gpo = set_uint16_bit(chip->tx_cfga.gpo, gpio - 1, input);
 }
 
 /**
@@ -260,6 +207,17 @@ void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq)
 void set_comm_break(cell_asic *chip, bool is_break)
 {
 	chip->tx_cfga.comm_bk = is_break;
+}
+
+/**
+ * @brief Enable/disable discharging through the mute discharge bit.
+ * 
+ * @param chip Pointer to chip config
+ * @param disable_discharge True to disable discharge, false to enable discharge.
+ */
+void set_mute_state(cell_asic *chip, bool disable_discharge)
+{
+	chip->tx_cfga.mute_st = disable_discharge;
 }
 
 /**
@@ -309,6 +267,67 @@ void set_discharge_timeout(cell_asic *chip, uint8_t timeout)
 		//TODO: Non-critical fault
 	}
 	chip->tx_cfgb.dcto = timeout;
+}
+
+/**
+ * @brief Initialize a chip with default values. 
+ * 
+ * @param chip Pointer to chip to initialize.
+ */
+void init_chip(cell_asic *chip)
+{
+	set_REFON(chip, PWR_UP);
+	set_volt_adc_comp_thresh(chip, CVT_8_1mV);
+	chip->tx_cfga.flag_d = 0;
+
+	// No soak on AUX ADCs
+	set_soak_on(chip, SOAKON_CLR);
+
+	// short soak time by default
+	set_open_wire_soak_range(chip, TIME_32US_TO_4_1MS);
+
+	// No open wire detect soak
+	set_open_wire_soak_time(chip, OWA0);
+
+	// All GPIOs are inputs by default
+	set_gpio_mode(chip, 0, true);
+	set_gpio_mode(chip, 1, true);
+	set_gpio_mode(chip, 2, true);
+	set_gpio_mode(chip, 3, true);
+	set_gpio_mode(chip, 4, true);
+	set_gpio_mode(chip, 5, true);
+	set_gpio_mode(chip, 6, true);
+	set_gpio_mode(chip, 7, true);
+	set_gpio_mode(chip, 8, true);
+	set_gpio_mode(chip, 9, true);
+	set_gpio_mode(chip, 10, true);
+
+	// Registers are unfrozen
+	set_snapshot(chip, SNAP_OFF);
+
+	// Charging is deactivated
+	set_mute_state(chip, true);
+
+	// Not an endpoint in the daisy chain
+	set_comm_break(chip, false);
+
+	// IIR filter disabled
+	set_iir_corner_freq(chip, IIR_FPA_OFF);
+
+	// Init config B
+
+	// If the corresponding fault bits are sent high, it does not affect the IC
+	chip->tx_cfgb.vov = SetOverVoltageThreshold(4.2);
+	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
+
+	// Discharge timer monitor off
+	set_discharge_timer_monitor(chip, false);
+
+	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
+	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
+
+	// Disable discharge for all cells
+	chip->tx_cfgb.dcc = 0;
 }
 
 /**
@@ -681,8 +700,7 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		if (chips[chip].tx_cfga.mute_st !=
-		    MUTE_ACTIVATED_DISCHARGE_DISABLED) {
+		if (chips[chip].tx_cfgb.dcc > 0) {
 			return true;
 		}
 	}
@@ -694,7 +712,7 @@ void segment_disable_balancing(cell_asic chips[NUM_CHIPS])
 	// Initializes all array elements to zero
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP] = { 0 };
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		chips[chip].tx_cfga.mute_st = MUTE_ACTIVATED_DISCHARGE_DISABLED;
+		set_mute_state(&chips[chip], true);
 	}
 	segment_configure_balancing(chips, discharge_config);
 }
@@ -702,6 +720,7 @@ void segment_disable_balancing(cell_asic chips[NUM_CHIPS])
 /**
  * @brief Configure which cells should discharge, and send configuration to ICs.
  * 
+ * @param chips Array of ADBMS6830 datastructs
  * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.
  */
 void segment_configure_balancing(
@@ -713,13 +732,7 @@ void segment_configure_balancing(
 		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
 			set_cell_discharge(&chips[chip], cell + 1,
 					   discharge_config[chip][cell]);
-
-			// Enable balancing for a chip if a cell is to be discharged
-			if (chips[chip].tx_cfga.mute_st ==
-				    MUTE_ACTIVATED_DISCHARGE_DISABLED &&
-			    discharge_config[chip][cell]) {
-				chips[chip].tx_cfga.mute_st = DISCHARGE_ENABLED;
-			}
+			set_mute_state(&chips[chip], false);
 		}
 	}
 	write_config_regs(chips);
