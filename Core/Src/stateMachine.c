@@ -340,18 +340,18 @@ bool sm_fault_eval(fault_eval_t *item)
 
 	if (is_timer_active(&item->timer)) {
 		if (!fault_present) {
-			printf("\t\t\t*******Fault cleared: %s\r\n", index->id);
-			cancel_timer(&index->timer);
-			compute_send_fault_timer_message(0, index->code,
-							 index->data_1);
+			printf("\t\t\t*******Fault cleared: %s\r\n", item->id);
+			cancel_timer(&item->timer);
+			compute_send_fault_timer_message(0, item->code,
+							 item->data_1);
 			return 0;
 		}
 
-		if (is_timer_expired(&index->timer) && fault_present) {
-			printf("\t\t\t*******Faulted: %s\r\n", index->id);
-			compute_send_fault_timer_message(2, index->code,
-							 index->data_1);
-			return index->code;
+		if (is_timer_expired(&item->timer) && fault_present) {
+			printf("\t\t\t*******Faulted: %s\r\n", item->id);
+			compute_send_fault_timer_message(2, item->code,
+							 item->data_1);
+			return item->code;
 		}
 
 		else
@@ -359,17 +359,17 @@ bool sm_fault_eval(fault_eval_t *item)
 
 	}
 
-	else if (!is_timer_active(&index->timer) && fault_present) {
-		printf("\t\t\t*******Starting fault timer: %s\r\n", index->id);
-		start_timer(&index->timer, index->timeout);
-		compute_send_fault_timer_message(1, index->code, index->data_1);
+	else if (!is_timer_active(&item->timer) && fault_present) {
+		printf("\t\t\t*******Starting fault timer: %s\r\n", item->id);
+		start_timer(&item->timer, item->timeout);
+		compute_send_fault_timer_message(1, item->code, item->data_1);
 
 		return 0;
 	}
-	/* if (index->code == CELL_VOLTAGE_TOO_LOW) {
+	/* if (item->code == CELL_VOLTAGE_TOO_LOW) {
           printf("\t\t\t*******Not fautled!!!!!\t%d\r\n",
-  !is_timer_active(&index->timer) && condition1 && condition2); printf("More
-  stats...\t:%d\t%d\r\n", is_timer_expired(&index->timer), index->timer.active);
+  !is_timer_active(&item->timer) && condition1 && condition2); printf("More
+  stats...\t:%d\t%d\r\n", is_timer_expired(&item->timer), item->timer.active);
   } */
 	printf("err should not get here");
 	return 0;
