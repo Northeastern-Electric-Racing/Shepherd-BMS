@@ -323,12 +323,33 @@ void compute_send_acc_status_message(acc_data_t *bmsdata)
 	queue_can_msg(bms_can_msgs[ACC_STATUS]);
 }
 
+void compute_send_fault_status_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint32_t fault_crit;
+		uint32_t fault_noncrit;
+	} fault_status_msg_data;
+
+	/* convert to big endian */
+	endian_swap(&fault_status_msg_data.fault_crit,
+		    sizeof(fault_status_msg_data.fault_crit));
+	endian_swap(&fault_status_msg_data.fault_noncrit,
+		    sizeof(fault_status_msg_data.fault_noncrit));
+
+	fault_status_msg_data.fault_crit = bmsdata->fault_code_crit;
+	fault_status_msg_data.fault_noncrit = bmsdata->fault_code_noncrit;
+
+	memcpy(bms_can_msgs[FAULT_STATUS].data, &fault_status_msg_data,
+	       sizeof(fault_status_msg_data));
+
+	queue_can_msg(bms_can_msgs[FAULT_STATUS]);
+}
+
 void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 				     bool balance)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t state;
-		uint32_t fault;
 		int8_t temp_avg;
 		uint8_t temp_internal;
 		uint8_t balance;
@@ -336,14 +357,9 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 
 	bms_status_msg_data.temp_avg = (int8_t)(bmsdata->avg_temp);
 	bms_status_msg_data.state = (uint8_t)(bms_state);
-	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
 	bms_status_msg_data.balance =
 		(uint8_t)(balance); // segment_is_balancing()
-
-	/* convert to big endian */
-	endian_swap(&bms_status_msg_data.fault,
-		    sizeof(bms_status_msg_data.fault));
 
 	memcpy(bms_can_msgs[BMS_STATUS].data, &bms_status_msg_data,
 	       sizeof(bms_status_msg_data));

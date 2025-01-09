@@ -58,7 +58,11 @@ void init_can_msg_config()
 
 	can_msg_t bms_status_msg;
 	bms_status_msg.id = BMS_STATUS_CANID;
-	bms_status_msg.len = 8;
+	bms_status_msg.len = 4;
+
+	can_msg_t fault_status_msg;
+	fault_status_msg.id = FAULT_STATUS_CANID;
+	fault_status_msg.len = 8;
 
 	can_msg_t shutdown_ctrl_msg;
 	shutdown_ctrl_msg.id = SHUTDOWN_CTRL_CANID;
@@ -84,9 +88,9 @@ void init_can_msg_config()
 	segment_temp_msg.id = SEGMENT_TEMP_CANID;
 	segment_temp_msg.len = 6;
 
-	can_msg_t fault_msg;
-	fault_msg.id = FAULT_CANID;
-	fault_msg.len = 5;
+	can_msg_t fault_detail_msg;
+	fault_detail_msg.id = FAULT_CANID;
+	fault_detail_msg.len = 5;
 
 	can_msg_t noise_msg;
 	noise_msg.id = NOISE_CANID;
@@ -107,13 +111,14 @@ void init_can_msg_config()
 	bms_can_msgs[CHARGE] = charge_msg;
 	bms_can_msgs[ACC_STATUS] = acc_status_msg;
 	bms_can_msgs[BMS_STATUS] = bms_status_msg;
+	bms_can_msgs[FAULT_STATUS] = fault_status_msg;
 	bms_can_msgs[SHUTDOWN_CTRL] = shutdown_ctrl_msg;
 	bms_can_msgs[CELL_DATA] = cell_data_msg;
 	bms_can_msgs[CELL_VOLTAGE] = cell_voltage_msg;
 	bms_can_msgs[CURRENT] = current_msg;
 	bms_can_msgs[CELL_TEMP] = cell_temp_msg;
 	bms_can_msgs[SEGMENT_TEMP] = segment_temp_msg;
-	bms_can_msgs[FAULT] = fault_msg;
+	bms_can_msgs[FAULT] = fault_detail_msg;
 	bms_can_msgs[NOISE] = noise_msg;
 	bms_can_msgs[DEBUG] = debug_msg;
 	bms_can_msgs[FAULT_TIMER] = fault_timer_msg;

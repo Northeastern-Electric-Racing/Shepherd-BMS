@@ -110,6 +110,14 @@ void compute_set_fault(int fault_state);
 void compute_send_acc_status_message(acc_data_t *bmsdata);
 
 /**
+ * @brief sends fault status message
+ *
+ * @param bms_state
+ *
+ */
+void compute_send_fault_status_message(acc_data_t *bmsdata);
+
+/**
  * @brief sends BMS status message
  *
  * @param bms_state
