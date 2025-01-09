@@ -100,6 +100,10 @@ void init_can_msg_config()
 	debug_msg.id = DEBUG_CANID;
 	debug_msg.len = 8; // yaml decodes this to 8 bytes
 
+	can_msg_t fault_timer_msg;
+	fault_timer_msg.id = FAULT_TIMER_CANID;
+	fault_timer_msg.len = 4;
+
 	// rl_data_t rl_discharge_data = { .msg_rate = 5000 };
 	// rl_data_t rl_charge_data = { .msg_rate = 0 };
 
@@ -117,6 +121,7 @@ void init_can_msg_config()
 	bms_can_msgs[FAULT] = fault_detail_msg;
 	bms_can_msgs[NOISE] = noise_msg;
 	bms_can_msgs[DEBUG] = debug_msg;
+	bms_can_msgs[FAULT_TIMER] = fault_timer_msg;
 
 	// rl_data[DISCHARGE] = rl_discharge_data;
 	// rl_data[CHARGE] = rl_charge_data;
@@ -163,6 +168,9 @@ rl_data_t *get_rl_msg(uint32_t can_id)
 		break;
 	case DEBUG_CANID:
 		return &rl_data[DEBUG];
+		break;
+	case FAULT_TIMER_CANID:
+		return &rl_data[FAULT_TIMER];
 		break;
 	default:
 		break;
