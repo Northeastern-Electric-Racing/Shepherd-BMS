@@ -95,7 +95,22 @@ inline uint16_t set_uint16_bit(uint16_t number, uint16_t n, bool x)
  */
 void adbms_wake()
 {
-	adBmsWakeupIc(NUM_CHIPS);
+	adBmsCsLow();
+	adBmsCsHigh();
+
+	/* 
+	DEBUG: Theoretically, below should work for one IC, but it is not. 
+	It shold be necessarry for multiple IC operation.
+	*/
+
+	// for (uint8_t ic = 0; ic < total_ic; ic++) {
+	// 	adBmsCsLow();
+	// 	Delay_ms(4);
+	// 	adBmsCsHigh();
+	// 	Delay_ms(4);
+	// }
+
+	// adBmsWakeupIc(NUM_CHIPS);
 }
 
 /**
@@ -290,7 +305,6 @@ void init_chip(cell_asic *chip)
 	set_open_wire_soak_time(chip, OWA0);
 
 	// All GPIOs are inputs by default
-	set_gpio_mode(chip, 0, true);
 	set_gpio_mode(chip, 1, true);
 	set_gpio_mode(chip, 2, true);
 	set_gpio_mode(chip, 3, true);
@@ -363,7 +377,7 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
  * 
  * @param chips Array of chips to write config registers of.
  */
-inline void write_config_regs(cell_asic chips[NUM_CHIPS])
+void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake();
 	write_adbms_data(chips, WRCFGA, Config, A);
@@ -386,25 +400,18 @@ void segment_init(acc_data_t *bmsdata)
 }
 
 /**
- * @brief Get voltage readings from the C-ADCs.
+ * @brief Get voltage readings from the C-ADCs. Takes a single shot measurement.
  * 
  * @param chips Array of chips to get voltage readings from.
  */
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	write_config_regs(chips);
-	adbms_wake();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
-	adBmsPollAdc(PLCADC);
 
-	adbms_wake();
+	// Take single shot measurement
+	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLCADC);
 	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
-	// read_adbms_data(chip, RDCVA, Cell, A);
-	// read_adbms_data(chip, RDCVB, Cell, B);
-	// read_adbms_data(chip, RDCVC, Cell, C);
-	// read_adbms_data(chip, RDCVD, Cell, D);
-	// read_adbms_data(chip, RDCVE, Cell, E);
-	// read_adbms_data(chip, RDCVF, Cell, F);
 }
 
 /**
@@ -682,11 +689,13 @@ void pull_voltages(acc_data_t *bmsdata)
 
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
+	// printf("Get C adc voltages\n");
 	get_c_adc_voltages(bmsdata->chips);
 
 	// get_s_adc_voltages(bmsdata->chips);
 
 	// The GPIOs in the AUX registers contain voltage readings from the therms.
+	// printf("Get therms\n");
 	read_aux_registers(bmsdata->chips);
 	// If you want redundant Thermistor readings, uncomment the following.
 	read_aux2_registers(bmsdata->chips);

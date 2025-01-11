@@ -29,6 +29,7 @@ void vGetSegmentData(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
+		// printf("Get segment data\n");
 		segment_retrieve_data(bmsdata);
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);

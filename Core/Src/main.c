@@ -45,6 +45,7 @@
 // #define DEBUG_RAW_VOLTAGES
 #define DEBUG_RAW_VOLTAGES_FORMATTED
 // #define DEBUG_OCV
+// #define DEUBG_THERMS
 // #define DEBUG_OTHER
 // etc etc
 //#endif
@@ -194,7 +195,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
-        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
+        printf("%d\t", acc_data->chips[c].cell.c_codes[cell]);
     }
     printf("\n");
   }
@@ -205,7 +206,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   {
     for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
     {
-        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
+        printf("%.3f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
     }
     printf("\n");
   }
@@ -238,7 +239,7 @@ const void print_bms_stats(acc_data_t *acc_data)
       
         printf("\n");
   }
-    
+  
   printf("UnFiltered Thermistor Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
@@ -252,6 +253,9 @@ const void print_bms_stats(acc_data_t *acc_data)
         printf("\n");
     }
 
+  #endif
+
+  #ifdef DEUBG_THERMS
    printf("Cell Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {

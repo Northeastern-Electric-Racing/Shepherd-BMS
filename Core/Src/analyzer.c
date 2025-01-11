@@ -371,7 +371,8 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	}
 
 	/* calculate some voltage stats */
-	bmsdata->avg_voltage = total_volt / NUM_CELLS;
+	// TODO: Make this based on total cells when actual segment is here
+	bmsdata->avg_voltage = (total_volt * 10000) / 16;
 
 	bmsdata->pack_voltage = total_volt * 10; /* convert to voltage * 10 */
 
