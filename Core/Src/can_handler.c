@@ -93,9 +93,8 @@ void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
  */
 void init_can_msg_config()
 {
-	init_rl_can_msg(DISCHARGE_CANID, 4000);
-	init_rl_can_msg(CHARGE_CANID, 3000);
-	init_rl_can_msg(BMS_STATUS_CANID, 7000);
+	// EXAMPLE
+	//init_rl_can_msg(DISCHARGE_CANID, 4000);
 }
 
 void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
