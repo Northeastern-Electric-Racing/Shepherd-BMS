@@ -67,6 +67,8 @@ void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
 		rl_bms_msgs = malloc(sizeof(struct node_t));
 		rl_bms_msgs->val.id = id;
 		rl_bms_msgs->val.msg_rate = msg_rate;
+		rl_bms_msgs->val.prev_tick = HAL_GetTick();
+		rl_bms_msgs->next = NULL;
 		return;
 	}
 
@@ -76,11 +78,13 @@ void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
 		curr = curr->next;
 	}
 
-	curr->next = malloc(sizeof(struct node_t));
-	curr = curr->next;
+	struct node_t *next = malloc(sizeof(struct node_t));
+	next->val.id = id;
+	next->val.msg_rate = msg_rate;
+	next->val.prev_tick = HAL_GetTick();
+	next->next = NULL;
 
-	curr->val.id = id;
-	curr->val.msg_rate = msg_rate;
+	curr->next = next;
 }
 
 /**
@@ -89,7 +93,9 @@ void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
  */
 void init_can_msg_config()
 {
-	init_rl_can_msg(DISCHARGE_CANID, 5000);
+	init_rl_can_msg(DISCHARGE_CANID, 4000);
+	init_rl_can_msg(CHARGE_CANID, 3000);
+	init_rl_can_msg(BMS_STATUS_CANID, 7000);
 }
 
 void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
@@ -161,8 +167,10 @@ int8_t queue_can_msg(can_msg_t msg)
 			    curr->val.prev_tick +
 				    pdMS_TO_TICKS(curr->val.msg_rate)) {
 				// block message
+				printf("Blocked 0x%lX\t", msg.id);
 				return 0;
 			} else {
+				printf("Sent 0x%lX\n", msg.id);
 				curr->val.prev_tick = HAL_GetTick();
 				break;
 			}
