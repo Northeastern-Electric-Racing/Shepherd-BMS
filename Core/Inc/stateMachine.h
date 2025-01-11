@@ -38,18 +38,18 @@ bool sm_charging_check(acc_data_t *bmsdata);
  * @note Should be bitwise OR'ed with the current fault status
  *
  * @param accData
- * @return uint32_t
+ * @return uint64_t to be cast to a bms_fault_t
  */
-uint32_t sm_fault_return(acc_data_t *accData);
+uint64_t sm_fault_return(acc_data_t *accData);
 
 /**
  * @brief Used in parellel to faultReturn(), calculates each fault to append the
  * fault status
  *
- * @param index
- * @return fault_code
+ * @param fault_item
+ * @return fault_status
  */
-uint32_t sm_fault_eval(fault_eval_t *index);
+bool sm_fault_eval(fault_eval_t *fault_item);
 
 /**
  * @brief handles the state machine, calls the appropriate handler function and

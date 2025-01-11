@@ -19,7 +19,9 @@
 #define ACC_STATUS_CANID    0x80
 #define ACC_STATUS_SIZE	    8
 #define BMS_STATUS_CANID    0x81
-#define BMS_STATUS_SIZE	    8
+#define BMS_STATUS_SIZE	    4
+#define FAULT_STATUS_CANID  0x89
+#define FAULT_STATUS_SIZE   8
 #define SHUTDOWN_CTRL_CANID 0x82
 #define SHUTDOWN_CTRL_SIZE  1
 #define CELL_DATA_CANID	    0x83
@@ -32,12 +34,14 @@
 #define CELL_TEMP_SIZE	    8
 #define SEGMENT_TEMP_CANID  0x85
 #define SEGMENT_TEMP_SIZE   6
-#define FAULT_CANID	    0x703
-#define FAULT_SIZE	    6
+#define FAULT_CANID	    0x703 // TODO: cleanup
+#define FAULT_SIZE	    5
 #define NOISE_CANID	    0x88
 #define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
 #define DEBUG_SIZE	    8
+#define FAULT_TIMER_CANID   0x6FF
+#define FAULT_TIMER_SIZE    4
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 

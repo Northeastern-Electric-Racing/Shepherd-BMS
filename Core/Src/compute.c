@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "bmsConfig.h"
 #include "can_handler.h"
+#include <math.h>
 
 #define REF_CHANNEL  0
 #define VOUT_CHANNEL 1
@@ -331,12 +332,37 @@ void compute_send_acc_status_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
+void compute_send_fault_status_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint32_t fault_crit;
+		uint32_t fault_noncrit;
+	} fault_status_msg_data;
+
+	/* convert to big endian */
+	endian_swap(&fault_status_msg_data.fault_crit,
+		    sizeof(fault_status_msg_data.fault_crit));
+	endian_swap(&fault_status_msg_data.fault_noncrit,
+		    sizeof(fault_status_msg_data.fault_noncrit));
+
+	fault_status_msg_data.fault_crit = bmsdata->fault_code_crit;
+	fault_status_msg_data.fault_noncrit = bmsdata->fault_code_noncrit;
+
+	can_msg_t fault_msg;
+	fault_msg.id = FAULT_STATUS_CANID;
+	fault_msg.len = FAULT_STATUS_SIZE;
+
+	memcpy(fault_msg.data, &fault_status_msg_data,
+	       sizeof(fault_status_msg_data));
+
+	queue_can_msg(fault_msg);
+}
+
 void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 				     bool balance)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t state;
-		uint32_t fault;
 		int8_t temp_avg;
 		uint8_t temp_internal;
 		uint8_t balance;
@@ -344,14 +370,9 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 
 	bms_status_msg_data.temp_avg = (int8_t)(bmsdata->avg_temp);
 	bms_status_msg_data.state = (uint8_t)(bms_state);
-	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
 	bms_status_msg_data.balance =
 		(uint8_t)(balance); // segment_is_balancing()
-
-	/* convert to big endian */
-	endian_swap(&bms_status_msg_data.fault,
-		    sizeof(bms_status_msg_data.fault));
 
 	can_msg_t msg;
 	msg.id = BMS_STATUS_CANID;
@@ -572,6 +593,33 @@ void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 	msg.len = FAULT_SIZE;
 
 	memcpy(msg.data, &fault_msg_data, sizeof(fault_msg_data));
+
+	queue_can_msg(msg);
+}
+
+void compute_send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
+				      uint16_t data_1)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t start_stop;
+		uint8_t fault_code;
+		int16_t data_1;
+	} fault_timer_msg_data;
+
+	fault_timer_msg_data.start_stop = start_stop;
+	fault_timer_msg_data.fault_code = log2(fault_code);
+	fault_timer_msg_data.data_1 = data_1;
+
+	endian_swap(&fault_timer_msg_data.fault_code,
+		    sizeof(fault_timer_msg_data.fault_code));
+	endian_swap(&fault_timer_msg_data.data_1,
+		    sizeof(fault_timer_msg_data.data_1));
+
+	can_msg_t msg;
+	msg.id = FAULT_TIMER_CANID;
+	msg.len = FAULT_TIMER_SIZE;
+
+	memcpy(msg.data, &fault_timer_msg_data, sizeof(fault_timer_msg_data));
 
 	queue_can_msg(msg);
 }
