@@ -37,7 +37,6 @@ chipdata_t previous_data[NUM_CHIPS] = {};
 uint16_t discharge_commands[NUM_CHIPS] = {};
 
 nertimer_t therm_timer;
-nertimer_t voltage_reading_timer;
 nertimer_t variance_timer;
 
 int therm_error = 0; // not faulted
@@ -49,26 +48,9 @@ const int mapping_correction[12] = { 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10 };
 
 uint16_t therm_settle_time_ = 0;
 
-// TODO: replace for new thermistors
-const uint32_t VOLT_TEMP_CONV[106] = {
-	157300, 148800, 140300, 131800, 123300, 114800, 108772, 102744, 96716,
-	90688,	84660,	80328,	75996,	71664,	67332,	63000,	59860,	56720,
-	53580,	50440,	47300,	45004,	42708,	40412,	38116,	35820,	34124,
-	32428,	30732,	29036,	27340,	26076,	24812,	23548,	22284,	21020,
-	20074,	19128,	18182,	17236,	16290,	15576,	14862,	14148,	13434,
-	12720,	12176,	11632,	11088,	10544,	10000,	9584,	9168,	8753,
-	8337,	7921,	7600,	7279,	6957,	6636,	6315,	6065,	5816,
-	5566,	5317,	5067,	4872,	4676,	4481,	4285,	4090,	3936,
-	3782,	3627,	3473,	3319,	3197,	3075,	2953,	2831,	2709,
-	2612,	2514,	2417,	2319,	2222,	2144,	2066,	1988,	1910,
-	1832,	1769,	1706,	1644,	1581,	1518,	1467,	1416,	1366,
-	1315,	1264,	1223,	1181,	1140,	1098,	1057
-};
-
 const int32_t VOLT_TEMP_CALIB_OFFSET = 0;
 
 /* private function prototypes */
-int8_t steinhart_est(uint16_t V);
 void variance_therm_check(void);
 void discard_neutrals(chipdata_t segment_data[NUM_CHIPS]);
 void pull_chip_configuration(void);
@@ -539,155 +521,6 @@ void adBms6830_read_status_registers(cell_asic chips[NUM_CHIPS])
 	read_adbms_data(chips, RDSTATE, Status, E);
 }
 
-void pull_voltages(acc_data_t *bmsdata)
-{
-	/**
-   * If we haven't waited long enough between pulling voltage data
-   * just copy over the contents of the last good reading and the fault status
-   * from the most recent attempt
-   */
-
-	// TODO: should probably get rid of this
-	if (!is_timer_expired(&voltage_reading_timer) &&
-	    voltage_reading_timer.active) {
-		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(&bmsdata->chips[i], &previous_data[i],
-			       sizeof(bmsdata->chips[i]));
-		}
-	}
-
-	get_c_adc_voltages(bmsdata->chips);
-
-	/*
-
-	OLD CODE THAT DID WORK FOR ADBMS. KEEPING IN FOR DEBUGGING.
-
-	uint16_t raw_voltages[NUM_CHIPS][NUM_CELLS_PER_CHIP];
-
-	// printVoltages(TOTAL_IC, &IC[0], Cell);
-
-	float voltage;
-	uint8_t ic = 0;
-	int16_t temp;
-	// number of cells
-	uint8_t channel = 16;
-	uint8_t type = Cell;
-	for (uint8_t index = 0; index < channel; index++) {
-		if (type == Cell) {
-			temp = IC[ic].cell.c_codes[index];
-		} else if (type == AvgCell) {
-			temp = IC[ic].acell.ac_codes[index];
-		} else if (type == F_volt) {
-			temp = IC[ic].fcell.fc_codes[index];
-		} else if (type == S_volt) {
-			temp = IC[ic].scell.sc_codes[index];
-		} else if (type == Aux) {
-			temp = IC[ic].aux.a_codes[index];
-		} else if (type == RAux) {
-			temp = IC[ic].raux.ra_codes[index];
-		}
-
-		voltage = getVoltage(temp);
-
-		raw_voltages[ic][index] = (uint16_t)temp;
-
-		segment_data[ic].voltage[index] = raw_voltages[ic][index];
-
-		if (type == Cell) {
-			// printf("C%d=%fV= %d raw\r\n", (index + 1), voltage,
-			//        segment_data[ic].voltage[index]);
-			if (index == (channel - 1)) {
-				// printf("CCount:%d,", IC[ic].cccrc.cmd_cntr);
-				// printf("PECError:%d", IC[ic].cccrc.cell_pec);
-			}
-		}
-	}
-	// printf("\n\n");
-
-	*/
-
-	/*
-	float total_volts = 0;
-	for (int i = 0; i < 16; i++) {
-		printf("Raw %d: %f\n", i, getVoltage(segment_data[ic].voltage[i]));
-		total_volts += getVoltage(segment_data[ic].voltage[i]);
-	}
-	printf("TOTAL VOLTAGE: %f", total_volts);*/
-
-	/*
-	if (MEASURE_AVG_CELL == ENABLED) {
-		adBmsReadData(TOTAL_IC, &IC[0], RDACA, AvgCell, A);
-		adBmsReadData(TOTAL_IC, &IC[0], RDACB, AvgCell, B);
-		adBmsReadData(TOTAL_IC, &IC[0], RDACC, AvgCell, C);
-		adBmsReadData(TOTAL_IC, &IC[0], RDACD, AvgCell, D);
-		adBmsReadData(TOTAL_IC, &IC[0], RDACE, AvgCell, E);
-		adBmsReadData(TOTAL_IC, &IC[0], RDACF, AvgCell, F);
-		printVoltages(TOTAL_IC, &IC[0], AvgCell);
-	}
-
-	if (MEASURE_F_CELL == ENABLED) {
-		adBmsReadData(TOTAL_IC, &IC[0], RDFCA, F_volt, A);
-		adBmsReadData(TOTAL_IC, &IC[0], RDFCB, F_volt, B);
-		adBmsReadData(TOTAL_IC, &IC[0], RDFCC, F_volt, C);
-		adBmsReadData(TOTAL_IC, &IC[0], RDFCD, F_volt, D);
-		adBmsReadData(TOTAL_IC, &IC[0], RDFCE, F_volt, E);
-		adBmsReadData(TOTAL_IC, &IC[0], RDFCF, F_volt, F);
-		printVoltages(TOTAL_IC, &IC[0], F_volt);
-	} */
-
-	/*
-	if (MEASURE_S_VOLTAGE == ENABLED) {
-		adBmsWakeupIc(TOTAL_IC);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSVA, S_volt, A);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSVB, S_volt, B);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSVC, S_volt, C);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSVD, S_volt, D);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSVE, S_volt, E);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSVF, S_volt, F);
-		printVoltages(TOTAL_IC, &IC[0], S_volt);
-	} */
-
-	/*
-	if (MEASURE_AUX == ENABLED) {
-		adBms6830_Adax(AUX_OW_OFF,
-			       PUP_DOWN, AUX_ALL);
-		adBmsPollAdc(PLAUX1);
-		adBmsReadData(TOTAL_IC, &IC[0], RDAUXA, Aux, A);
-		adBmsReadData(TOTAL_IC, &IC[0], RDAUXB, Aux, B);
-		adBmsReadData(TOTAL_IC, &IC[0], RDAUXC, Aux, C);
-		adBmsReadData(TOTAL_IC, &IC[0], RDAUXD, Aux, D);
-		printVoltages(TOTAL_IC, &IC[0], Aux);
-	} */
-
-	/*
-	if (MEASURE_RAUX == ENABLED) {
-		adBmsWakeupIc(TOTAL_IC);
-		adBms6830_Adax2(AUX_ALL);
-		adBmsPollAdc(PLAUX2);
-		adBmsReadData(TOTAL_IC, &IC[0], RDRAXA, RAux, A);
-		adBmsReadData(TOTAL_IC, &IC[0], RDRAXB, RAux, B);
-		adBmsReadData(TOTAL_IC, &IC[0], RDRAXC, RAux, C);
-		adBmsReadData(TOTAL_IC, &IC[0], RDRAXD, RAux, D);
-		printVoltages(TOTAL_IC, &IC[0], RAux);
-	}	*/
-
-	/*
-	if (MEASURE_STAT == ENABLED) {
-		adBms6830_Adax(AUX_OW_OFF,
-			       PUP_DOWN, AUX_ALL);
-		adBmsPollAdc(PLAUX1);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSTATA, Status, A);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSTATB, Status, B);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSTATC, Status, C);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSTATD, Status, D);
-		adBmsReadData(TOTAL_IC, &IC[0], RDSTATE, Status, E);
-		printStatus(TOTAL_IC, &IC[0], Status, ALL_GRP);
-	}*/
-
-	/* Start the timer between readings if successful */
-	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-}
-
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
 	// printf("Get C adc voltages\n");
@@ -740,18 +573,6 @@ void segment_configure_balancing(
 		}
 	}
 	write_config_regs(bmsdata->chips);
-}
-
-int8_t steinhart_est(uint16_t V)
-{
-	/* min temp - max temp with buffer on both */
-	for (int i = -25; i < 80; i++) {
-		if (V > VOLT_TEMP_CONV[i + 25]) {
-			return i;
-		}
-	}
-
-	return 80;
 }
 
 // void averaging_therm_check(chipdata_t segment_data[NUM_CHIPS])

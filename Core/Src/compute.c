@@ -155,7 +155,6 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 
 void compute_set_fault(int fault_state)
 {
-	// TODO work with charger fw on this
 	HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin, !fault_state);
 	// if (true) digitalWrite(CHARGE_SAFETY_RELAY, 1);
 }
