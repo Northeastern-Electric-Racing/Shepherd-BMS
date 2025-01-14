@@ -141,22 +141,21 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state);
  *
  * @return Returns a fault if we are not able to send
  */
-void compute_send_cell_data_message(acc_data_t *bmsdata);
+void compute_send_cell_voltage_message(acc_data_t *bmsdata);
 
 /**
- * @brief sends cell voltage message
+ * @brief Send a message over CAN containing the data of an individual cell.
  *
- * @param cell_id
- * @param instant_volt
- * @param internal_res
- * @param shunted
- * @param open_voltage
+ * @param cell_id The ID of the cell.
+ * @param instant_volt Raw cell voltage reading.
+ * @param internal_res Internal resistance of the cell.
+ * @param temperature Cell temperature.
+ * @param discharging Whether or not the cell is discharging while balancing.
  *
- * @return Returns a fault if we are not able to send
  */
-void compute_send_cell_voltage_message(uint8_t cell_id, uint16_t instant_volt,
-				       uint16_t internal_res, uint8_t shunted,
-				       uint16_t open_voltage);
+void compute_send_cell_data_message(uint8_t cell_id, uint16_t instant_volt,
+				    uint16_t internal_res, uint8_t shunted,
+				    bool discharging);
 
 /**
  * @brief sends out the calculated values of currents

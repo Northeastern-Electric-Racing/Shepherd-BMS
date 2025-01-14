@@ -345,7 +345,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
 
 	compute_send_acc_status_message(bmsdata);
-	compute_send_cell_data_message(bmsdata);
+	compute_send_cell_voltage_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)

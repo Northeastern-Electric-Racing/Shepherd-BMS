@@ -395,6 +395,11 @@ int main(void)
   state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
   assert(state_machine_thread);
 
+  if (DEBUG_MODE_ENABLED) {
+    debug_mode_thread = osThreadNew(vDebugMode, acc_data, &debug_mode_attrs);
+    assert(debug_mode_thread);
+  }
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */

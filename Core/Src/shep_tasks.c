@@ -100,3 +100,34 @@ void vStateMachine(void *pv_params)
 		osDelay(10);
 	}
 }
+
+osThreadId_t debug_mode_thread;
+const osThreadAttr_t debug_mode_attrs = { .name = "Debug Mode Thread",
+					  .stack_size = 2048,
+					  .priority = osPriorityNormal };
+void vDebugMode(void *pv_params)
+{
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
+	while (69 < 420) {
+		int cell_ID = 0;
+
+		for (int c = 0; c < NUM_CHIPS; c++) {
+			uint8_t num_cells =
+				get_num_cells(&bmsdata->chip_data[c]);
+			for (int cell = 0; cell < num_cells; cell++) {
+				compute_send_cell_data_message(
+					cell_ID,
+					bmsdata->chips[c].cell.c_codes[cell],
+					bmsdata->chip_data[c]
+						.cell_resistance[cell],
+					bmsdata->chip_data[c].cell_temp[cell],
+					(bmsdata->chips[cell].tx_cfgb.dcc >>
+					 cell) & 1u);
+				cell_ID += 1; 
+
+				osDelay(6);
+			}
+		}
+	}
+}

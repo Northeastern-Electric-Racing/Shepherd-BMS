@@ -330,8 +330,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
-	bms_status_msg_data.balance =
-		(uint8_t)(balance);
+	bms_status_msg_data.balance = (uint8_t)(balance);
 
 	/* convert to big endian */
 	endian_swap(&bms_status_msg_data.fault,
@@ -357,7 +356,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	queue_can_msg(bms_can_msgs[SHUTDOWN_CTRL]);
 }
 
-void compute_send_cell_data_message(acc_data_t *bmsdata)
+void compute_send_cell_voltage_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t high_cell_voltage;
@@ -390,32 +389,29 @@ void compute_send_cell_data_message(acc_data_t *bmsdata)
 	queue_can_msg(bms_can_msgs[CELL_DATA]);
 }
 
-void compute_send_cell_voltage_message(uint8_t cell_id,
-				       uint16_t instant_voltage,
-				       uint16_t internal_Res, uint8_t shunted,
-				       uint16_t open_voltage)
+void compute_send_cell_data_message(uint8_t cell_id, uint16_t instant_voltage,
+				    uint16_t internal_Res, uint8_t temperature,
+				    bool discharging)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t cellID;
 		uint16_t instantVoltage;
 		uint16_t internalResistance;
-		uint8_t shunted;
-		uint16_t openVoltage;
+		int8_t temperature;
+		bool discharging;
 	} cell_voltage_msg_data;
 
 	cell_voltage_msg_data.cellID = cell_id;
 	cell_voltage_msg_data.instantVoltage = instant_voltage;
 	cell_voltage_msg_data.internalResistance = internal_Res;
-	cell_voltage_msg_data.shunted = shunted;
-	cell_voltage_msg_data.openVoltage = open_voltage;
+	cell_voltage_msg_data.temperature = temperature;
+	cell_voltage_msg_data.discharging = discharging;
 
 	/* convert to big endian */
 	endian_swap(&cell_voltage_msg_data.instantVoltage,
 		    sizeof(cell_voltage_msg_data.instantVoltage));
 	endian_swap(&cell_voltage_msg_data.internalResistance,
 		    sizeof(cell_voltage_msg_data.internalResistance));
-	endian_swap(&cell_voltage_msg_data.openVoltage,
-		    sizeof(cell_voltage_msg_data.openVoltage));
 
 	memcpy(bms_can_msgs[CELL_VOLTAGE].data, &cell_voltage_msg_data,
 	       sizeof(cell_voltage_msg_data));
