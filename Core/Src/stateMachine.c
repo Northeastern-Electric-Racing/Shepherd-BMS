@@ -101,6 +101,7 @@ void init_charging(acc_data_t *bmsdata)
 	return;
 }
 
+// TODO: Improve algorithm. Change for new cells. Make more configurable.
 void handle_charging(acc_data_t *bmsdata)
 {
 	if (!compute_charger_connected()) {
@@ -159,9 +160,6 @@ void handle_faulted(acc_data_t *bmsdata)
 
 	else {
 		compute_set_fault(0);
-
-		// TODO update to HAL
-		// digitalWrite(CHARGE_SAFETY_RELAY, 0);
 	}
 	return;
 }
@@ -387,6 +385,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 	}
 }
 
+// TODO: Improve algorithm.
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
 	if (!compute_charger_connected())
@@ -444,6 +443,7 @@ void sm_broadcast_current_limit(acc_data_t *bmsdata)
 	}
 }
 
+//TODO: Improve algorithm
 void sm_balance_cells(acc_data_t *bmsdata)
 {
 	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA];
@@ -481,7 +481,7 @@ void sm_balance_cells(acc_data_t *bmsdata)
 
 void calculate_pwm(acc_data_t *bmsdata)
 {
-	// todo actually implement algorithm
+	// TODO: actually implement algorithm
 	// this should include:
 	// 1. set PWM based on temp of "nearby" cells
 	// 2. automate seleciton of htim rather than hardcode

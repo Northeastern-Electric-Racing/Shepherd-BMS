@@ -377,6 +377,7 @@ void calc_cell_resistances(acc_data_t *bmsdata)
 	}
 }
 
+// TODO: Change to match P45Bs.
 void calc_dcl(acc_data_t *bmsdata)
 {
 	static nertimer_t dcl_timer;
@@ -464,6 +465,7 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 	}
 }
 
+//TODO: Change for P45B electrical characteristics.
 void calcCCL(acc_data_t *bmsdata)
 {
 	int16_t currentLimit = 0x7FFF;
@@ -498,6 +500,7 @@ void calcCCL(acc_data_t *bmsdata)
 	compute_send_current_message(bmsdata);
 }
 
+//TODO: Change for P45B electrical characteristics.
 void calc_cont_ccl(acc_data_t *bmsdata)
 {
 	uint8_t min_res_index =
@@ -597,6 +600,7 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 	}
 }
 
+//TODO: Change for new fans and cell temps
 uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
 {
 	/* Resistance LUT increments by 5C for each index, plus we account for negative minimum */
@@ -637,6 +641,9 @@ uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
 // 	}
 // }
 
+//TODO: Change for P45B electrical characteristics.
+//TODO: Add coulomb couting.
+// FUTURE: State of power calcs.
 void calc_state_of_charge(acc_data_t *bmsdata)
 {
 	/* Spltting the delta voltage into 18 increments */

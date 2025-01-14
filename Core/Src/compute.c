@@ -155,7 +155,6 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 
 void compute_set_fault(int fault_state)
 {
-	// TODO work with charger fw on this
 	HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin, !fault_state);
 	// if (true) digitalWrite(CHARGE_SAFETY_RELAY, 1);
 }
@@ -331,8 +330,7 @@ void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.fault = bmsdata->fault_code;
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
-	bms_status_msg_data.balance =
-		(uint8_t)(balance);
+	bms_status_msg_data.balance = (uint8_t)(balance);
 
 	/* convert to big endian */
 	endian_swap(&bms_status_msg_data.fault,
