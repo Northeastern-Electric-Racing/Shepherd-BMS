@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "compute.h"
 
@@ -18,7 +19,20 @@
 #define GPIO9  8
 #define GPIO10 9
 
+typedef enum {
+	THERM1 = 0,
+	THERM2,
+	THERM3,
+	THERM4,
+	THERM5,
+	THERM6,
+	THERM7
+} THERM;
+
 // clang-format off
+
+//TODO: CHANGE ALL FOR NEW CELLS
+
 /**
  * @brief Mapping Cell temperature to the cell resistance based on the
  *      nominal cell resistance curve profile of the Samsung 186500 INR in the
@@ -79,6 +93,8 @@ const uint8_t STATE_OF_CHARGE_CURVE[18] =
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 15, 24, 56, 74, 85, 95, 98, 100
 };
 
+// END TODO
+
 /**
  * @brief Mapping desired fan speed PWM to the cell temperature
  *
@@ -95,56 +111,26 @@ const uint8_t FAN_CURVE[16] =
 const uint8_t NO_THERM = 0xFF;
 const uint8_t MUX_OFFSET = 16;
 
-//TODO: MAKE THESE THERM MAPPINGS CORRECT
-
 /**
- * @brief Mapping the Relevant Thermistors for each cell based on cell #
- * @note 0xFF indicates the end of the relevant therms
- * @note High side
+ * @brief Map cells to therms.
+ * 
  */
-const uint8_t RELEVANT_THERM_MAP_H[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
+const THERM THERM_MAP[NUM_CELLS_ALPHA] =
 {
-	{GPIO1},
-	{GPIO1},
-	{GPIO2},
-	{GPIO2},
-	{GPIO3},
-	{GPIO3},
-	{GPIO4},
-	{GPIO4},
-	{GPIO5},
-	{GPIO6},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-};
-
-/**
- * @brief Mapping the Relevant Thermistors for each cell based on cell #
- * @note 0xFF indicates the end of the relevant therms
- * @note Low side
- */
-const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP][NUM_RELEVANT_THERMS] =
-{
-	{GPIO1},
-	{GPIO1},
-	{GPIO2},
-	{GPIO2},
-	{GPIO3},
-	{GPIO3},
-	{GPIO4},
-	{GPIO4},
-	{GPIO5},
-	{GPIO6},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
-	{GPIO7},
+	THERM1,
+	THERM1,
+	THERM2,
+	THERM2,
+	THERM3,
+	THERM3,
+	THERM4,
+	THERM4,
+	THERM5,
+	THERM5,
+	THERM6,
+	THERM6,
+	THERM7,
+	THERM7
 };
 
 // clang-format on
@@ -154,37 +140,33 @@ nertimer_t ocvTimer;
 
 bool is_first_reading_ = true;
 
-/**
- * @brief Calcualte the cell temperatures for a chip.
- * 
- * @param chip_data Pointer to processed chip data.
- * @param chip Pointer to raw chip data.
- * @param num_cells The number of cells connected to the chip.
- */
-void calc_chip_temps(chipdata_t *chip_data, cell_asic *chip, int num_cells)
+uint8_t get_num_cells(chipdata_t *chip_data)
 {
-	for (int cell = 0; cell < num_cells; cell++) {
-		int sum = 0;
-		for (int therm = 0; therm < NUM_RELEVANT_THERMS; therm++) {
-			// TODO: use the correct relevant therm map
-			sum += chip->aux.a_codes[RELEVANT_THERM_MAP_H[cell]
-								     [therm]];
-		}
-		chip_data->cell_temp[cell] = sum / NUM_RELEVANT_THERMS;
+	if (chip_data->alpha) {
+		return NUM_CELLS_ALPHA;
+	} else {
+		return NUM_CELLS_BETA;
 	}
 }
 
 void calc_cell_temps(acc_data_t *bmsdata)
 {
+	// TODO: DELETE THIS JUST USING FOR PROFILING HOW LONG THIS SHIT TAKES
+	uint32_t start = HAL_GetTick();
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		if (bmsdata->chip_data[chip].alpha) {
-			calc_chip_temps(&bmsdata->chip_data[chip],
-					&bmsdata->chips[chip], NUM_CELLS_ALPHA);
-		} else {
-			calc_chip_temps(&bmsdata->chip_data[chip],
-					&bmsdata->chips[chip], NUM_CELLS_BETA);
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+
+		for (int cell = 0; cell < num_cells; cell++) {
+			int16_t x = bmsdata->chips[chip]
+					    .aux.a_codes[THERM_MAP[cell]];
+
+			/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
+			int8_t temp = 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) -
+				      10.278 * pow(x, 2) + 34.184 * x + 2.7608;
+			bmsdata->chip_data[chip].cell_temp[cell] = temp;
 		}
 	}
+	printf("%ld\n", HAL_GetTick() - start);
 
 	/*
 	
@@ -234,43 +216,11 @@ void calc_pack_temps(acc_data_t *bmsdata)
 
 	int total_temp = 0;
 	int total_seg_temp = 0;
-	int total_accepted = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 0; therm < NUM_THERMS_PER_CHIP; therm++) {
-			/* finds out the maximum cell temp and location */
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
 
-			//if (THERM_DISABLE[c][therm]) continue;
-			total_accepted++;
-			//if (bmsdata->chip_data[c].thermistor_value[therm] > bmsdata->max_temp.val) {
-			//	bmsdata->max_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
-			//	bmsdata->max_temp.cellNum = c;
-			//	bmsdata->max_temp.chipIndex = therm;
-			//}
-
-			/* finds out the minimum cell temp and location */
-			//if (bmsdata->chip_data[c].thermistor_value[therm] < bmsdata->min_temp.val) {
-			//	bmsdata->min_temp.val = bmsdata->chip_data[c].thermistor_value[therm];
-			//	bmsdata->min_temp.cellNum = c;
-			//	bmsdata->min_temp.chipIndex = therm;
-			//}
-
-			total_temp +=
-				bmsdata->chip_data[c].thermistor_value[therm];
-			total_seg_temp +=
-				bmsdata->chip_data[c].thermistor_value[therm];
-		}
-
-		/* only for NERO */
-		if (c % 2 == 0) {
-			bmsdata->segment_average_temps[c / 2] =
-				total_seg_temp / 22;
-			total_seg_temp = 0;
-		}
-	}
-
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			if (bmsdata->chip_data[c].cell_temp[cell] >
 			    bmsdata->max_temp.val) {
 				bmsdata->max_temp.val =
@@ -287,11 +237,21 @@ void calc_pack_temps(acc_data_t *bmsdata)
 				bmsdata->min_temp.cellNum = cell;
 				bmsdata->min_temp.chipIndex = c;
 			}
+
+			total_temp += bmsdata->chip_data[c].cell_temp[cell];
+			total_seg_temp += bmsdata->chip_data[c].cell_temp[cell];
+		}
+		/* only for NERO */
+		if (c % 2 == 0) {
+			bmsdata->segment_average_temps[c / 2] =
+				total_seg_temp /
+				(NUM_CELLS_ALPHA + NUM_CELLS_BETA);
+			total_seg_temp = 0;
 		}
 	}
 
-	/* takes the average of all the cell temperatures */
-	bmsdata->avg_temp = total_temp / (total_accepted);
+	/* Takes the average of all the cell temperatures. */
+	bmsdata->avg_temp = total_temp / NUM_CELLS;
 
 	compute_send_cell_temp_message(bmsdata);
 }
@@ -318,7 +278,8 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	float total_ocv = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* fings out the maximum cell voltage and location */
 			if (getVoltage(bmsdata->chips[c].cell.c_codes[cell]) *
 				    10000 >
@@ -390,7 +351,9 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 void calc_cell_resistances(acc_data_t *bmsdata)
 {
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
+
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			uint8_t cell_temp =
 				bmsdata->chip_data[c].cell_temp[cell];
 
@@ -423,7 +386,8 @@ void calc_dcl(acc_data_t *bmsdata)
 	int16_t current_limit = 0x7FFF;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* Apply equation */
 			/* Multiplying resistance by 10 to convert from mOhm to Ohm and then to Ohm * 10000 to
 			 * account for the voltage units */
@@ -485,6 +449,7 @@ void calc_dcl(acc_data_t *bmsdata)
 	compute_send_current_message(bmsdata);
 }
 
+//TODO: Fix for new cells and BMS
 void calc_cont_dcl(acc_data_t *bmsdata)
 {
 	uint8_t min_res_index =
@@ -504,7 +469,8 @@ void calcCCL(acc_data_t *bmsdata)
 	int16_t currentLimit = 0x7FFF;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* Apply equation */
 			uint16_t tmpCCL =
 				((MAX_VOLT * 10000) -
@@ -550,6 +516,8 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 	}
 }
 
+//TODO: Make it actually calc OCVs. Revise algorithm and stuff.
+//TODO: Change for new cells (probs not needed).
 void calc_open_cell_voltage(acc_data_t *bmsdata)
 {
 	static chipdata_t prev_chipdata[12];
@@ -557,13 +525,14 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 	/* if there is no previous data point, set inital open cell voltage to current reading */
 	if (is_first_reading_) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-			for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP;
-			     cell++) {
+			uint8_t num_cells =
+				get_num_cells(&bmsdata->chip_data[chip]);
+			for (uint8_t cell = 0; cell < num_cells; cell++) {
 				bmsdata->chip_data[chip]
 					.open_cell_voltage[cell] =
-					bmsdata->chip_data[chip].voltage[cell];
+					bmsdata->chips[chip].cell.c_codes[cell];
 				prev_chipdata[chip].open_cell_voltage[cell] =
-					bmsdata->chip_data[chip].voltage[cell];
+					bmsdata->chips[chip].cell.c_codes[cell];
 			}
 		}
 		return;
@@ -574,21 +543,24 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 		if (is_timer_expired(&ocvTimer) ||
 		    !is_timer_active(&ocvTimer)) {
 			for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-				for (uint8_t cell = 0;
-				     cell < NUM_CELLS_PER_CHIP; cell++) {
+				uint8_t num_cells = get_num_cells(
+					&bmsdata->chip_data[chip]);
+				for (uint8_t cell = 0; cell < num_cells;
+				     cell++) {
 					/* Sets open cell voltage to a moving average of OCV_AVG values */
 					bmsdata->chip_data[chip]
 						.open_cell_voltage[cell] =
-						((uint32_t)(bmsdata->chip_data[chip]
-								    .voltage[cell]) +
+						((uint32_t)(bmsdata->chips[chip]
+								    .cell
+								    .c_codes[cell]) +
 						 ((uint32_t)(prev_chipdata[chip].open_cell_voltage
 								     [cell]) *
 						  (OCV_AVG - 1))) /
 						OCV_AVG;
 					bmsdata->chip_data[chip]
 						.open_cell_voltage[cell] =
-						bmsdata->chip_data[chip]
-							.voltage[cell];
+						bmsdata->chips[chip]
+							.cell.c_codes[cell];
 
 					if (bmsdata->chip_data[chip]
 						    .open_cell_voltage[cell] >
@@ -616,7 +588,8 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 		start_timer(&ocvTimer, 1000);
 	}
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* Set OCV to the previous/existing OCV */
 			bmsdata->chip_data[chip].open_cell_voltage[cell] =
 				prev_chipdata[chip].open_cell_voltage[cell];
@@ -694,25 +667,27 @@ void calc_state_of_charge(acc_data_t *bmsdata)
 	compute_send_acc_status_message(bmsdata);
 }
 
-void calc_noise_volt_percent(acc_data_t *bmsdata)
-{
-	int i = 0;
-	for (uint8_t seg = 0; seg < NUM_SEGMENTS; seg++) {
-		uint8_t count = 0;
-		/* merge results from each of the two chips on a given segment */
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			count = bmsdata->chip_data[seg + i].noise_reading[cell];
-			count += bmsdata->chip_data[seg + i + 1]
-					 .noise_reading[cell];
-		}
-		i++;
+// NOTE: This function is broken or something.
+// void calc_noise_volt_percent(acc_data_t *bmsdata)
+// {
+// 	int i = 0;
+// 	for (uint8_t seg = 0; seg < NUM_SEGMENTS; seg++) {
+// 		uint8_t count = 0;
 
-		/* turn into percentage */
-		//printf("count: %d\r\n", count);
-		bmsdata->segment_noise_percentage[seg] =
-			(uint8_t)(100 * (count) / (NUM_CELLS_PER_CHIP * 2.0f));
-	}
-}
+// 		/* merge results from each of the two chips on a given segment */
+// 		for (uint8_t cell = 0; cell < NUM_CELLS_SEG; cell++) {
+// 			count = bmsdata->chip_data[seg + i].noise_reading[cell];
+// 			count += bmsdata->chip_data[seg + i + 1]
+// 					 .noise_reading[cell];
+// 		}
+// 		i++;
+
+// 		/* turn into percentage */
+// 		//printf("count: %d\r\n", count);
+// 		bmsdata->segment_noise_percentage[seg] =
+// 			(uint8_t)(100 * (count) / (NUM_CELLS_SEG * 2.0f));
+// 	}
+// }
 
 // void high_curr_therm_check()
 // {

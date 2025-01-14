@@ -66,7 +66,7 @@ void vAnalyzer(void *pv_params)
 		// temporary end
 
 		calc_state_of_charge(bmsdata);
-		calc_noise_volt_percent(bmsdata);
+		// calc_noise_volt_percent(bmsdata);
 
 		osMutexRelease(bmsdata->mutex);
 	}

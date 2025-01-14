@@ -64,7 +64,7 @@ void init_boot(acc_data_t *bmsdata)
 void handle_boot(acc_data_t *bmsdata)
 {
 	prevAccData = NULL;
-	segment_disable_balancing(bmsdata->chips);
+	segment_disable_balancing(bmsdata);
 	compute_enable_charging(false);
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
@@ -78,7 +78,7 @@ void handle_boot(acc_data_t *bmsdata)
 
 void init_ready(acc_data_t *bmsdata)
 {
-	segment_disable_balancing(bmsdata->chips);
+	segment_disable_balancing(bmsdata);
 	compute_enable_charging(false);
 	return;
 }
@@ -120,15 +120,16 @@ void handle_charging(acc_data_t *bmsdata)
 		if (sm_balancing_check(bmsdata))
 			sm_balance_cells(bmsdata);
 		else
-			segment_disable_balancing(bmsdata->chips);
+			segment_disable_balancing(bmsdata);
 
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) ||
 		    !is_timer_active(&charger_message_timer)) {
-			compute_send_charging_message((MAX_CHARGE_VOLT *
-						       NUM_CELLS_PER_CHIP *
-						       NUM_CHIPS),
-						      5, bmsdata);
+			compute_send_charging_message(
+				(MAX_CHARGE_VOLT *
+				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
+				 NUM_CHIPS),
+				5, bmsdata);
 			start_timer(&charger_message_timer,
 				    CHARGE_MESSAGE_WAIT);
 		}
@@ -137,7 +138,7 @@ void handle_charging(acc_data_t *bmsdata)
 
 void init_faulted(acc_data_t *bmsdata)
 {
-	segment_disable_balancing(bmsdata->chips);
+	segment_disable_balancing(bmsdata);
 	compute_enable_charging(false);
 	entered_faulted = true;
 	return;
@@ -443,17 +444,19 @@ void sm_broadcast_current_limit(acc_data_t *bmsdata)
 	}
 }
 
-void sm_balance_cells(acc_data_t *bms_data)
+void sm_balance_cells(acc_data_t *bmsdata)
 {
-	bool balanceConfig[NUM_CHIPS][NUM_CELLS_PER_CHIP];
+	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA];
 
 	/* For all cells of all the chips, figure out if we need to balance by
    * comparing the difference in voltages */
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			uint16_t delta =
-				bms_data->chip_data[chip].voltage[cell] -
-				(uint16_t)bms_data->min_voltage.val;
+				bmsdata->chips[chip].cell.c_codes[cell] -
+				(uint16_t)bmsdata->min_voltage.val;
 			if (delta > MAX_DELTA_V * 10000)
 				balanceConfig[chip][cell] = true;
 			else
@@ -464,7 +467,8 @@ void sm_balance_cells(acc_data_t *bms_data)
 #ifdef DEBUG_CHARGING
 	printf("Cell Balancing:");
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(bmsdata->chip_data[c]);
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			printf(balanceConfig[c][cell]);
 			printf("\t");
 		}
@@ -472,7 +476,7 @@ void sm_balance_cells(acc_data_t *bms_data)
 	}
 #endif
 
-	segment_configure_balancing(bms_data->chips, balanceConfig);
+	segment_configure_balancing(bmsdata, balanceConfig);
 }
 
 void calculate_pwm(acc_data_t *bmsdata)

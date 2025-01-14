@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "analyzer.h"
 
 #include "common.h"
 #include "adBms6830CmdList.h"
@@ -716,35 +717,29 @@ bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 	return false;
 }
 
-void segment_disable_balancing(cell_asic chips[NUM_CHIPS])
+void segment_disable_balancing(acc_data_t *bmsdata)
 {
 	// Initializes all array elements to zero
-	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP] = { 0 };
+	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		set_mute_state(&chips[chip], true);
+		set_mute_state(&bmsdata->chips[chip], true);
 	}
-	segment_configure_balancing(chips, discharge_config);
+	segment_configure_balancing(bmsdata, discharge_config);
 }
 
-/**
- * @brief Configure which cells should discharge, and send configuration to ICs.
- * 
- * @param chips Array of ADBMS6830 datastructs
- * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.
- */
 void segment_configure_balancing(
-	cell_asic chips[NUM_CHIPS],
-	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP])
+	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA])
 {
 	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			set_cell_discharge(&chips[chip], cell + 1,
+		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
+		for (int cell = 0; cell < num_cells; cell++) {
+			set_cell_discharge(&bmsdata->chips[chip], cell + 1,
 					   discharge_config[chip][cell]);
-			set_mute_state(&chips[chip], false);
+			set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
-	write_config_regs(chips);
+	write_config_regs(bmsdata->chips);
 }
 
 int8_t steinhart_est(uint16_t V)
@@ -873,18 +868,18 @@ int8_t steinhart_est(uint16_t V)
 // 	return standard_dev;
 // }
 
-int16_t calc_average(chipdata_t segment_data[NUM_CHIPS])
-{
-	int16_t avg = 0;
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int therm = 17; therm < 28; therm++) {
-			avg += segment_data[chip].thermistor_value[therm];
-		}
-	}
+// int16_t calc_average(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	int16_t avg = 0;
+// 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+// 		for (int therm = 17; therm < 28; therm++) {
+// 			avg += segment_data[chip].thermistor_value[therm];
+// 		}
+// 	}
 
-	avg = avg / (NUM_CHIPS * 11);
-	return avg;
-}
+// 	avg = avg / (NUM_CHIPS * 11);
+// 	return avg;
+// }
 
 // void variance_therm_check()
 // {

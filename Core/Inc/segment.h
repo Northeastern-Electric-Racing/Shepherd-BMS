@@ -21,17 +21,16 @@ void segment_retrieve_data(acc_data_t *bmsdata);
  *
  * @param chips Array of ADBMS6830 data structs.
  */
-void segment_disable_balancing(cell_asic chips[NUM_CHIPS]);
+void segment_disable_balancing(acc_data_t *bmsdata);
 
 /**
- * @brief Set the cell balancing configuration and send it to the segments.
+ * @brief Configure which cells should discharge, and send configuration to ICs.
  * 
- * @param chips Array of ADBMS6830 data structs.
- * @param discharge_config Configuration for which cells to discharge.
+ * @param bmsdata Pointer to acc data struct.
+ * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.
  */
 void segment_configure_balancing(
-	cell_asic chips[NUM_CHIPS],
-	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP]);
+	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA]);
 
 /**
  * @brief Returns if a specific cell is balancing

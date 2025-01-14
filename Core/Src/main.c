@@ -193,7 +193,8 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("Raw Cell Voltage:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
     {
         printf("%d\t", acc_data->chips[c].cell.c_codes[cell]);
     }
@@ -204,7 +205,8 @@ const void print_bms_stats(acc_data_t *acc_data)
   #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
     for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
     {
         printf("%.3f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
     }
@@ -216,7 +218,8 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("Open Cell Voltage:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
     }
@@ -225,29 +228,22 @@ const void print_bms_stats(acc_data_t *acc_data)
   #endif
 
   #ifdef DEBUG_OTHER
-
-  printf("Thermistors with Disabling:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-     printf("Chip %d:  ", c);
-
-	for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
-
-          //if (THERM_DISABLE[c][cell]) continue;
-          printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
-        }
-      
-        printf("\n");
-  }
   
   printf("UnFiltered Thermistor Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
 
-    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
+    uint8_t num_therms;
+    if (acc_data->chip_data->alpha) {
+      num_therms = 7;
+    } else {
+      num_therms = 6;
+    }
 
-          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
+    for (uint8_t therm = 0; therm < num_therms; therm++) {
+
+          printf("%d ", acc_data->chips[c].aux.a_codes[therm]);
         }
       
         printf("\n");
@@ -260,8 +256,8 @@ const void print_bms_stats(acc_data_t *acc_data)
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
-
-    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for (uint8_t cell = 0; cell < num_cells; cell++) {
 
           printf("%d ", acc_data->chip_data[c].cell_temp[cell]);
         }

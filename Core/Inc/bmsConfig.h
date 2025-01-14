@@ -2,16 +2,15 @@
 #define BMS_CONFIG_H
 
 // Hardware definition
-#define NUM_SEGMENTS	   1
-#define NUM_CHIPS	   1 //NUM_SEGMENTS * 2
-#define NUM_CELLS_PER_CHIP 16
-#define NUM_CELLS_ALPHA	   16
-#define NUM_CELLS_BETA	   12
-#define NUM_CELLS                              \
+#define NUM_SEGMENTS	1
+#define NUM_CHIPS	1 //NUM_SEGMENTS * 2
+#define NUM_CELLS_ALPHA 14
+#define NUM_CELLS_BETA	11
+#define NUM_CELLS_SEG	NUM_CELLS_ALPHA + NUM_CELLS_BETA
+#define NUM_CELLS                                \
 	((NUM_CELLS_ALPHA * (NUM_CHIPS / 2.0)) + \
 	 (NUM_CELLS_BETA * (NUM_CHIPS / 2.0)))
-#define NUM_THERMS_PER_CHIP 32
-#define NUM_RELEVANT_THERMS 1
+#define NUM_THERMS_PER_CHIP 14
 
 // Firmware limits
 #define MAX_TEMP      65 //degrees C
