@@ -25,6 +25,7 @@
 #include "shep_tasks.h"
 
 #include "assert.h"
+#include "string.h"
 
 /* USER CODE END Includes */
 
