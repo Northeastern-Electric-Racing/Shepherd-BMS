@@ -9,6 +9,7 @@ jobs:
         uses: actions/checkout@v4
         with:
             submodules: recursive
+            fetch-depth: 0
       - name: Execute Make
         run: |
             if ! docker compose run --rm ner-gcc-arm make -j `nproc`; then
