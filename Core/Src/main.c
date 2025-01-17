@@ -1198,7 +1198,9 @@ struct __attribute__((__packed__)) git_version_data {
     uint32_t git_authorhash;
   } git_hash_data;
 
-//put funtion that makes can message and queues message, send_nero_message is similar, use variables from versioning over can ticket in embedded-base
+/**
+ * @brief Sends git version infomation as a can message
+ */
 void send_git_version_message() {
   const struct git_hash_data git_hash_data2 = {GIT_SHORTHASH , GIT_AUTHORHASH};
   const struct git_version_data git_version_data2 = {GIT_MAJOR_VERSION , GIT_MINOR_VERSION, GIT_PATCH_VERSION, GIT_IS_UPSTREAM_CLEAN, GIT_IS_LOCAL_CLEAN};
