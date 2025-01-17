@@ -9,8 +9,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Execute Make
-        run: |
-            if ! docker-compose run --rm ner-gcc-arm make -j `nproc`; then
-            echo "The application has failed to build."
-            exit 1  # This will cause the workflow to fail
-            fi
+        run: docker compose run --rm ner-gcc-arm make -j `nproc`
