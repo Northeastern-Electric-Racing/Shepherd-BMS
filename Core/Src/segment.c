@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "analyzer.h"
+#include "c_utils.h"
 
 #include "common.h"
 #include "adBms6830CmdList.h"
@@ -34,21 +35,10 @@ extern SPI_HandleTypeDef hspi1;
 uint8_t therm_avg_counter = 0;
 
 chipdata_t previous_data[NUM_CHIPS] = {};
-uint16_t discharge_commands[NUM_CHIPS] = {};
 
-nertimer_t therm_timer;
 nertimer_t variance_timer;
 
-int therm_error = 0; // not faulted
-uint16_t crc_error_check = 0;
-
-/* our segments are mapped backwards and in pairs, so they are read in 1,0 then
- * 3,2, etc*/
-const int mapping_correction[12] = { 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10 };
-
-uint16_t therm_settle_time_ = 0;
-
-const int32_t VOLT_TEMP_CALIB_OFFSET = 0;
+uint32_t pec_error_count = 0;
 
 /* private function prototypes */
 void variance_therm_check(void);
@@ -353,6 +343,23 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 		     GRP group)
 {
 	adBmsReadData(NUM_CHIPS, chips, command, type, group);
+
+	// Count PEC errors
+	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+		// Yes, they did separate every PEC as if that mattered.
+		pec_error_count +=
+			chips[chip].cccrc.cfgr_pec + chips[chip].cccrc.sid_pec +
+			chips[chip].cccrc.cell_pec +
+			chips[chip].cccrc.acell_pec +
+			chips[chip].cccrc.scell_pec +
+			chips[chip].cccrc.fcell_pec +
+			chips[chip].cccrc.aux_pec + chips[chip].cccrc.raux_pec +
+			chips[chip].cccrc.stat_pec +
+			chips[chip].cccrc.comm_pec + chips[chip].cccrc.pwm_pec;
+		if (pec_error_count > 0) {
+			printf("PEC COUNT: %ld\n", pec_error_count);
+		}
+	}
 }
 
 /**
@@ -392,13 +399,13 @@ void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 	write_config_regs(chips);
 
 	// Take single shot measurement
-	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
 }
 
 /**
- * @brief Get voltages from the S-ADCs.
+ * @brief Get voltages from the S-ADCs. Makes a single shot measurement.
  * 
  * @param chip Array of chips to get voltage readings from.
  */
@@ -406,7 +413,7 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	write_config_regs(chips);
 	adbms_wake();
-	adBms6830_Adsv(CONTINUOUS, DCP_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLSADC);
 
 	adbms_wake();
@@ -417,6 +424,44 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 	// read_adbms_data(chip, RDSVD, S_volt, D);
 	// read_adbms_data(chip, RDSVE, S_volt, E);
 	// read_adbms_data(chip, RDSVF, S_volt, F);
+}
+
+/**
+ * @brief Do a single shot, redundant C-ADC measurement and read
+ * the contents of Status Register Group C, which contains the 
+ * CSxFLT bits indicating whether the difference between the 
+ * C and S ADC measurements was above the CTH[2:0] set in config
+ * register A.
+ * 
+ * @param chips Pointer to accumulator data struct.
+ */
+void get_adc_comparison(acc_data_t *bmsdata)
+{
+	write_config_regs(chips);
+
+	// Take single shot measurement
+	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc(PLCADC);
+	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
+
+	// Result of C-ADC and S-ADC comparison is stored in status register group C
+	read_adbms_data(chips, RDSTATC, Status, C);
+
+	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+		uint8_t cells = get_num_cells(bmsdata->chip_data[chip]);
+		for (uint8_t cell = 0; cell < cells; cell++) {
+			if (NER_GET_BIT(bmsdata->chips[chip].statc.cs_flt,
+					cell)) {
+				printf("ADC VOLTAGE DISCREPANCY ERROR\nChip %d, Cell %d\nC-ADC: %f, S-ADC%f\n",
+				       chip + 1, cell + 1,
+				       getVoltage(bmsdata->chips[chip]
+							  .cell.c_codes[cell]),
+				       getVoltage(
+					       bmsdata->chips[chip]
+						       .scell.sc_codes[cell]));
+			}
+		}
+	}
 }
 
 /**
