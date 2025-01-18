@@ -1,19 +1,20 @@
-name: Task
-description: Create a task that a developer can complete.
+name: Feature
+description: Describe a feature that a developer can add.
 title: '[Area] - Short Description'
+projects: ["Northeastern-Electric-Racing/20"]
 body:
   - type: textarea
     id: description
     attributes:
       label: Description
-      description: Provide a brief summary of this issue
+      description: Provide a brief summary of the current shortcoming or new improvement
     validations:
       required: true
   - type: textarea
     id: acceptance-criteria
     attributes:
       label: Acceptance Criteria
-      description: What are the conditions that need to be satisified to complete this task?
+      description: What are the test conditions that need to be satisified to complete this task?
     validations:
       required: true
   - type: textarea

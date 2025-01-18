@@ -25,7 +25,6 @@ It can be helpful to check the `Checks` and `Files changed` tabs.
 Please reach out to your Project Lead if anything is unclear.
 Please request reviewers and ping on slack only after you've gone through this whole checklist.
 
-- [ ] All commits are tagged with the ticket number
 - [ ] No merge conflicts
 - [ ] All checks passing
 - [ ] Remove any non-applicable sections of this template
