@@ -15,6 +15,32 @@
 ######################################
 TARGET = shepherd2
 
+######################################
+# git
+######################################
+GIT_MAJOR_VERSION := $(shell git describe --tags --abbrev=0 | cut -c2- | cut -d'.' -f1)
+GIT_MINOR_VERSION := $(shell git describe --tags --abbrev=0 | cut -c2- | cut -d'.' -f2)
+GIT_PATCH_VERSION := $(shell git describe --tags --abbrev=0 | cut -c2- | cut -d'.' -f3)
+GIT_IS_UPSTREAM_CLEAN := $(shell bash -c 'git merge-base --is-ancestor HEAD @{u} && echo 0 || echo 1')
+GIT_IS_LOCAL_CLEAN := $(shell bash -c 'test -z "$$(git status --porcelain)" && echo 0 || echo 1')
+GIT_SHORTHASH := $(shell git rev-parse --short=8 HEAD)
+GIT_AUTHORHASH := $(shell bash -c 'git log -n 1 --format=%h --author=$(git config --get user.name)')
+
+
+all:
+	@echo "VERSION: $(GIT_MAJOR_VERSION).$(GIT_MINOR_VERSION).$(GIT_PATCH_VERSION)"
+	@echo "UNPUSHED CHANGES: $(GIT_IS_UPSTREAM_CLEAN)"
+	@echo "UNCOMMITTED CHANGES: $(GIT_IS_LOCAL_CLEAN)"
+	@echo "COMMIT HASH: $(GIT_SHORTHASH)"
+	@echo "AUTHOR HASH: $(GIT_AUTHORHASH)"
+
+CFLAGS += -DGIT_MAJOR_VERSION=$(GIT_MAJOR_VERSION) \
+		  -DGIT_MINOR_VERSION=$(GIT_MINOR_VERSION) \
+		  -DGIT_PATCH_VERSION=$(GIT_PATCH_VERSION) \
+		  -DGIT_IS_UPSTREAM_CLEAN=$(GIT_IS_UPSTREAM_CLEAN) \
+		  -DGIT_IS_LOCAL_CLEAN=$(GIT_IS_LOCAL_CLEAN) \
+		  -DGIT_SHORTHASH=$(GIT_SHORTHASH) \
+		  -DGIT_AUTHORHASH=$(GIT_AUTHORHASH)
 
 ######################################
 # building variables

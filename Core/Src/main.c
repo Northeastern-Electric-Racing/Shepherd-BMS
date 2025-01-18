@@ -25,6 +25,7 @@
 #include "shep_tasks.h"
 
 #include "assert.h"
+#include "string.h"
 
 /* USER CODE END Includes */
 
@@ -1185,6 +1186,37 @@ void watchdog_pet(void)
 
 }
 
+struct __attribute__((__packed__)) git_version_data {
+		uint8_t git_major_version;
+		uint8_t git_minor_version;
+		uint8_t git_patch_version;
+		bool git_is_upstream_clean;
+		bool git_is_local_clean;
+	} git_version_data;
+
+  struct __attribute__((__packed__)) git_hash_data {
+    uint32_t git_shorthash;
+    uint32_t git_authorhash;
+  } git_hash_data;
+
+/**
+ * @brief Sends git version infomation as a can message
+ */
+void send_git_version_message() {
+  //const struct git_hash_data git_hash_data2 = {GIT_SHORTHASH , GIT_AUTHORHASH};
+  const struct git_version_data git_version_data2 = {GIT_MAJOR_VERSION , GIT_MINOR_VERSION, GIT_PATCH_VERSION, GIT_IS_UPSTREAM_CLEAN, GIT_IS_LOCAL_CLEAN};
+  
+  can_msg_t msg1 = { .id = 0x698, .len = sizeof(git_version_data2)};
+  //can_msg_t msg2 = { .id = 0x699, .len = sizeof(git_hash_data2)};
+
+  memcpy(&msg1.data, &git_version_data2, sizeof(git_version_data2));
+  //memcpy(&msg2.data, &git_hash_data2, sizeof(git_hash_data2));
+
+  queue_can_msg(msg1);
+  //queue_can_msg(msg2);
+  
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1219,6 +1251,9 @@ void StartDefaultTask(void *argument)
     compute_send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing());
     compute_send_fault_status_message(bmsdata);
+
+    send_git_version_message();
+  
 
     HAL_IWDG_Refresh(&hiwdg);
 
