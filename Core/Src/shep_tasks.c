@@ -15,6 +15,7 @@
 #include "analyzer.h"
 #include "compute.h"
 #include <stdio.h>
+#include "serialPrintResult.h"
 
 #define STATE_MACHINE_FLAG 1
 
@@ -98,5 +99,52 @@ void vStateMachine(void *pv_params)
 	for (;;) {
 		sm_handle_state(bmsdata);
 		osDelay(10);
+	}
+}
+
+osThreadId_t debug_mode_thread;
+const osThreadAttr_t debug_mode_attrs = { .name = "Debug Mode Thread",
+					  .stack_size = 2048,
+					  .priority = osPriorityNormal };
+void vDebugMode(void *pv_params)
+{
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
+	while (69 < 420) {
+		for (int c = 0; c < NUM_CHIPS; c++) {
+			uint8_t num_cells =
+				get_num_cells(&bmsdata->chip_data[c]);
+			for (int cell = 0; cell < num_cells; cell += 2) {
+				compute_send_cell_data_message(
+					bmsdata->chip_data[c].alpha,
+
+					bmsdata->chip_data[c].cell_temp[cell],
+
+					10000 * getVoltage(
+							bmsdata->chips[c]
+								.cell
+								.c_codes[cell]),
+
+					10000 * getVoltage(
+							bmsdata->chips[c]
+								.cell
+								.c_codes[cell +
+									 1]),
+
+					c,
+
+					cell,
+
+					cell + 1,
+
+					(bmsdata->chips[c].tx_cfgb.dcc >>
+					 cell) & 1,
+
+					(bmsdata->chips[c].tx_cfgb.dcc >>
+					 (cell + 1)) &
+						1);
+				osDelay(6);
+			}
+		}
 	}
 }

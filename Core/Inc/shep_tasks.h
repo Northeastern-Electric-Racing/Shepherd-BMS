@@ -49,4 +49,13 @@ void vStateMachine(void *pv_params);
 extern osThreadId_t state_machine_thread;
 extern const osThreadAttr_t state_machine_attrs;
 
+/**
+ * @brief Task that handles all BMS debug mode functionalities.
+ * 
+ * @param pv_params Pointer to accumulator data struct.
+ */
+void vDebugMode(void *pv_params);
+extern osThreadId_t debug_mode_thread;
+extern const osThreadAttr_t debug_mode_attrs;
+
 #endif

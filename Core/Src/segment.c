@@ -437,18 +437,18 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
  */
 void get_adc_comparison(acc_data_t *bmsdata)
 {
-	write_config_regs(chips);
+	write_config_regs(bmsdata->chips);
 
 	// Take single shot measurement
 	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
-	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
+	read_adbms_data(bmsdata->chips, RDCVALL, Rdcvall, ALL_GRP);
 
 	// Result of C-ADC and S-ADC comparison is stored in status register group C
-	read_adbms_data(chips, RDSTATC, Status, C);
+	read_adbms_data(bmsdata->chips, RDSTATC, Status, C);
 
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		uint8_t cells = get_num_cells(bmsdata->chip_data[chip]);
+		uint8_t cells = get_num_cells(&bmsdata->chip_data[chip]);
 		for (uint8_t cell = 0; cell < cells; cell++) {
 			if (NER_GET_BIT(bmsdata->chips[chip].statc.cs_flt,
 					cell)) {

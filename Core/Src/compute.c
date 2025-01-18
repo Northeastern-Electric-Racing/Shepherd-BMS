@@ -356,7 +356,7 @@ void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
 	queue_can_msg(bms_can_msgs[SHUTDOWN_CTRL]);
 }
 
-void compute_send_cell_data_message(acc_data_t *bmsdata)
+void compute_send_cell_voltage_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t high_cell_voltage;
@@ -387,39 +387,6 @@ void compute_send_cell_data_message(acc_data_t *bmsdata)
 	       sizeof(cell_data_msg_data));
 
 	queue_can_msg(bms_can_msgs[CELL_DATA]);
-}
-
-void compute_send_cell_voltage_message(uint8_t cell_id,
-				       uint16_t instant_voltage,
-				       uint16_t internal_Res, uint8_t shunted,
-				       uint16_t open_voltage)
-{
-	struct __attribute__((__packed__)) {
-		uint8_t cellID;
-		uint16_t instantVoltage;
-		uint16_t internalResistance;
-		uint8_t shunted;
-		uint16_t openVoltage;
-	} cell_voltage_msg_data;
-
-	cell_voltage_msg_data.cellID = cell_id;
-	cell_voltage_msg_data.instantVoltage = instant_voltage;
-	cell_voltage_msg_data.internalResistance = internal_Res;
-	cell_voltage_msg_data.shunted = shunted;
-	cell_voltage_msg_data.openVoltage = open_voltage;
-
-	/* convert to big endian */
-	endian_swap(&cell_voltage_msg_data.instantVoltage,
-		    sizeof(cell_voltage_msg_data.instantVoltage));
-	endian_swap(&cell_voltage_msg_data.internalResistance,
-		    sizeof(cell_voltage_msg_data.internalResistance));
-	endian_swap(&cell_voltage_msg_data.openVoltage,
-		    sizeof(cell_voltage_msg_data.openVoltage));
-
-	memcpy(bms_can_msgs[CELL_VOLTAGE].data, &cell_voltage_msg_data,
-	       sizeof(cell_voltage_msg_data));
-
-	queue_can_msg(bms_can_msgs[CELL_VOLTAGE]);
 }
 
 void compute_send_current_message(acc_data_t *bmsdata)
@@ -584,6 +551,138 @@ void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	memcpy(bms_can_msgs[DEBUG].data, &debug_msg_data, 8);
 
 	queue_can_msg(bms_can_msgs[DEBUG]);
+}
+
+void compute_send_cell_data_message(bool alpha, uint16_t temperature,
+				    uint16_t voltage_a, uint16_t voltage_b,
+				    uint8_t chip_ID, uint8_t cell_a,
+				    uint8_t cell_b, bool discharging_a,
+				    bool discharging_b)
+{
+	endian_swap(&temperature, sizeof(temperature));
+	endian_swap(&voltage_a, sizeof(voltage_a));
+	endian_swap(&voltage_b, sizeof(voltage_b));
+
+	can_msg_t msg;
+	if (alpha) {
+		msg.id = ALPHA_CELL_CANID;
+	} else {
+		msg.id = BETA_CELL_CANID;
+	}
+	msg.len = CELL_MSG_SIZE;
+
+	msg.data[0] = (temperature >> 2);
+	msg.data[1] = (temperature << 8) | (voltage_a >> 7);
+	msg.data[2] = (voltage_a << 6) | (voltage_b >> 12);
+	msg.data[3] = (voltage_b << 1);
+	msg.data[4] = (voltage_b << 9) | chip_ID;
+	msg.data[5] = (cell_a << 4) | cell_b;
+	msg.data[6] = (discharging_a << 7) | (discharging_b << 6);
+
+	queue_can_msg(msg);
+}
+
+void compute_send_beta_status_a_message(uint16_t cell_temperature,
+					uint16_t voltage, bool discharging,
+					uint8_t chip,
+					uint16_t segment_temperature,
+					uint16_t die_temperature, uint16_t vpv)
+{
+	endian_swap(&cell_temperature, sizeof(cell_temperature));
+	endian_swap(&voltage, sizeof(voltage));
+	endian_swap(&segment_temperature, sizeof(segment_temperature));
+	endian_swap(&die_temperature, sizeof(die_temperature));
+	endian_swap(&vpv, sizeof(vpv));
+
+	can_msg_t msg;
+	msg.id = BETA_STAT_A_CANID;
+	msg.len = BETA_STAT_A_SIZE;
+
+	msg.data[0] = cell_temperature >> 2;
+	msg.data[1] = (cell_temperature << 8) | (voltage >> 7);
+	msg.data[2] = (voltage << 6) | discharging;
+	msg.data[3] = (chip << 4) | segment_temperature >> 6;
+	msg.data[4] = (segment_temperature << 4) | (die_temperature >> 11);
+	msg.data[5] = die_temperature >> 3;
+	msg.data[6] = (die_temperature << 10) | (vpv >> 8);
+	msg.data[7] = vpv >> 5;
+
+	queue_can_msg(msg);
+}
+
+void compute_send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
+					uint16_t v_digital, uint8_t chip,
+					uint16_t v_res, uint16_t vmv)
+{
+	endian_swap(&vref2, sizeof(vref2));
+	endian_swap(&v_analog, sizeof(v_analog));
+	endian_swap(&v_digital, sizeof(v_digital));
+	endian_swap(&v_res, sizeof(v_res));
+	endian_swap(&vmv, sizeof(vmv));
+
+	can_msg_t msg;
+	msg.id = BETA_STAT_B_CANID;
+	msg.len = BETA_STAT_B_SIZE;
+
+	msg.data[0] = vref2 >> 5;
+	msg.data[1] = (vref2 << 8) | (v_analog >> 7);
+	msg.data[2] = (v_analog << 3) | (v_digital >> 9);
+	msg.data[3] = v_digital << 1;
+	msg.data[4] = (v_digital << 9) | (chip << 3) | (v_res >> 10);
+	msg.data[5] = v_res << 3;
+	msg.data[6] = (v_res << 11) | (vmv >> 8);
+	msg.data[7] = vmv << 5;
+
+	queue_can_msg(msg);
+}
+
+void compute_send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
+					 uint16_t die_temperature, uint16_t vpv,
+					 uint16_t vmv)
+{
+	endian_swap(&segment_temp, sizeof(segment_temp));
+	endian_swap(&die_temperature, sizeof(die_temperature));
+	endian_swap(&vpv, sizeof(vpv));
+	endian_swap(&vmv, sizeof(vmv));
+
+	can_msg_t msg;
+	msg.id = ALPHA_STAT_A_CANID;
+	msg.len = ALPHA_STAT_A_SIZE;
+
+	msg.data[0] = segment_temp >> 2;
+	msg.data[1] = (segment_temp << 8) | (chip << 2) |
+		      (die_temperature >> 11);
+	msg.data[2] = die_temperature << 2;
+	msg.data[3] = (die_temperature << 10) | (vpv >> 8);
+	msg.data[4] = vpv << 5;
+	msg.data[5] = vmv >> 5;
+	msg.data[6] = vmv << 8;
+
+	queue_can_msg(msg);
+}
+
+void compute_send_alpha_status_b_message(uint16_t v_res, uint8_t chip,
+					 uint16_t vref2, uint16_t v_analog,
+					 uint16_t v_digital)
+{
+	endian_swap(&v_res, sizeof(v_res));
+	endian_swap(&vref2, sizeof(vref2));
+	endian_swap(&v_analog, sizeof(v_analog));
+	endian_swap(&v_digital, sizeof(v_digital));
+
+	can_msg_t msg;
+	msg.id = ALPHA_STAT_B_CANID;
+	msg.len = ALPHA_STAT_B_SIZE;
+
+	msg.data[0] = v_res >> 5;
+	msg.data[1] = (v_res << 8) | (chip >> 1);
+	msg.data[2] = (chip << 7) | (vref2 >> 6);
+	msg.data[3] = (vref2 << 7) | (v_analog >> 11);
+	msg.data[4] = v_analog >> 3;
+	msg.data[6] = (v_analog << 10) | (v_digital >> 8);
+	msg.data[7] = v_analog << 5;
+
+	queue_can_msg(msg);
 }
 
 void change_adc1_channel(uint8_t channel)
