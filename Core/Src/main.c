@@ -1252,6 +1252,9 @@ void StartDefaultTask(void *argument)
 					segment_is_balancing());
     compute_send_fault_status_message(bmsdata);
 
+    send_git_version_message();
+  
+
     HAL_IWDG_Refresh(&hiwdg);
 
     osDelay(1000);
