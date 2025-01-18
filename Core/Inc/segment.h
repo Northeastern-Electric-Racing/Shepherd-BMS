@@ -50,4 +50,29 @@ bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num);
  */
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS]);
 
+/**
+ * @brief Do a single shot, redundant C-ADC measurement and read
+ * the contents of Status Register Group C, which contains the 
+ * CSxFLT bits indicating whether the difference between the 
+ * C and S ADC measurements was above the CTH[2:0] set in config
+ * register A.
+ * 
+ * @param chips Pointer to accumulator data struct.
+ */
+void get_adc_comparison(acc_data_t *bmsdata);
+
+/**
+ * @brief Read the serial ID of the chip.
+ * 
+ * @param chips Array of chips to read.
+ */
+void read_serial_id(cell_asic chips[NUM_CHIPS]);
+
+/**
+ * @brief Read voltages in every register connected to AUX2 ADC.
+ * 
+ * @param chips Array of chips to get voltages of.
+ */
+void read_aux2_registers(cell_asic chips[NUM_CHIPS]);
+
 #endif

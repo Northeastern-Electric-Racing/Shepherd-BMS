@@ -40,7 +40,7 @@
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
-#define DEBUG_STATS
+// #define DEBUG_STATS
 #define DEBUG_VOLTAGES
 // #define DEBUG_RAW_VOLTAGES
 #define DEBUG_RAW_VOLTAGES_FORMATTED
@@ -380,6 +380,7 @@ int main(void)
   /* Messaging */
   can_dispatch_handle = osThreadNew(vCanDispatch, &hcan1, &can_dispatch_attributes);
   assert(can_dispatch_handle);
+  
   can_receive_thread = osThreadNew(vCanReceive, NULL, &can_receive_attributes);
   assert(can_receive_thread);
 
@@ -1239,9 +1240,7 @@ void watchdog_pet(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  #ifdef DEBUG_STATS
   acc_data_t* bmsdata = (acc_data_t*) argument;
-  #endif
 
   bool alt = true;
 

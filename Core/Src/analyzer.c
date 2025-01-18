@@ -149,10 +149,21 @@ uint8_t get_num_cells(chipdata_t *chip_data)
 	}
 }
 
+/**
+ * @brief Calculate a cell temperature based on the thermistor reading.
+ * 
+ * @param x The thremistor reading.
+ * @return int8_t Temperature in celsius.
+ */
+int8_t calc_cell_temp(uint16_t x)
+{
+	/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
+	return 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) - 10.278 * pow(x, 2) +
+	       34.184 * x + 2.7608;
+}
+
 void calc_cell_temps(acc_data_t *bmsdata)
 {
-	// TODO: DELETE THIS JUST USING FOR PROFILING HOW LONG THIS SHIT TAKES
-	uint32_t start = HAL_GetTick();
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 
@@ -160,13 +171,25 @@ void calc_cell_temps(acc_data_t *bmsdata)
 			int16_t x = bmsdata->chips[chip]
 					    .aux.a_codes[THERM_MAP[cell]];
 
-			/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
-			int8_t temp = 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) -
-				      10.278 * pow(x, 2) + 34.184 * x + 2.7608;
-			bmsdata->chip_data[chip].cell_temp[cell] = temp;
+			bmsdata->chip_data[chip].cell_temp[cell] =
+				calc_cell_temp(x);
+		}
+
+		// Calculate onboard therm temps
+
+		if (!bmsdata->chip_data[chip].alpha) {
+			// Take average of both onboard therms
+			bmsdata->chip_data[chip].on_board_temp =
+				(calc_cell_temp((
+					 bmsdata->chips[chip].aux.a_codes[6])) +
+				 calc_cell_temp(
+					 bmsdata->chips[chip].aux.a_codes[7])) /
+				2;
+		} else {
+			bmsdata->chip_data[chip].on_board_temp = calc_cell_temp(
+				bmsdata->chips[chip].aux.a_codes[7]);
 		}
 	}
-	printf("%ld\n", HAL_GetTick() - start);
 
 	/*
 	

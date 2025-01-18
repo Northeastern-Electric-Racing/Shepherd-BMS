@@ -29,6 +29,9 @@ typedef struct {
 
 	/* True if chip is alpha, False if Chip is Beta */
 	bool alpha;
+
+	/* For temperatures of on-board therms. Length 1 if Alpha, length 2 if Beta. */
+	int8_t on_board_temp;
 } chipdata_t;
 
 /**

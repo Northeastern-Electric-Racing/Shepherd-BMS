@@ -34,8 +34,6 @@ extern SPI_HandleTypeDef hspi1;
 
 uint8_t therm_avg_counter = 0;
 
-chipdata_t previous_data[NUM_CHIPS] = {};
-
 nertimer_t variance_timer;
 
 uint32_t pec_error_count = 0;
@@ -357,9 +355,23 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 			chips[chip].cccrc.stat_pec +
 			chips[chip].cccrc.comm_pec + chips[chip].cccrc.pwm_pec;
 		if (pec_error_count > 0) {
-			printf("PEC COUNT: %ld\n", pec_error_count);
+			printf("PEC COUNT: %ld | Chip: %d | CMD: %d\n",
+			       pec_error_count, chip, type);
 		}
+
+		chips[chip].cccrc.cfgr_pec = 0;
+		chips[chip].cccrc.sid_pec = 0;
+		chips[chip].cccrc.cell_pec = 0;
+		chips[chip].cccrc.acell_pec = 0;
+		chips[chip].cccrc.scell_pec = 0;
+		chips[chip].cccrc.fcell_pec = 0;
+		chips[chip].cccrc.aux_pec = 0;
+		chips[chip].cccrc.raux_pec = 0;
+		chips[chip].cccrc.stat_pec = 0;
+		chips[chip].cccrc.comm_pec = 0;
+		chips[chip].cccrc.pwm_pec = 0;
 	}
+	pec_error_count = 0;
 }
 
 /**
@@ -384,7 +396,7 @@ void segment_init(acc_data_t *bmsdata)
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		init_chip(&bmsdata->chips[chip]);
 		// TODO: Make sure this is accurate
-		bmsdata->chip_data->alpha = chip % 2 == 0;
+		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
 	}
 	write_config_regs(bmsdata->chips);
 }
@@ -426,17 +438,10 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 	// read_adbms_data(chip, RDSVF, S_volt, F);
 }
 
-/**
- * @brief Do a single shot, redundant C-ADC measurement and read
- * the contents of Status Register Group C, which contains the 
- * CSxFLT bits indicating whether the difference between the 
- * C and S ADC measurements was above the CTH[2:0] set in config
- * register A.
- * 
- * @param chips Pointer to accumulator data struct.
- */
 void get_adc_comparison(acc_data_t *bmsdata)
 {
+	// TODO: S-ADC measurements are all over the place.
+
 	write_config_regs(bmsdata->chips);
 
 	// Take single shot measurement
@@ -452,7 +457,7 @@ void get_adc_comparison(acc_data_t *bmsdata)
 		for (uint8_t cell = 0; cell < cells; cell++) {
 			if (NER_GET_BIT(bmsdata->chips[chip].statc.cs_flt,
 					cell)) {
-				printf("ADC VOLTAGE DISCREPANCY ERROR\nChip %d, Cell %d\nC-ADC: %f, S-ADC%f\n",
+				printf("ADC VOLTAGE DISCREPANCY ERROR\nChip %d, Cell %d\nC-ADC: %f, S-ADC: %f\n",
 				       chip + 1, cell + 1,
 				       getVoltage(bmsdata->chips[chip]
 							  .cell.c_codes[cell]),
@@ -551,9 +556,9 @@ void read_aux2_registers(cell_asic chips[NUM_CHIPS])
 /**
  * @brief Read status registers.
  * 
- * @param chips Array of chips to read voltages of.
+ * @param chips Array of chips to read.
  */
-void adBms6830_read_status_registers(cell_asic chips[NUM_CHIPS])
+void read_status_registers(cell_asic chips[NUM_CHIPS])
 {
 	write_config_regs(chips);
 	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
@@ -566,23 +571,40 @@ void adBms6830_read_status_registers(cell_asic chips[NUM_CHIPS])
 	read_adbms_data(chips, RDSTATE, Status, E);
 }
 
+/**
+ * @brief Read status and aux registers in one command.
+ * 
+ * @param chips Array of chips to read.
+ */
+void read_status_aux_registers(cell_asic chips[NUM_CHIPS])
+{
+	write_config_regs(chips);
+	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
+	adBmsPollAdc(PLAUX1);
+
+	read_adbms_data(chips, RDASALL, Rdasall, ALL_GRP);
+}
+
+/**
+ * @brief Read the serial ID of the chip.
+ * 
+ * @param chips Array of chips to read.
+ */
+void read_serial_id(cell_asic chips[NUM_CHIPS])
+{
+	read_adbms_data(chips, RDSID, Sid, NONE);
+}
+
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
 	// printf("Get C adc voltages\n");
 	get_c_adc_voltages(bmsdata->chips);
 
-	// get_s_adc_voltages(bmsdata->chips);
-
 	// The GPIOs in the AUX registers contain voltage readings from the therms.
-	// printf("Get therms\n");
-	read_aux_registers(bmsdata->chips);
-	// If you want redundant Thermistor readings, uncomment the following.
-	read_aux2_registers(bmsdata->chips);
+	read_status_aux_registers(bmsdata->chips);
 
-	/* Save the contents of the reading so that we can use it to fill in missing
-   * data */
-	memcpy(previous_data, bmsdata->chip_data,
-	       sizeof(chipdata_t) * NUM_CHIPS);
+	// If you want redundant Thermistor readings, uncomment the following.
+	// read_aux2_registers(bmsdata->chips);
 }
 
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])

@@ -111,39 +111,111 @@ void vDebugMode(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	while (69 < 420) {
-		for (int c = 0; c < NUM_CHIPS; c++) {
+		// get_adc_comparison(bmsdata);
+
+		// read_serial_id(bmsdata->chips);
+
+		read_aux2_registers(bmsdata->chips);
+
+		for (int chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
-				get_num_cells(&bmsdata->chip_data[c]);
+				get_num_cells(&bmsdata->chip_data[chip]);
 			for (int cell = 0; cell < num_cells; cell += 2) {
 				compute_send_cell_data_message(
-					bmsdata->chip_data[c].alpha,
+					bmsdata->chip_data[chip].alpha,
 
-					bmsdata->chip_data[c].cell_temp[cell],
+					bmsdata->chip_data[chip].cell_temp[cell],
 
 					10000 * getVoltage(
-							bmsdata->chips[c]
+							bmsdata->chips[chip]
 								.cell
 								.c_codes[cell]),
 
 					10000 * getVoltage(
-							bmsdata->chips[c]
+							bmsdata->chips[chip]
 								.cell
 								.c_codes[cell +
 									 1]),
 
-					c,
+					chip,
 
 					cell,
 
 					cell + 1,
 
-					(bmsdata->chips[c].tx_cfgb.dcc >>
+					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 cell) & 1,
 
-					(bmsdata->chips[c].tx_cfgb.dcc >>
+					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 (cell + 1)) &
 						1);
 				osDelay(6);
+			}
+
+			// Send chip status messages
+			if (!bmsdata->chip_data[chip].alpha) {
+				compute_send_beta_status_a_message(
+					10000 * getVoltage(
+							bmsdata->chip_data[chip]
+								.cell_temp[10]),
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.cell
+								.c_codes[10]),
+					NER_GET_BIT(
+						bmsdata->chips[chip].tx_cfgb.dcc,
+						10),
+					chip,
+					bmsdata->chip_data[chip].on_board_temp,
+					(getVoltage(bmsdata->chips[chip]
+							    .stata.itmp) /
+					 0.0075) -
+						273,
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[9]));
+				compute_send_beta_status_b_message(
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.stata.vref2),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.va),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vd),
+					chip,
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vr4k),
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[8]));
+			} else {
+				compute_send_alpha_status_a_message(
+					bmsdata->chip_data->on_board_temp, chip,
+					(getVoltage(bmsdata->chips[chip]
+							    .stata.itmp) /
+					 0.0075) -
+						273,
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[9]),
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[8]));
+				compute_send_alpha_status_b_message(
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vr4k),
+					chip,
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.stata.vref2),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.va),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vd));
 			}
 		}
 	}
