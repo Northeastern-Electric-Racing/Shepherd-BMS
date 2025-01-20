@@ -354,6 +354,7 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 			chips[chip].cccrc.aux_pec + chips[chip].cccrc.raux_pec +
 			chips[chip].cccrc.stat_pec +
 			chips[chip].cccrc.comm_pec + chips[chip].cccrc.pwm_pec;
+
 		if (pec_error_count > 0) {
 			printf("PEC COUNT: %ld | Chip: %d | CMD: %d\n",
 			       pec_error_count, chip, type);
