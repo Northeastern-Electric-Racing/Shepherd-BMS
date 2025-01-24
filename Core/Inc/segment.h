@@ -12,9 +12,14 @@ void segment_init(acc_data_t *bmsdata);
 /**
  * @brief Pulls all cell data from the segments and returns all cell data
  *
- * @todo make sure that retrieving cell data doesn't block code too much
  */
 void segment_retrieve_data(acc_data_t *bmsdata);
+
+/**
+ * @brief Fetch extra data for segment
+ * 
+ */
+void segment_retrieve_debug_data(acc_data_t *bmsdata);
 
 /**
  * @brief Disables balancing for all cells.

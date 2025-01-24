@@ -45,7 +45,8 @@ void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 void init_chip(cell_asic *chip)
 {
 	set_REFON(chip, PWR_UP);
-	set_volt_adc_comp_thresh(chip, CVT_22_5mV);
+	// WARNING, THE ENUM IS WRONG, CHECK TABLE 102
+	set_volt_adc_comp_thresh(chip, CVT_45mV);
 	chip->tx_cfga.flag_d = 0;
 
 	// Short soak on ADAX
@@ -189,6 +190,7 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 	write_clear_flags(chips);
 }
 
+// ensure stuff used is in the correctfunction
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
 	// read from ADC convs
@@ -197,13 +199,16 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	// check our fault flags
 	segment_monitor_flts(bmsdata->chips);
 
-	// check the RDSTAT, then clear it
-
-	// The GPIOs in the AUX registers contain voltage readings from the therms.
-	read_status_aux_registers(bmsdata->chips);
-
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
+}
+void segment_retrieve_debug_data(acc_data_t *bmsdata)
+{
+	// poll stuff like vref, etc.
+	adc_and_read_aux_registers(bmsdata->chips);
+
+	// read the above into status registers
+	read_status_registers(bmsdata->chips);
 }
 
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
