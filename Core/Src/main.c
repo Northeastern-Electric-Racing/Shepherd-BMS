@@ -236,7 +236,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   {
     for(uint8_t gpio = 0; gpio < 10; gpio++)
     {
-        printf("%d\t", acc_data->chips[c].raux.ra_codes[gpio]);
+        printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
     }
     printf("\n");
   }
