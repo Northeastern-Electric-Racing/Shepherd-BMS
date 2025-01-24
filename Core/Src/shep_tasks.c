@@ -115,7 +115,7 @@ void vDebugMode(void *pv_params)
 
 		// read_serial_id(bmsdata->chips);
 
-		read_aux2_registers(bmsdata->chips);
+		adc_and_read_aux2_registers(bmsdata->chips);
 
 		for (int chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =

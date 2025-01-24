@@ -169,7 +169,7 @@ void calc_cell_temps(acc_data_t *bmsdata)
 
 		for (int cell = 0; cell < num_cells; cell++) {
 			int16_t x = bmsdata->chips[chip]
-					    .aux.a_codes[THERM_MAP[cell]];
+					    .raux.ra_codes[THERM_MAP[cell]];
 
 			bmsdata->chip_data[chip].cell_temp[cell] =
 				calc_cell_temp(x);
@@ -181,13 +181,13 @@ void calc_cell_temps(acc_data_t *bmsdata)
 			// Take average of both onboard therms
 			bmsdata->chip_data[chip].on_board_temp =
 				(calc_cell_temp((
-					 bmsdata->chips[chip].aux.a_codes[6])) +
+					 bmsdata->chips[chip].raux.ra_codes[6])) +
 				 calc_cell_temp(
-					 bmsdata->chips[chip].aux.a_codes[7])) /
+					 bmsdata->chips[chip].raux.ra_codes[7])) /
 				2;
 		} else {
 			bmsdata->chip_data[chip].on_board_temp = calc_cell_temp(
-				bmsdata->chips[chip].aux.a_codes[7]);
+				bmsdata->chips[chip].raux.ra_codes[7]);
 		}
 	}
 
@@ -304,13 +304,13 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* fings out the maximum cell voltage and location */
-			if (getVoltage(bmsdata->chips[c].cell.c_codes[cell]) *
+			if (getVoltage(bmsdata->chips[c].fcell.fc_codes[cell]) *
 				    10000 >
 			    bmsdata->max_voltage.val) {
 				bmsdata->max_voltage.val =
 					getVoltage(
 						bmsdata->chips[c]
-							.cell.c_codes[cell]) *
+							.fcell.fc_codes[cell]) *
 					10000;
 				bmsdata->max_voltage.chipIndex = c;
 				bmsdata->max_voltage.cellNum = cell;
@@ -326,13 +326,13 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			}
 
 			/* finds out the minimum cell voltage and location */
-			if (getVoltage(bmsdata->chips[c].cell.c_codes[cell]) *
+			if (getVoltage(bmsdata->chips[c].fcell.fc_codes[cell]) *
 				    10000 <
 			    bmsdata->min_voltage.val) {
 				bmsdata->min_voltage.val =
 					getVoltage(
 						bmsdata->chips[c]
-							.cell.c_codes[cell]) *
+							.fcell.fc_codes[cell]) *
 					10000;
 				bmsdata->min_voltage.chipIndex = c;
 				bmsdata->min_voltage.cellNum = cell;
@@ -348,7 +348,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			}
 
 			total_volt += getVoltage(
-				bmsdata->chips[c].cell.c_codes[cell]);
+				bmsdata->chips[c].fcell.fc_codes[cell]);
 			total_ocv +=
 				bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
@@ -556,9 +556,9 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 			for (uint8_t cell = 0; cell < num_cells; cell++) {
 				bmsdata->chip_data[chip]
 					.open_cell_voltage[cell] =
-					bmsdata->chips[chip].cell.c_codes[cell];
+					bmsdata->chips[chip].fcell.fc_codes[cell];
 				prev_chipdata[chip].open_cell_voltage[cell] =
-					bmsdata->chips[chip].cell.c_codes[cell];
+					bmsdata->chips[chip].fcell.fc_codes[cell];
 			}
 		}
 		return;
@@ -577,8 +577,8 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 					bmsdata->chip_data[chip]
 						.open_cell_voltage[cell] =
 						((uint32_t)(bmsdata->chips[chip]
-								    .cell
-								    .c_codes[cell]) +
+								    .fcell
+								    .fc_codes[cell]) +
 						 ((uint32_t)(prev_chipdata[chip].open_cell_voltage
 								     [cell]) *
 						  (OCV_AVG - 1))) /
@@ -586,7 +586,7 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 					bmsdata->chip_data[chip]
 						.open_cell_voltage[cell] =
 						bmsdata->chips[chip]
-							.cell.c_codes[cell];
+							.fcell.fc_codes[cell];
 
 					if (bmsdata->chip_data[chip]
 						    .open_cell_voltage[cell] >

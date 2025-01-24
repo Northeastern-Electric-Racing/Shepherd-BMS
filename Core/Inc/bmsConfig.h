@@ -2,6 +2,7 @@
 #define BMS_CONFIG_H
 
 #define DEBUG_MODE_ENABLED true
+#define DEBUG_STATS
 
 // Hardware definition
 #define NUM_SEGMENTS	1
