@@ -144,18 +144,60 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 	}
 }
 
+void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
+{
+	read_status_registers(chips);
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].statc.va_ov) {
+			printf("A OV FLT\n");
+		}
+		if (chips[chip].statc.va_uv) {
+			printf("A UV FLT\n");
+		}
+		if (chips[chip].statc.vd_ov) {
+			printf("D OV FLT\n");
+		}
+		if (chips[chip].statc.vd_uv) {
+			printf("D OV FLT\n");
+		}
+		if (chips[chip].statc.vde) {
+			printf("VDE FLT\n");
+		}
+		if (chips[chip].statc.vdel) {
+			printf("VDEL FLT\n");
+		}
+		if (chips[chip].statc.spiflt) {
+			printf("SPI SLV FLT\n");
+		}
+		if (chips[chip].statc.sleep) {
+			printf("SLEEP OCCURED\n");
+		}
+		if (chips[chip].statc.thsd) {
+			printf("THERMAL FLT\n");
+		}
+		if (chips[chip].statc.oscchk) {
+			printf("OSC FLT\n");
+		}
+		if (chips[chip].statc.otp1_med) {
+			printf("CMED? FLT\n");
+		}
+		if (chips[chip].statc.otp2_med) {
+			printf("SMED? FLT\n");
+		}
+	}
+	// clear them
+	write_clear_flags(chips);
+}
+
 void segment_retrieve_data(acc_data_t *bmsdata)
 {
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
 
-	// see if we are violating sADC
-	//segment_adc_comparison(bmsdata);
+	// check our fault flags
+	segment_monitor_flts(bmsdata->chips);
 
 	// check the RDSTAT, then clear it
-	read_status_registers(bmsdata->chips);
-	printf("RDSTAT %d", bmsdata->chips[0].statc.sleep);
-	write_clear_flags(bmsdata->chips);
 
 	// The GPIOs in the AUX registers contain voltage readings from the therms.
 	read_status_aux_registers(bmsdata->chips);
