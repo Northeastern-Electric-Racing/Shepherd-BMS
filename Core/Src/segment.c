@@ -133,8 +133,9 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 					cell)) {
 				printf("ADC VOLTAGE DISCREPANCY ERROR\nChip %d, Cell %d\nC-ADC: %f, S-ADC: %f\n",
 				       chip + 1, cell + 1,
-				       getVoltage(bmsdata->chips[chip]
-							  .fcell.fc_codes[cell]),
+				       getVoltage(
+					       bmsdata->chips[chip]
+						       .fcell.fc_codes[cell]),
 				       getVoltage(
 					       bmsdata->chips[chip]
 						       .scell.sc_codes[cell]));

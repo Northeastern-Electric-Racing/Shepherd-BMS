@@ -180,10 +180,10 @@ void calc_cell_temps(acc_data_t *bmsdata)
 		if (!bmsdata->chip_data[chip].alpha) {
 			// Take average of both onboard therms
 			bmsdata->chip_data[chip].on_board_temp =
-				(calc_cell_temp((
-					 bmsdata->chips[chip].raux.ra_codes[6])) +
-				 calc_cell_temp(
-					 bmsdata->chips[chip].raux.ra_codes[7])) /
+				(calc_cell_temp((bmsdata->chips[chip]
+							 .raux.ra_codes[6])) +
+				 calc_cell_temp(bmsdata->chips[chip]
+							.raux.ra_codes[7])) /
 				2;
 		} else {
 			bmsdata->chip_data[chip].on_board_temp = calc_cell_temp(
@@ -556,9 +556,11 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 			for (uint8_t cell = 0; cell < num_cells; cell++) {
 				bmsdata->chip_data[chip]
 					.open_cell_voltage[cell] =
-					bmsdata->chips[chip].fcell.fc_codes[cell];
+					bmsdata->chips[chip]
+						.fcell.fc_codes[cell];
 				prev_chipdata[chip].open_cell_voltage[cell] =
-					bmsdata->chips[chip].fcell.fc_codes[cell];
+					bmsdata->chips[chip]
+						.fcell.fc_codes[cell];
 			}
 		}
 		return;
