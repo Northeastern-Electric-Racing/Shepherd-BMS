@@ -211,7 +211,8 @@ void segment_retrieve_debug_data(acc_data_t *bmsdata)
 	//segment_adc_comparison(bmsdata);
 }
 
-void segment_restart(acc_data_t *bmsdata) {
+void segment_restart(acc_data_t *bmsdata)
+{
 	soft_reset_chips(bmsdata->chips);
 	segment_init(bmsdata);
 }

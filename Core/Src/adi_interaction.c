@@ -149,7 +149,8 @@ void adbms_wake_isospi()
  * @brief Wake the chip of every ADBMS6830 IC.  Blocking wait about 1ms * NUM_CHIPS
  * 
  */
-void adbms_wake_core() {
+void adbms_wake_core()
+{
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
@@ -228,10 +229,11 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 
 // --- BEGIN WRITE COMMANDS ---
 
-void soft_reset_chips(cell_asic chips[NUM_CHIPS]) {
+void soft_reset_chips(cell_asic chips[NUM_CHIPS])
+{
 	write_adbms_data(chips, SRST, Comm, NONE);
 	adbms_wake_core();
-} 
+}
 
 void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
