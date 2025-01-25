@@ -13,18 +13,33 @@
 #define NUM_INBOUND_CAN2_IDS 1
 
 #define CHARGE_CANID	    0x176
+#define CHARGE_SIZE	    8
 #define DISCHARGE_CANID	    0x156
+#define DISCHARGE_SIZE	    8
 #define ACC_STATUS_CANID    0x80
+#define ACC_STATUS_SIZE	    8
 #define BMS_STATUS_CANID    0x81
+#define BMS_STATUS_SIZE	    4
+#define FAULT_STATUS_CANID  0x89
+#define FAULT_STATUS_SIZE   8
 #define SHUTDOWN_CTRL_CANID 0x82
+#define SHUTDOWN_CTRL_SIZE  1
 #define CELL_DATA_CANID	    0x83
+#define CELL_DATA_SIZE	    8
 #define CELL_VOLTAGE_CANID  0x87
+#define CELL_VOLTAGE_SIZE   8
 #define CURRENT_CANID	    0x86
+#define CURRENT_SIZE	    6
 #define CELL_TEMP_CANID	    0x84
+#define CELL_TEMP_SIZE	    8
 #define SEGMENT_TEMP_CANID  0x85
-#define FAULT_CANID	    0x703
+#define SEGMENT_TEMP_SIZE   6
+#define FAULT_CANID	    0x703 // TODO: cleanup
+#define FAULT_SIZE	    5
 #define NOISE_CANID	    0x88
+#define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
+
 #define ALPHA_CELL_CANID    0x6FA
 #define BETA_CELL_CANID	    0x6FB
 #define CELL_MSG_SIZE	    7
@@ -58,6 +73,10 @@ typedef enum {
 	DEBUG,
 	RL_MSG_COUNT
 } rate_lim_t;
+
+#define DEBUG_SIZE	    8
+#define FAULT_TIMER_CANID   0x6FF
+#define FAULT_TIMER_SIZE    4
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 

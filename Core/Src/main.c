@@ -25,6 +25,7 @@
 #include "shep_tasks.h"
 
 #include "assert.h"
+#include "string.h"
 
 #include "serialPrintResult.h"
 
@@ -60,6 +61,7 @@
 ADC_HandleTypeDef hadc1;
 ADC_HandleTypeDef hadc2;
 DMA_HandleTypeDef hdma_adc1;
+DMA_HandleTypeDef hdma_adc2;
 
 CAN_HandleTypeDef hcan1;
 CAN_HandleTypeDef hcan2;
@@ -320,7 +322,8 @@ int main(void)
 
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
   acc_data->is_charger_connected = false;
-  acc_data->fault_code = FAULTS_CLEAR;
+  acc_data->fault_code_crit = FAULTS_CLEAR;
+  acc_data->fault_code_noncrit = FAULTS_CLEAR;
   
   /* USER CODE END Init */
 
@@ -513,13 +516,13 @@ static void MX_ADC1_Init(void)
   hadc1.Instance = ADC1;
   hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV2;
   hadc1.Init.Resolution = ADC_RESOLUTION_12B;
-  hadc1.Init.ScanConvMode = DISABLE;
+  hadc1.Init.ScanConvMode = ENABLE;
   hadc1.Init.ContinuousConvMode = DISABLE;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
-  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.NbrOfConversion = 2;
   hadc1.Init.DMAContinuousRequests = ENABLE;
   hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
   if (HAL_ADC_Init(&hadc1) != HAL_OK)
@@ -532,6 +535,15 @@ static void MX_ADC1_Init(void)
   sConfig.Channel = ADC_CHANNEL_15;
   sConfig.Rank = 1;
   sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure for the selected ADC regular channel its corresponding rank in the sequencer and its sample time.
+  */
+  sConfig.Channel = ADC_CHANNEL_9;
+  sConfig.Rank = 2;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -1185,6 +1197,9 @@ static void MX_DMA_Init(void)
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
+  /* DMA2_Stream2_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA2_Stream2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA2_Stream2_IRQn);
 
 }
 
@@ -1291,6 +1306,37 @@ void watchdog_pet(void)
 
 }
 
+struct __attribute__((__packed__)) git_version_data {
+		uint8_t git_major_version;
+		uint8_t git_minor_version;
+		uint8_t git_patch_version;
+		bool git_is_upstream_clean;
+		bool git_is_local_clean;
+	} git_version_data;
+
+  struct __attribute__((__packed__)) git_hash_data {
+    uint32_t git_shorthash;
+    uint32_t git_authorhash;
+  } git_hash_data;
+
+/**
+ * @brief Sends git version infomation as a can message
+ */
+void send_git_version_message() {
+  //const struct git_hash_data git_hash_data2 = {GIT_SHORTHASH , GIT_AUTHORHASH};
+  const struct git_version_data git_version_data2 = {GIT_MAJOR_VERSION , GIT_MINOR_VERSION, GIT_PATCH_VERSION, GIT_IS_UPSTREAM_CLEAN, GIT_IS_LOCAL_CLEAN};
+  
+  can_msg_t msg1 = { .id = 0x698, .len = sizeof(git_version_data2)};
+  //can_msg_t msg2 = { .id = 0x699, .len = sizeof(git_hash_data2)};
+
+  memcpy(&msg1.data, &git_version_data2, sizeof(git_version_data2));
+  //memcpy(&msg2.data, &git_hash_data2, sizeof(git_hash_data2));
+
+  queue_can_msg(msg1);
+  //queue_can_msg(msg2);
+  
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1324,7 +1370,10 @@ void StartDefaultTask(void *argument)
 
     compute_send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing(bmsdata->chips));
+    compute_send_fault_status_message(bmsdata);
 
+    send_git_version_message();
+  
     HAL_IWDG_Refresh(&hiwdg);
 
     osDelay(1000);

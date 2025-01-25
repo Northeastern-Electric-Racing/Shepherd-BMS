@@ -110,6 +110,14 @@ void compute_set_fault(int fault_state);
 void compute_send_acc_status_message(acc_data_t *bmsdata);
 
 /**
+ * @brief sends fault status message
+ *
+ * @param bms_state
+ *
+ */
+void compute_send_fault_status_message(acc_data_t *bmsdata);
+
+/**
  * @brief sends BMS status message
  *
  * @param bms_state
@@ -169,6 +177,9 @@ void compute_send_cell_temp_message(acc_data_t *bmsdata);
 void compute_send_segment_temp_message(acc_data_t *bmsdata);
 
 void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
+
+void compute_send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
+				      uint16_t data_1);
 
 /**
  * @brief Send CAN message for debugging the car on the fly.

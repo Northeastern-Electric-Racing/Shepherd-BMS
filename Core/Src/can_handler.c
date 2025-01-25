@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define CAN_MSG_QUEUE_SIZE 50 /* messages */
 
@@ -12,11 +13,25 @@
 static osMessageQueueId_t can_outbound_queue;
 static osMessageQueueId_t can_inbound_queue;
 
+/**
+ * @brief Datastructure for keeping track of the last time a CAN message was transmitted.
+ * 
+ */
+typedef struct {
+	uint32_t id;
+	uint32_t prev_tick;
+	uint32_t msg_rate; /* in milliseconds */
+} rl_can_msg_t;
+
+struct node_t {
+	rl_can_msg_t val;
+	struct node_t *next;
+};
+
+struct node_t *rl_bms_msgs = NULL;
+
 can_t *can1;
 can_t *can2;
-
-can_msg_t bms_can_msgs[RL_MSG_COUNT];
-rl_data_t rl_data[RL_MSG_COUNT];
 
 static uint32_t can1_id_list[] = {
 	//CANID_X,
@@ -40,130 +55,46 @@ osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
 	return status;
 }
 
-void init_can_msg_config()
+/**
+ * @brief Add a CAN message to the list of rate limited CAN messages.
+ * 
+ * @param id ID of the CAN message to rate limit.
+ * @param msg_rate The amount of time that must pass before this CAN message can be ttansmitted again.
+ */
+void init_rl_can_msg(uint32_t id, uint32_t msg_rate)
 {
-	can_msg_t discharge_msg = { 0 };
-	discharge_msg.id =
-		DISCHARGE_CANID; // 0x0A is the dcl id, 0x22 is the device id set by us
-	discharge_msg.len = 8;
-
-	can_msg_t charge_msg = { 0 };
-	charge_msg.id =
-		CHARGE_CANID; // 0x0A is the dcl id, 0x157 is the device id set by us
-	charge_msg.len = 8;
-
-	can_msg_t acc_status_msg;
-	acc_status_msg.id = ACC_STATUS_CANID;
-	acc_status_msg.len = 8;
-
-	can_msg_t bms_status_msg;
-	bms_status_msg.id = BMS_STATUS_CANID;
-	bms_status_msg.len = 8;
-
-	can_msg_t shutdown_ctrl_msg;
-	shutdown_ctrl_msg.id = SHUTDOWN_CTRL_CANID;
-	shutdown_ctrl_msg.len = 1;
-
-	can_msg_t cell_data_msg;
-	cell_data_msg.id = CELL_DATA_CANID;
-	cell_data_msg.len = 8;
-
-	can_msg_t cell_voltage_msg;
-	cell_voltage_msg.id = CELL_VOLTAGE_CANID;
-	cell_voltage_msg.len = 8;
-
-	can_msg_t current_msg;
-	current_msg.id = CURRENT_CANID;
-	current_msg.len = 6;
-
-	can_msg_t cell_temp_msg;
-	cell_temp_msg.id = CELL_TEMP_CANID;
-	cell_temp_msg.len = 8;
-
-	can_msg_t segment_temp_msg;
-	segment_temp_msg.id = SEGMENT_TEMP_CANID;
-	segment_temp_msg.len = 6;
-
-	can_msg_t fault_msg;
-	fault_msg.id = FAULT_CANID;
-	fault_msg.len = 5;
-
-	can_msg_t noise_msg;
-	noise_msg.id = NOISE_CANID;
-	noise_msg.len = 6;
-
-	can_msg_t debug_msg;
-	debug_msg.id = DEBUG_CANID;
-	debug_msg.len = 8; // yaml decodes this to 8 bytes
-
-	// rl_data_t rl_discharge_data = { .msg_rate = 5000 };
-	// rl_data_t rl_charge_data = { .msg_rate = 0 };
-
-	bms_can_msgs[DISCHARGE] = discharge_msg;
-	bms_can_msgs[CHARGE] = charge_msg;
-	bms_can_msgs[ACC_STATUS] = acc_status_msg;
-	bms_can_msgs[BMS_STATUS] = bms_status_msg;
-	bms_can_msgs[SHUTDOWN_CTRL] = shutdown_ctrl_msg;
-	bms_can_msgs[CELL_DATA] = cell_data_msg;
-	bms_can_msgs[CELL_VOLTAGE] = cell_voltage_msg;
-	bms_can_msgs[CURRENT] = current_msg;
-	bms_can_msgs[CELL_TEMP] = cell_temp_msg;
-	bms_can_msgs[SEGMENT_TEMP] = segment_temp_msg;
-	bms_can_msgs[FAULT] = fault_msg;
-	bms_can_msgs[NOISE] = noise_msg;
-	bms_can_msgs[DEBUG] = debug_msg;
-
-	// rl_data[DISCHARGE] = rl_discharge_data;
-	// rl_data[CHARGE] = rl_charge_data;
-}
-
-rl_data_t *get_rl_msg(uint32_t can_id)
-{
-	switch (can_id) {
-	case CHARGE_CANID:
-		return &rl_data[CHARGE];
-		break;
-	case DISCHARGE_CANID:
-		return &rl_data[DISCHARGE];
-		break;
-	case ACC_STATUS_CANID:
-		return &rl_data[ACC_STATUS];
-		break;
-	case BMS_STATUS_CANID:
-		return &rl_data[BMS_STATUS];
-		break;
-	case SHUTDOWN_CTRL_CANID:
-		return &rl_data[SHUTDOWN_CTRL];
-		break;
-	case CELL_DATA_CANID:
-		return &rl_data[CELL_DATA];
-		break;
-	case CELL_VOLTAGE_CANID:
-		return &rl_data[CELL_VOLTAGE];
-		break;
-	case CURRENT_CANID:
-		return &rl_data[CURRENT];
-		break;
-	case CELL_TEMP_CANID:
-		return &rl_data[CELL_TEMP];
-		break;
-	case SEGMENT_TEMP_CANID:
-		return &rl_data[SEGMENT_TEMP];
-		break;
-	case FAULT_CANID:
-		return &rl_data[FAULT];
-		break;
-	case NOISE_CANID:
-		return &rl_data[NOISE];
-		break;
-	case DEBUG_CANID:
-		return &rl_data[DEBUG];
-		break;
-	default:
-		break;
+	if (rl_bms_msgs == NULL) {
+		rl_bms_msgs = malloc(sizeof(struct node_t));
+		rl_bms_msgs->val.id = id;
+		rl_bms_msgs->val.msg_rate = msg_rate;
+		rl_bms_msgs->val.prev_tick = HAL_GetTick();
+		rl_bms_msgs->next = NULL;
+		return;
 	}
 
-	return NULL;
+	struct node_t *curr = rl_bms_msgs;
+
+	while (curr->next != NULL) {
+		curr = curr->next;
+	}
+
+	struct node_t *next = malloc(sizeof(struct node_t));
+	next->val.id = id;
+	next->val.msg_rate = msg_rate;
+	next->val.prev_tick = HAL_GetTick();
+	next->next = NULL;
+
+	curr->next = next;
+}
+
+/**
+ * @brief Initialize any per message configurations.
+ * 
+ */
+void init_can_msg_config()
+{
+	// EXAMPLE
+	// init_rl_can_msg(DISCHARGE_CANID, 4000);
 }
 
 void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
@@ -227,16 +158,23 @@ int8_t queue_can_msg(can_msg_t msg)
 	if (!can_outbound_queue)
 		return -1;
 
-	rl_data_t *rl_data = get_rl_msg(msg.id);
+	struct node_t *curr = rl_bms_msgs;
 
-	if (rl_data != NULL && rl_data->msg_rate != 0) {
-		if (HAL_GetTick() <=
-		    pdMS_TO_TICKS(rl_data->prev_tick) + rl_data->msg_rate) {
-			// block message
-			return 0;
-		} else {
-			rl_data->prev_tick = HAL_GetTick();
+	while (curr != NULL) {
+		if (curr->val.id == msg.id) {
+			if (HAL_GetTick() <=
+			    curr->val.prev_tick +
+				    pdMS_TO_TICKS(curr->val.msg_rate)) {
+				// block message
+				// printf("Blocked 0x%lX\t", msg.id);
+				return 0;
+			} else {
+				// printf("Sent 0x%lX\n", msg.id);
+				curr->val.prev_tick = HAL_GetTick();
+				break;
+			}
 		}
+		curr = curr->next;
 	}
 
 	return queue_and_set_flag(can_outbound_queue, &msg, can_dispatch_handle,
@@ -263,7 +201,7 @@ void vCanDispatch(void *pv_params)
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
-				  osFlagsWaitAny);
+				  osWaitForever);
 
 		/* Send all CAN messages in the queue */
 		while (osOK == osMessageQueueGet(can_outbound_queue,

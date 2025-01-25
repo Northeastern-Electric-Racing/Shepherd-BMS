@@ -3,8 +3,6 @@ on: [push]
 jobs:
   run-build:
     runs-on: ubuntu-latest
-    container:
-        image: ghcr.io/northeastern-electric-racing/embedded-base:main
     timeout-minutes: 10
     steps:
       - name: Checkout code
@@ -12,9 +10,10 @@ jobs:
         with:
             submodules: recursive
             token: ${{ secrets.PAT_TOKEN }}
+            fetch-depth: 0
       - name: Execute Make
         run: |
-            if ! make; then
+            if ! docker compose run --rm ner-gcc-arm make -j `nproc`; then
             echo "The application has failed to build."
             exit 1  # This will cause the workflow to fail
             fi

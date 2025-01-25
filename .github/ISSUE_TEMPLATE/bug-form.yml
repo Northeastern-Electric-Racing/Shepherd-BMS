@@ -2,33 +2,20 @@ name: Bug
 description: For any issue related to a bug
 title: '[Area] - Short Description'
 labels: [bug]
+projects: ["Northeastern-Electric-Racing/20"]
 body:
   - type: textarea
     id: observed-behavior
     attributes:
       label: Observed Behavior
-      description: What happened?
-    validations:
-      required: true
-  - type: textarea
-    id: expected-behavior
-    attributes:
-      label: Expected Behavior
-      description: What should have happened?
+      description: What happened? What should of happened?
     validations:
       required: true
   - type: textarea
     id: steps-to-reproduce
     attributes:
       label: Steps to Reproduce
-      description: How could someone reproduce this bug?
+      description: How could someone reproduce this bug? Include versions of code or PCBs as applicable.
       value: "1. \n2. \n3. "
     validations:
       required: true
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots (as needed)
-      description: Add screenshots of the bug if applicable
-    validations:
-      required: false

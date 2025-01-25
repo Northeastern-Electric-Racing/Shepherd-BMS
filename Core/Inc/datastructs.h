@@ -40,10 +40,10 @@ typedef struct {
  *          to set or get the error codes
  */
 // clang-format off
-typedef enum {
+enum {
 	FAULTS_CLEAR = 0x0,
 
-	/* Orion BMS faults */
+	/* Shepherd BMS faults */
 	CELLS_NOT_BALANCING		            = 0x1,
 	CELL_VOLTAGE_TOO_HIGH	            = 0x4,
 	CELL_VOLTAGE_TOO_LOW	            = 0x2,
@@ -64,7 +64,8 @@ typedef enum {
 	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
-} bms_fault_t;
+};
+
 // clang-format on
 
 /**
@@ -93,6 +94,7 @@ typedef struct {
 	cell_asic chips[NUM_CHIPS];
 
 	int fault_status;
+	int fault_status; // FIXME: this field is unused
 
 	int16_t pack_current; /* this value is multiplied by 10 to account for decimal precision */
 	uint16_t pack_voltage;
@@ -111,7 +113,9 @@ typedef struct {
 	/**
 	 * @brief Note that this is a 32 bit integer, so there are 32 max possible fault codes
 	 */
-	uint32_t fault_code;
+	// uint32_t fault_code;
+	uint32_t fault_code_crit;
+	uint32_t fault_code_noncrit;
 
 	/* Max, min, and avg thermistor readings */
 	crit_cellval_t max_temp;
@@ -186,7 +190,8 @@ typedef struct {
 	int data_2;
 	int lim_2;
 
-	bool is_faulted;
+	bool is_critical;
+	// bool is_faulted; /* note: unused field */
 } fault_eval_t;
 
 #endif
