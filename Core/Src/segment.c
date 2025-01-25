@@ -1,736 +1,425 @@
 #include "segment.h"
-#include "main.h"
 #include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "analyzer.h"
+#include "c_utils.h"
 
-#define THERM_WAIT_TIME	   500 /* ms */
-#define VOLTAGE_WAIT_TIME  100 /* ms */
-#define THERM_AVG	   15 /* Number of values to average */
-#define MAX_VOLT_DELTA	   2500
-#define MAX_CONSEC_NOISE   10
-#define GPIO_EXPANDER_ADDR 0x40
-#define GPIO_REGISTER_ADDR 0x09
+#include "serialPrintResult.h"
+#include "adBms6830ParseCreate.h"
+#include "adi_interaction.h"
 
-// TODO ensure spi 1 is correct for talking to segs
-extern SPI_HandleTypeDef hspi1;
-ltc_config *ltc68041;
+#define T_READY 10 /* microseconds*/
+#define T_IDLE	4.3 /* milliseconds, minimum. typ is 5.5, max is 6.7 */
+#define T_WAKE	200 /* microseconds */
+#define T_SLEEP 1.8 /* seconds minimum, typ is 2, max is 2.2 */
+#define T_REFUP 2.7 /* milliseconds minimum, typ is 3.5, max is 4.4 */
 
-uint8_t local_config[NUM_CHIPS][6] = {};
+#define THERM_WAIT_TIME	  500 /* ms */
+#define VOLTAGE_WAIT_TIME 500 /* ms */
+#define THERM_AVG	  15 /* Number of values to average */
+#define MAX_VOLT_DELTA	  2500
+#define MAX_CONSEC_NOISE  10
+
+extern TIM_HandleTypeDef htim2;
+
 uint8_t therm_avg_counter = 0;
 
-chipdata_t *segment_data = NULL;
-chipdata_t previous_data[NUM_CHIPS] = {};
-uint16_t discharge_commands[NUM_CHIPS] = {};
-
-nertimer_t therm_timer;
-nertimer_t voltage_reading_timer;
 nertimer_t variance_timer;
 
-int voltage_error = 0; // not faulted
-int therm_error = 0; // not faulted
-uint16_t crc_error_check = 0;
-
-/* our segments are mapped backwards and in pairs, so they are read in 1,0 then
- * 3,2, etc*/
-const int mapping_correction[12] = { 1, 0, 3, 2, 5, 4, 7, 6, 9, 8, 11, 10 };
-
-uint16_t therm_settle_time_ = 0;
-
-const uint32_t VOLT_TEMP_CONV[106] = {
-	157300, 148800, 140300, 131800, 123300, 114800, 108772, 102744, 96716,
-	90688,	84660,	80328,	75996,	71664,	67332,	63000,	59860,	56720,
-	53580,	50440,	47300,	45004,	42708,	40412,	38116,	35820,	34124,
-	32428,	30732,	29036,	27340,	26076,	24812,	23548,	22284,	21020,
-	20074,	19128,	18182,	17236,	16290,	15576,	14862,	14148,	13434,
-	12720,	12176,	11632,	11088,	10544,	10000,	9584,	9168,	8753,
-	8337,	7921,	7600,	7279,	6957,	6636,	6315,	6065,	5816,
-	5566,	5317,	5067,	4872,	4676,	4481,	4285,	4090,	3936,
-	3782,	3627,	3473,	3319,	3197,	3075,	2953,	2831,	2709,
-	2612,	2514,	2417,	2319,	2222,	2144,	2066,	1988,	1910,
-	1832,	1769,	1706,	1644,	1581,	1518,	1467,	1416,	1366,
-	1315,	1264,	1223,	1181,	1140,	1098,	1057
-};
-
-const int32_t VOLT_TEMP_CALIB_OFFSET = 0;
-
 /* private function prototypes */
-void serialize_i2c_msg(uint8_t data_to_write[][3], uint8_t comm_output[][6]);
-int8_t steinhart_est(uint16_t V);
-void variance_therm_check(void);
-void discard_neutrals(void);
-void pull_chip_configuration(void);
-int16_t calc_average(void);
-int8_t calc_therm_standard_dev(int16_t avg_temp);
+// void variance_therm_check(void);
+// void discard_neutrals(chipdata_t segment_data[NUM_CHIPS]);
+// void pull_chip_configuration(void);
+// int16_t calc_average(chipdata_t segment_data[NUM_CHIPS]);
+// int8_t calc_therm_standard_dev(int16_t avg_temp);
+void init_chip(cell_asic *chip);
+void write_config_regs(cell_asic chip[NUM_CHIPS]);
+void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 
-void push_chip_configuration()
+/**
+ * @brief Initialize a chip with our default values.
+ * 
+ * @param chip Pointer to chip to initialize.
+ */
+void init_chip(cell_asic *chip)
 {
-	LTC6804_wrcfg(ltc68041, NUM_CHIPS, local_config);
+	set_REFON(chip, PWR_UP);
+	// WARNING, THE ENUM IS WRONG, CHECK TABLE 102
+	set_volt_adc_comp_thresh(chip, CVT_135mV);
+	chip->tx_cfga.flag_d = 0;
+
+	// Short soak on ADAX
+	set_soak_on(chip, SOAKON_SET);
+	set_aux_soak_range(chip, SHORT);
+
+	// No open wire detect soak
+	set_open_wire_soak_time(chip, OWA0);
+
+	// Set therm GPIOs
+	set_gpio_pull(chip, 1, true);
+	set_gpio_pull(chip, 2, true);
+	set_gpio_pull(chip, 3, true);
+	set_gpio_pull(chip, 4, true);
+	set_gpio_pull(chip, 5, true);
+	set_gpio_pull(chip, 6, true);
+	set_gpio_pull(chip, 7, true); // this is a on board therm for beta only
+	set_gpio_pull(chip, 8, true); // this is a on board therm
+
+	// set outputs, 9=iso led 10=bal LED
+	set_gpio_pull(chip, 9, false);
+	set_gpio_pull(chip, 10, false);
+
+	// Registers are unfrozen
+	set_snapshot(chip, SNAP_OFF);
+
+	// Charging is deactivated
+	set_mute_state(chip, true);
+
+	// Not an endpoint in the daisy chain
+	set_comm_break(chip, false);
+
+	// IIR filter disabled
+	set_iir_corner_freq(chip, IIR_FPA16);
+
+	// Init config B
+
+	// If the corresponding fault bits are sent high, it does not affect the IC
+	chip->tx_cfgb.vov = SetOverVoltageThreshold(4.2);
+	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
+
+	// Discharge timer monitor off
+	set_discharge_timer_monitor(chip, false);
+
+	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
+	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
+
+	// Disable discharge for all cells
+	chip->tx_cfgb.dcc = 0;
 }
 
-void segment_init()
+/**
+ * @brief Initialize chips with default values.
+ * 
+ */
+void segment_init(acc_data_t *bmsdata)
 {
 	printf("Initializing Segments...");
-
-	ltc68041 = malloc(sizeof(ltc_config));
-	LTC6804_initialize(ltc68041, &hspi1, GPIOA, SPI_1_CS_Pin);
-
-	pull_chip_configuration();
-
-	for (int c = 0; c < NUM_CHIPS; c++) {
-		local_config[c][0] = 0xF8;
-		local_config[c][1] = 0x19; /* VUV = 0x619 = 1561 -> 2.4992V */
-		local_config[c][2] = 0x06; /* VOV = 0xA60 = 2656 -> 4.2496V */
-		local_config[c][3] = 0xA6;
-		local_config[c][4] = 0x00;
-		local_config[c][5] = 0x00;
-	}
-	push_chip_configuration();
-
-	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-	start_timer(&therm_timer, THERM_WAIT_TIME);
-
-	uint8_t i2c_write_data[NUM_CHIPS][3];
-
-	// Set GPIO expander to output
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		i2c_write_data[chip][0] = 0x40; // GPIO expander addr
-		i2c_write_data[chip][1] = 0x00; // GPIO direction addr
-		i2c_write_data[chip][2] = 0x00; // Set all to output
+		init_chip(&bmsdata->chips[chip]);
+		// TODO: Make sure this is accurate
+		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
 	}
-	uint8_t comm_reg_data[NUM_CHIPS][6];
+	write_config_regs(bmsdata->chips);
 
-	serialize_i2c_msg(i2c_write_data, comm_reg_data);
-	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-	LTC6804_stcomm(ltc68041, 24);
+	start_c_adc_conv();
 }
 
-void select_therm(uint8_t therm)
+void segment_adc_comparison(acc_data_t *bmsdata)
 {
-	/* Exit if out of range values */
-	if (therm < 1 || therm > 16) {
-		return;
-	}
+	// TODO: S-ADC measurements are all over the place.
 
-	uint8_t i2c_write_data[NUM_CHIPS][3];
-	uint8_t comm_reg_data[NUM_CHIPS][6];
+	// Take single shot measurement
+	// adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	// adBmsPollAdc(PLCADC);
+	// read_adbms_data(bmsdata->chips, RDCVALL, Rdcvall, ALL_GRP);
 
-	// select 0-16 on GPIO expander
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		i2c_write_data[chip][0] = GPIO_EXPANDER_ADDR;
-		i2c_write_data[chip][1] = GPIO_REGISTER_ADDR;
-		i2c_write_data[chip][2] =
-			(therm -
-			 1); // 0-15, will change multiplexer to select thermistor
-	}
-	serialize_i2c_msg(i2c_write_data, comm_reg_data);
-	push_chip_configuration();
-	LTC6804_wrcomm(ltc68041, NUM_CHIPS, comm_reg_data);
-	LTC6804_stcomm(ltc68041, 24);
-}
+	// Result of C-ADC and S-ADC comparison is stored in status register group C
+	read_status_registers(bmsdata->chips);
 
-int pull_voltages()
-{
-	/**
-   * If we haven't waited long enough between pulling voltage data
-   * just copy over the contents of the last good reading and the fault status
-   * from the most recent attempt
-   */
-
-	// int test_v[12] = {800, 800, 800, 800, 800, 800, 800, 800, 800, 800, 800,
-	// 800};
-	if (!is_timer_expired(&voltage_reading_timer) &&
-	    voltage_reading_timer.active) {
-		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage,
-			       previous_data[i].voltage,
-			       sizeof(segment_data[i].voltage));
-		}
-		return voltage_error;
-	}
-
-	uint16_t raw_voltages[NUM_CHIPS][12];
-
-	push_chip_configuration();
-	LTC6804_adcv(ltc68041);
-
-	/**
-   * If we received an incorrect PEC indicating a bad read
-   * copy over the data from the last good read and indicate an error
-   */
-	if (LTC6804_rdcv(ltc68041, 0, NUM_CHIPS, raw_voltages) == -1) {
-		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].voltage,
-			       previous_data[i].voltage,
-			       sizeof(segment_data[i].voltage));
-
-			crc_error_check++;
-			printf("Bad voltage read\n");
-		}
-		return 1;
-	}
-
-	/* If the read was successful, copy the voltage data */
-	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-		int corrected_index = mapping_correction[i];
-
-		/* correction to account for missing index, see more info below */
-		int dest_index = 0;
-
-		for (uint8_t j = 0; j < NUM_CELLS_PER_CHIP + 1; j++) {
-			/* cell 6 on every chip is not a real reading, we need to have the array
-       * skip this, and shift the remaining readings up one index*/
-			if (j == 5)
-				continue;
-
-			segment_data[corrected_index].noise_reading[dest_index] =
-				0;
-
-			if (raw_voltages[i][j] >
-				    (int)(10000 * (MAX_VOLT + 0.5)) ||
-			    raw_voltages[i][j] <
-				    (int)(10000 * (MIN_VOLT - 0.5))) {
-				// if (previous_data[corrected_index].voltage[dest_index] > 45000 ||
-				// previous_data[corrected_index].voltage[dest_index] < 20000)
-				// printf("poop\r\n");
-				segment_data[corrected_index]
-					.voltage[dest_index] =
-					previous_data[corrected_index]
-						.voltage[dest_index];
-				segment_data[corrected_index]
-					.noise_reading[dest_index] = 1;
-				segment_data[corrected_index]
-					.consecutive_noise[dest_index]++;
-				// printf("New data: %d\r\n",
-				// segment_data[corrected_index].voltage[dest_index]);
-				//  if (segment_data[corrected_index].consecutive_noise[dest_index] >
-				//  MAX_CONSEC_NOISE) {
-				//  	segment_data[corrected_index].noise_reading[dest_index] = 0;
-				//  	segment_data[corrected_index].consecutive_noise[dest_index] = 0;
-				//  	segment_data[corrected_index].voltage[dest_index] =
-				//  raw_voltages[i][j];
-				//  }
-			} else {
-				// printf("previous: %d\r\n",
-				// previous_data[corrected_index].voltage[dest_index]); if
-				// (previous_data[corrected_index].voltage[dest_index] > 45000 ||
-				// previous_data[corrected_index].voltage[dest_index] < 20000)
-				// printf("pee\r\n"); else printf("wiping\r\n");
-				segment_data[corrected_index]
-					.consecutive_noise[dest_index] = 0;
-				segment_data[corrected_index]
-					.voltage[dest_index] =
-					raw_voltages[i][j];
-
-				if (raw_voltages[i][j] < 45000 &&
-				    raw_voltages[i][j] > 24000) {
-					previous_data[corrected_index]
-						.voltage[dest_index] =
-						raw_voltages[i][j];
-					// printf("previous: %d\r\n",
-					// previous_data[corrected_index].voltage[dest_index]); printf("raw:
-					// %d\r\n", segment_data[corrected_index].voltage[dest_index]);
-				}
-			}
-			dest_index++;
-		}
-	}
-
-	/* Start the timer between readings if successful */
-	start_timer(&voltage_reading_timer, VOLTAGE_WAIT_TIME);
-
-	return 0;
-}
-
-int pull_thermistors()
-{
-	/* If polled too soon, just copy existing values from memory */
-	if (!is_timer_expired(&therm_timer)) {
-		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
-			memcpy(segment_data[i].thermistor_reading,
-			       previous_data[i].thermistor_reading,
-			       sizeof(segment_data[i].thermistor_reading));
-			memcpy(segment_data[i].thermistor_value,
-			       previous_data[i].thermistor_value,
-			       sizeof(segment_data[i].thermistor_value));
-		}
-		return voltage_error;
-	}
-
-	uint16_t raw_temp_voltages[NUM_CHIPS][6];
-
-	static uint8_t current_therm = 1;
-	if (current_therm > 16) {
-		current_therm = 1;
-	}
-
-	/* Sets multiplexors to select thermistors */
-	select_therm(current_therm);
-	HAL_Delay(200);
-	// push_chip_configuration();
-	LTC6804_clraux(ltc68041);
-	LTC6804_adax(ltc68041); /* Run ADC for AUX (GPIOs and refs) */
-	HAL_Delay(3);
-	LTC6804_rdaux(ltc68041, 0, NUM_CHIPS, raw_temp_voltages);
-	/* Rotate through all thermistor pairs (we can poll two at once) */
-	for (uint8_t therm = 1; therm <= (NUM_THERMS_PER_CHIP / 2); therm++) {
-		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-			int corrected_index = mapping_correction[c];
-			/*
-       * Get current temperature LUT. Voltage is adjusted to account for 5V reg
-       * fluctuations (index 2 is a reading of the ADC 5V ref)
-       */
-			if (therm == current_therm) {
-				/* see "thermister decoding" in confluence in shepherd software 22A */
-				uint16_t steinhart_input_low =
-					10000 *
-					(float)(((float)raw_temp_voltages[c][2]) /
-							(raw_temp_voltages[c]
-									  [0]) -
-						1);
-				uint16_t steinhart_input_high =
-					10000 *
-					(float)(((float)raw_temp_voltages[c][2]) /
-							(raw_temp_voltages[c]
-									  [1]) -
-						1);
-
-				segment_data[corrected_index]
-					.thermistor_reading[therm - 1] =
-					steinhart_est(steinhart_input_low);
-				segment_data[corrected_index]
-					.thermistor_reading[therm + 15] =
-					steinhart_est(steinhart_input_high);
-
-				/* Directly update for a set time from start up due to therm voltages
-         * needing to settle */
-				segment_data[corrected_index]
-					.thermistor_value[therm - 1] =
-					segment_data[corrected_index]
-						.thermistor_reading[therm - 1];
-				segment_data[corrected_index]
-					.thermistor_value[therm + 15] =
-					segment_data[corrected_index]
-						.thermistor_reading[therm + 15];
-
-				if (raw_temp_voltages[c][0] == LTC_BAD_READ ||
-				    raw_temp_voltages[c][1] == LTC_BAD_READ ||
-				    segment_data[corrected_index]
-						    .thermistor_value[therm - 1] >
-					    (MAX_CELL_TEMP + 5) ||
-				    segment_data[corrected_index]
-						    .thermistor_value[therm +
-								      15] >
-					    (MAX_CELL_TEMP + 5) ||
-				    segment_data[corrected_index]
-						    .thermistor_value[therm - 1] <
-					    (MIN_CELL_TEMP - 5) ||
-				    segment_data[corrected_index]
-						    .thermistor_value[therm +
-								      15] <
-					    (MIN_CELL_TEMP - 5)) {
-					memcpy(segment_data[corrected_index]
-						       .thermistor_reading,
-					       previous_data[c]
-						       .thermistor_reading,
-					       sizeof(segment_data[corrected_index]
-							      .thermistor_reading));
-					memcpy(segment_data[corrected_index]
-						       .thermistor_value,
-					       previous_data[c].thermistor_value,
-					       sizeof(segment_data[corrected_index]
-							      .thermistor_value));
-				}
-			} else {
-				segment_data[corrected_index]
-					.thermistor_reading[therm - 1] =
-					previous_data[corrected_index]
-						.thermistor_reading[therm - 1];
-				segment_data[corrected_index]
-					.thermistor_reading[therm + 15] =
-					previous_data[corrected_index]
-						.thermistor_reading[therm + 15];
-
-				segment_data[corrected_index]
-					.thermistor_value[therm - 1] =
-					segment_data[corrected_index]
-						.thermistor_reading[therm - 1];
-				segment_data[corrected_index]
-					.thermistor_value[therm + 15] =
-					segment_data[corrected_index]
-						.thermistor_reading[therm + 15];
+	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+		uint8_t cells = get_num_cells(&bmsdata->chip_data[chip]);
+		for (uint8_t cell = 0; cell < cells; cell++) {
+			if (NER_GET_BIT(bmsdata->chips[chip].statc.cs_flt,
+					cell)) {
+				printf("ADC VOLTAGE DISCREPANCY ERROR\nChip %d, Cell %d\nC-ADC: %f, S-ADC: %f\n",
+				       chip + 1, cell + 1,
+				       getVoltage(
+					       bmsdata->chips[chip]
+						       .fcell.fc_codes[cell]),
+				       getVoltage(
+					       bmsdata->chips[chip]
+						       .scell.sc_codes[cell]));
 			}
 		}
 	}
-	current_therm++;
-	start_timer(&therm_timer,
-		    100 /*THERM_WAIT_TIME*/); /* Start timer for next reading */
-
-	/* the following algorithms were used to eliminate noise on Car 17D - keep
-   * them off if possible */
-	// variance_therm_check();
-	// standard_dev_therm_check();
-	// averaging_therm_check();
-	// discard_neutrals();
-
-	return 0; /* Read successfully */
 }
 
-void segment_retrieve_data(chipdata_t databuf[NUM_CHIPS])
+void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
-	segment_data = databuf;
-
-	/* Pull voltages and thermistors and indiacate if there was a problem during
-   * retrieval */
-	voltage_error = pull_voltages();
-	therm_error = pull_thermistors();
-
-	/* Save the contents of the reading so that we can use it to fill in missing
-   * data */
-	memcpy(previous_data, segment_data, sizeof(chipdata_t) * NUM_CHIPS);
-
-	segment_data = NULL;
-}
-
-void configure_discharge(uint8_t chip, uint16_t cells)
-{
-	/*
-   * chipConfigurations[chip][4] == chipConfigurations[Literally what chip you
-   * want][register] 4 and 5 are registers to discharge chips
-   */
-	local_config[chip][4] = (uint8_t)(cells & 0x00FF);
-
-	/*
-   * Register 5 is split in half, so we maintain the upper half and add in the
-   * bottom half to discharge cells
-   */
-	local_config[chip][5] =
-		(local_config[chip][5] & 0xF0) + (uint8_t)(cells >> 8);
-}
-
-void segment_enable_balancing(bool balance_enable)
-{
-	/*
-   * Discharging all cells in series
-   * Making the discharge command all 1's for all cells per chip
-   */
-	static const uint16_t DICHARGE_ALL_COMMAND = 0xFFFF >>
-						     (16 - NUM_CELLS_PER_CHIP);
-
-	if (balance_enable) {
-		for (int c = 0; c < NUM_CHIPS; c++) {
-			configure_discharge(c, DICHARGE_ALL_COMMAND);
-			discharge_commands[c] = DICHARGE_ALL_COMMAND;
+	read_status_registers(chips);
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].statc.va_ov) {
+			printf("A OV FLT\n");
 		}
-		push_chip_configuration();
-	} else {
-		for (int c = 0; c < NUM_CHIPS; c++) {
-			configure_discharge(c, 0);
-			discharge_commands[c] = 0;
+		if (chips[chip].statc.va_uv) {
+			printf("A UV FLT\n");
 		}
-		push_chip_configuration();
-	}
-}
-
-// @todo Revisit after testing
-void cell_enable_balancing(uint8_t chip_num, uint8_t cell_num,
-			   bool balance_enable)
-{
-	pull_chip_configuration();
-
-	if (balance_enable)
-		discharge_commands[chip_num] |= (1 << cell_num);
-	else
-		discharge_commands[chip_num] &= ~(1 << cell_num);
-
-	configure_discharge(chip_num, discharge_commands[chip_num]);
-
-	push_chip_configuration();
-}
-
-void segment_configure_balancing(
-	bool discharge_config[NUM_CHIPS][NUM_CELLS_PER_CHIP])
-{
-	for (int c = 0; c < NUM_CHIPS; c++) {
-		for (int cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
-			if (discharge_config[mapping_correction[c]][cell])
-				discharge_commands[mapping_correction[c]] |=
-					1 << cell;
-			else
-				discharge_commands[mapping_correction[c]] &=
-					~(1 << cell);
+		if (chips[chip].statc.vd_ov) {
+			printf("D OV FLT\n");
 		}
-
-		configure_discharge(c, discharge_commands[c]);
-	}
-	push_chip_configuration();
-}
-
-bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num)
-{
-	/* If the cell is one of the first 8, check the 4th register */
-	if (cell_num < 8) {
-		return local_config[chip_num][4] & (1 << cell_num);
-	}
-	/* If the cell number is greater than 8, check the 5th register */
-	else {
-		return local_config[chip_num][5] & (1 << (cell_num - 8));
-	}
-
-	return false; /* default case */
-}
-
-bool segment_is_balancing()
-{
-	for (int c = 0; c < NUM_CHIPS; c++) {
-		/* Reading from the 4th config register */
-		for (int cell = 0; cell < 8; cell++) {
-			if (local_config[c][4] & (1 << cell))
-				return true;
+		if (chips[chip].statc.vd_uv) {
+			printf("D OV FLT\n");
 		}
-
-		/* Reading from the 5th config register */
-		for (int cell = 0; cell < 4; cell++) {
-			if (local_config[c][5] & (1 << (cell)))
-				return true;
+		if (chips[chip].statc.vde) {
+			printf("VDE FLT\n");
+		}
+		if (chips[chip].statc.vdel) {
+			printf("VDEL FLT\n");
+		}
+		if (chips[chip].statc.spiflt) {
+			printf("SPI SLV FLT\n");
+		}
+		if (chips[chip].statc.sleep) {
+			printf("SLEEP OCCURED\n");
+		}
+		if (chips[chip].statc.thsd) {
+			printf("THERMAL FLT\n");
+		}
+		if (chips[chip].statc.oscchk) {
+			printf("OSC FLT\n");
+		}
+		if (chips[chip].statc.otp1_med) {
+			printf("CMED? FLT\n");
+		}
+		if (chips[chip].statc.otp2_med) {
+			printf("SMED? FLT\n");
 		}
 	}
+	// clear them
+	write_clear_flags(chips);
+}
 
+// ensure stuff used is in the correctfunction
+void segment_retrieve_data(acc_data_t *bmsdata)
+{
+	// read from ADC convs
+	read_filtered_voltage_registers(bmsdata->chips);
+
+	// check our fault flags
+	segment_monitor_flts(bmsdata->chips);
+
+	// read all therms using AUX 2
+	adc_and_read_aux2_registers(bmsdata->chips);
+}
+void segment_retrieve_debug_data(acc_data_t *bmsdata)
+{
+	// poll stuff like vref, etc.
+	adc_and_read_aux_registers(bmsdata->chips);
+
+	// read the above into status registers
+	read_status_registers(bmsdata->chips);
+
+	//segment_adc_comparison(bmsdata);
+}
+
+void segment_restart(acc_data_t *bmsdata)
+{
+	soft_reset_chips(bmsdata->chips);
+	segment_init(bmsdata);
+}
+
+bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
+{
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].tx_cfgb.dcc > 0) {
+			return true;
+		}
+	}
 	return false;
 }
 
-void pull_chip_configuration()
+void segment_disable_balancing(acc_data_t *bmsdata)
 {
-	uint8_t remote_config[NUM_CHIPS][8];
-	LTC6804_rdcfg(ltc68041, NUM_CHIPS, remote_config);
-
+	// Initializes all array elements to zero
+	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int index = 0; index < 6; index++) {
-			local_config[chip][index] = remote_config[chip][index];
-		}
+		set_mute_state(&bmsdata->chips[chip], true);
 	}
+	segment_configure_balancing(bmsdata, discharge_config);
 }
 
-int8_t steinhart_est(uint16_t V)
+void segment_configure_balancing(
+	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA])
 {
-	/* min temp - max temp with buffer on both */
-	for (int i = -25; i < 80; i++) {
-		if (V > VOLT_TEMP_CONV[i + 25]) {
-			return i;
-		}
-	}
-
-	return 80;
-}
-void disable_gpio_pulldowns()
-{
-	HAL_Delay(1000);
-	/* Turn OFF GPIO 1 & 2 pull downs */
-	pull_chip_configuration();
-	for (int c = 0; c < NUM_CHIPS; c++) {
-		local_config[c][0] |= 0x18;
-	}
-	push_chip_configuration();
-
-	pull_chip_configuration();
-	printf("Chip CFG:\n");
-	for (int c = 0; c < NUM_CHIPS; c++) {
-		for (int byte = 0; byte < 6; byte++) {
-			printf("%x", local_config[c][byte]);
-			printf("\t");
-		}
-		printf("\n");
-	}
-	printf("Done\n");
-}
-
-void serialize_i2c_msg(uint8_t data_to_write[][3], uint8_t comm_output[][6])
-{
+	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		comm_output[chip][0] = 0x60 | (data_to_write[chip][0] >>
-					       4); /* START + high side of B0 */
-		comm_output[chip][1] = (data_to_write[chip][0] << 4) |
-				       0x00; /* low side of B0 + ACK */
-		comm_output[chip][2] = 0x00 | (data_to_write[chip][1] >>
-					       4); /* BLANK + high side of B1 */
-		comm_output[chip][3] = (data_to_write[chip][1] << 4) |
-				       0x00; /* low side of B1 + ACK */
-		comm_output[chip][4] = 0x00 | (data_to_write[chip][2] >>
-					       4); /* BLANK + high side of B2 */
-		comm_output[chip][5] = (data_to_write[chip][2] << 4) |
-				       0x09; /* low side of B2 + STOP & NACK */
-	}
-}
-
-void averaging_therm_check()
-{
-	for (int therm = 1; therm <= 16; therm++) {
-		for (int c = 0; c < NUM_CHIPS; c++) {
-			/* Directly update for a set time from start up due to therm voltages
-       * needing to settle */
-			if (therm_avg_counter < THERM_AVG * 10) {
-				segment_data[c].thermistor_value[therm - 1] =
-					segment_data[c]
-						.thermistor_reading[therm - 1];
-				segment_data[c].thermistor_value[therm + 15] =
-					segment_data[c]
-						.thermistor_reading[therm + 15];
-				therm_avg_counter++;
-			} else {
-				/* We need to investigate this. Very sloppy */
-				/* Discard if reading is 33C */
-				if (segment_data[c]
-					    .thermistor_reading[therm - 1] !=
-				    33) {
-					/* If measured value is larger than current "averaged" value,
-           * increment value */
-					if (segment_data[c]
-						    .thermistor_reading[therm -
-									1] >
-					    segment_data[c]
-						    .thermistor_value[therm -
-								      1]) {
-						segment_data[c]
-							.thermistor_value[therm -
-									  1]++;
-						/* If measured value is smaller than current "averaged" value,
-             * decrement value */
-					} else if (segment_data[c]
-							   .thermistor_reading
-								   [therm - 1] <
-						   segment_data[c]
-							   .thermistor_value
-								   [therm - 1]) {
-						segment_data[c]
-							.thermistor_value[therm -
-									  1]--;
-					}
-				}
-
-				/* See comments above. Identical but for the upper 16 therms */
-				if (segment_data[c]
-					    .thermistor_reading[therm + 15] !=
-				    33) {
-					if (segment_data[c]
-						    .thermistor_reading[therm +
-									15] >
-					    segment_data[c]
-						    .thermistor_value[therm +
-								      15]) {
-						segment_data[c]
-							.thermistor_value[therm +
-									  15]++;
-					} else if (segment_data[c]
-							   .thermistor_reading
-								   [therm + 15] <
-						   segment_data[c].thermistor_value
-							   [therm + 15]) {
-						segment_data[c]
-							.thermistor_value[therm +
-									  15]--;
-					}
-				}
-			}
+		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
+		for (int cell = 0; cell < num_cells; cell++) {
+			set_cell_discharge(&bmsdata->chips[chip], cell + 1,
+					   discharge_config[chip][cell]);
+			set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
+	// write_config_regs(bmsdata->chips);
 }
 
-void standard_dev_therm_check()
-{
-	if (previous_data == NULL)
-		return;
-	int16_t avg_temp = calc_average();
-	uint8_t standard_dev = calc_therm_standard_dev(avg_temp);
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 17; therm < 28; therm++) {
-			/*
-       * If difference between thermistor and average is more than
-       * MAX_STANDARD_DEV set the therm to pack average
-       */
-			if (abs(segment_data[c].thermistor_value[therm] -
-				avg_temp) > (MAX_STANDARD_DEV * standard_dev)) {
-				/* Nullify thermistor by setting to pack average */
-				segment_data[c].thermistor_value[therm] =
-					previous_data[c].thermistor_value[therm];
-			}
-		}
-	}
-}
+// void averaging_therm_check(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	for (int therm = 1; therm <= 16; therm++) {
+// 		for (int c = 0; c < NUM_CHIPS; c++) {
+// 			/* Directly update for a set time from start up due to therm voltages
+//        * needing to settle */
+// 			if (therm_avg_counter < THERM_AVG * 10) {
+// 				segment_data[c].thermistor_value[therm - 1] =
+// 					segment_data[c]
+// 						.thermistor_reading[therm - 1];
+// 				segment_data[c].thermistor_value[therm + 15] =
+// 					segment_data[c]
+// 						.thermistor_reading[therm + 15];
+// 				therm_avg_counter++;
+// 			} else {
+// 				/* We need to investigate this. Very sloppy */
+// 				/* Discard if reading is 33C */
+// 				if (segment_data[c]
+// 					    .thermistor_reading[therm - 1] !=
+// 				    33) {
+// 					/* If measured value is larger than current "averaged" value,
+//            * increment value */
+// 					if (segment_data[c]
+// 						    .thermistor_reading[therm -
+// 									1] >
+// 					    segment_data[c]
+// 						    .thermistor_value[therm -
+// 								      1]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm -
+// 									  1]++;
+// 						/* If measured value is smaller than current "averaged" value,
+//              * decrement value */
+// 					} else if (segment_data[c]
+// 							   .thermistor_reading
+// 								   [therm - 1] <
+// 						   segment_data[c]
+// 							   .thermistor_value
+// 								   [therm - 1]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm -
+// 									  1]--;
+// 					}
+// 				}
 
-int8_t calc_therm_standard_dev(int16_t avg_temp)
-{
-	uint16_t sum_diff_sqrd = 0;
-	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		for (uint8_t therm = 17; therm < 28; therm++) {
-			uint16_t sum_diff =
-				abs(segment_data[chip].thermistor_value[therm] -
-				    avg_temp);
-			sum_diff_sqrd += sum_diff * sum_diff;
-		}
-	}
+// 				/* See comments above. Identical but for the upper 16 therms */
+// 				if (segment_data[c]
+// 					    .thermistor_reading[therm + 15] !=
+// 				    33) {
+// 					if (segment_data[c]
+// 						    .thermistor_reading[therm +
+// 									15] >
+// 					    segment_data[c]
+// 						    .thermistor_value[therm +
+// 								      15]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm +
+// 									  15]++;
+// 					} else if (segment_data[c]
+// 							   .thermistor_reading
+// 								   [therm + 15] <
+// 						   segment_data[c].thermistor_value
+// 							   [therm + 15]) {
+// 						segment_data[c]
+// 							.thermistor_value[therm +
+// 									  15]--;
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
-	uint8_t standard_dev = sqrt(sum_diff_sqrd / 88);
-	if (standard_dev < 8) {
-		standard_dev = 8;
-	}
-	return standard_dev;
-}
+// void standard_dev_therm_check(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	if (previous_data == NULL)
+// 		return;
+// 	int16_t avg_temp = calc_average(segment_data);
+// 	uint8_t standard_dev = calc_therm_standard_dev(avg_temp);
+// 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+// 		for (uint8_t therm = 17; therm < 28; therm++) {
+// 			/*
+//        * If difference between thermistor and average is more than
+//        * MAX_STANDARD_DEV set the therm to pack average
+//        */
+// 			if (abs(segment_data[c].thermistor_value[therm] -
+// 				avg_temp) > (MAX_STANDARD_DEV * standard_dev)) {
+// 				/* Nullify thermistor by setting to pack average */
+// 				segment_data[c].thermistor_value[therm] =
+// 					previous_data[c].thermistor_value[therm];
+// 			}
+// 		}
+// 	}
+// }
 
-int16_t calc_average()
-{
-	int16_t avg = 0;
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int therm = 17; therm < 28; therm++) {
-			avg += segment_data[chip].thermistor_value[therm];
-		}
-	}
+// int8_t calc_therm_standard_dev(chipdata_t segment_data[NUM_CHIPS], int16_t avg_temp)
+// {
+// 	uint16_t sum_diff_sqrd = 0;
+// 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+// 		for (uint8_t therm = 17; therm < 28; therm++) {
+// 			uint16_t sum_diff =
+// 				abs(segment_data[chip].thermistor_value[therm] -
+// 				    avg_temp);
+// 			sum_diff_sqrd += sum_diff * sum_diff;
+// 		}
+// 	}
 
-	avg = avg / (NUM_CHIPS * 11);
-	return avg;
-}
+// 	uint8_t standard_dev = sqrt(sum_diff_sqrd / 88);
+// 	if (standard_dev < 8) {
+// 		standard_dev = 8;
+// 	}
+// 	return standard_dev;
+// }
 
-void variance_therm_check()
-{
-	if (previous_data == NULL) {
-		start_timer(&variance_timer, 1000);
-		return;
-	}
+// int16_t calc_average(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	int16_t avg = 0;
+// 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+// 		for (int therm = 17; therm < 28; therm++) {
+// 			avg += segment_data[chip].thermistor_value[therm];
+// 		}
+// 	}
 
-	if (is_timer_expired(&variance_timer)) {
-		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-			for (uint8_t therm = 17; therm < 28; therm++) {
-				if (abs(segment_data[c]
-						.thermistor_reading[therm] -
-					previous_data[c]
-						.thermistor_reading[therm]) >
-					    5 &&
-				    (segment_data[c].thermistor_reading[therm] <
-					     10 ||
-				     segment_data[c].thermistor_reading[therm] >
-					     30)) {
-					segment_data[c]
-						.thermistor_reading[therm] =
-						previous_data[c]
-							.thermistor_reading
-								[therm];
-					segment_data[c].thermistor_value[therm] =
-						previous_data[c]
-							.thermistor_value[therm];
-				}
-			}
-		}
-	}
-}
+// 	avg = avg / (NUM_CHIPS * 11);
+// 	return avg;
+// }
 
-void discard_neutrals()
-{
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t therm = 17; therm < 28; therm++) {
-			if (segment_data[c].thermistor_reading[therm] == 33) {
-				segment_data[c].thermistor_reading[therm] = 25;
-				segment_data[c].thermistor_value[therm] = 25;
-			}
-		}
-	}
-}
+// void variance_therm_check()
+// {
+// 	if (previous_data == NULL) {
+// 		start_timer(&variance_timer, 1000);
+// 		return;
+// 	}
+
+// 	if (is_timer_expired(&variance_timer)) {
+// 		for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+// 			for (uint8_t therm = 17; therm < 28; therm++) {
+// 				if (abs(segment_data[c]
+// 						.thermistor_reading[therm] -
+// 					previous_data[c]
+// 						.thermistor_reading[therm]) >
+// 					    5 &&
+// 				    (segment_data[c].thermistor_reading[therm] <
+// 					     10 ||
+// 				     segment_data[c].thermistor_reading[therm] >
+// 					     30)) {
+// 					segment_data[c]
+// 						.thermistor_reading[therm] =
+// 						previous_data[c]
+// 							.thermistor_reading
+// 								[therm];
+// 					segment_data[c].thermistor_value[therm] =
+// 						previous_data[c]
+// 							.thermistor_value[therm];
+// 				}
+// 			}
+// 		}
+// 	}
+// }
+
+// void discard_neutrals(chipdata_t segment_data[NUM_CHIPS])
+// {
+// 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
+// 		for (uint8_t therm = 17; therm < 28; therm++) {
+// 			if (segment_data[c].thermistor_reading[therm] == 33) {
+// 				segment_data[c].thermistor_reading[therm] = 25;
+// 				segment_data[c].thermistor_value[therm] = 25;
+// 			}
+// 		}
+// 	}
+// }

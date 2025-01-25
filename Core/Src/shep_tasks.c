@@ -15,6 +15,7 @@
 #include "analyzer.h"
 #include "compute.h"
 #include <stdio.h>
+#include "serialPrintResult.h"
 
 #define STATE_MACHINE_FLAG 1
 
@@ -28,8 +29,21 @@ const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
 void vGetSegmentData(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
+	int i = 0;
 	for (;;) {
-		segment_retrieve_data(bmsdata->chip_data);
+		// printf("Get segment data\n");
+		segment_retrieve_data(bmsdata);
+
+		if (DEBUG_MODE_ENABLED) {
+			segment_retrieve_debug_data(bmsdata);
+		}
+
+		if (++i % (45 * SAMPLE_RATE) == 0) {
+			printf(" ***********  REBOOTING SEGMENT\n\n");
+			segment_restart(bmsdata);
+		}
+
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
 	}
@@ -47,7 +61,7 @@ void vAnalyzer(void *pv_params)
 		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
 
 		osMutexAcquire(bmsdata->mutex, osWaitForever);
-		disable_therms(bmsdata);
+		// disable_therms(bmsdata);
 
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
@@ -65,7 +79,7 @@ void vAnalyzer(void *pv_params)
 		// temporary end
 
 		calc_state_of_charge(bmsdata);
-		calc_noise_volt_percent(bmsdata);
+		// calc_noise_volt_percent(bmsdata);
 
 		osMutexRelease(bmsdata->mutex);
 	}
@@ -97,5 +111,120 @@ void vStateMachine(void *pv_params)
 	for (;;) {
 		sm_handle_state(bmsdata);
 		osDelay(10);
+	}
+}
+
+osThreadId_t debug_mode_thread;
+const osThreadAttr_t debug_mode_attrs = { .name = "Debug Mode Thread",
+					  .stack_size = 2048,
+					  .priority = osPriorityNormal };
+void vDebugMode(void *pv_params)
+{
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
+	while (69 < 420) {
+		for (int chip = 0; chip < NUM_CHIPS; chip++) {
+			uint8_t num_cells =
+				get_num_cells(&bmsdata->chip_data[chip]);
+			for (int cell = 0; cell < num_cells; cell += 2) {
+				compute_send_cell_data_message(
+					bmsdata->chip_data[chip].alpha,
+
+					bmsdata->chip_data[chip].cell_temp[cell],
+
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.cell
+								.c_codes[cell]),
+
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.cell
+								.c_codes[cell +
+									 1]),
+
+					chip,
+
+					cell,
+
+					cell + 1,
+
+					(bmsdata->chips[chip].tx_cfgb.dcc >>
+					 cell) & 1,
+
+					(bmsdata->chips[chip].tx_cfgb.dcc >>
+					 (cell + 1)) &
+						1);
+				osDelay(1000 / NUM_CHIPS);
+			}
+
+			// Send chip status messages
+			if (!bmsdata->chip_data[chip].alpha) {
+				compute_send_beta_status_a_message(
+					10000 * getVoltage(
+							bmsdata->chip_data[chip]
+								.cell_temp[10]),
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.cell
+								.c_codes[10]),
+					NER_GET_BIT(
+						bmsdata->chips[chip].tx_cfgb.dcc,
+						10),
+					chip,
+					bmsdata->chip_data[chip].on_board_temp,
+					(getVoltage(bmsdata->chips[chip]
+							    .stata.itmp) /
+					 0.0075) -
+						273,
+					10000 * 20 *
+						getVoltage( // VPV is ra_code 11 w/ different scale
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[11]));
+				compute_send_beta_status_b_message(
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.stata.vref2),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.va),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vd),
+					chip,
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vr4k),
+					10000 * 20 *
+						getVoltage( // VMV is ra_code 10
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[10]));
+			} else {
+				compute_send_alpha_status_a_message(
+					bmsdata->chip_data->on_board_temp, chip,
+					(getVoltage(bmsdata->chips[chip]
+							    .stata.itmp) /
+					 0.0075) -
+						273,
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[9]),
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.raux
+								.ra_codes[8]));
+				compute_send_alpha_status_b_message(
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vr4k),
+					chip,
+					10000 * getVoltage(
+							bmsdata->chips[chip]
+								.stata.vref2),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.va),
+					10000 * getVoltage(bmsdata->chips[chip]
+								   .statb.vd));
+			}
+		}
 	}
 }

@@ -27,6 +27,8 @@
 #include "assert.h"
 #include "string.h"
 
+#include "serialPrintResult.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -40,6 +42,12 @@
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
 // #define DEBUG_STATS
+#define DEBUG_VOLTAGES
+// #define DEBUG_RAW_VOLTAGES
+#define DEBUG_RAW_VOLTAGES_FORMATTED
+// #define DEBUG_OCV
+// #define DEUBG_THERMS
+// #define DEBUG_OTHER
 // etc etc
 //#endif
 /* USER CODE END PD */
@@ -68,6 +76,7 @@ SPI_HandleTypeDef hspi3;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
+TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart4;
@@ -79,7 +88,7 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
@@ -104,6 +113,7 @@ static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_IWDG_Init(void);
+static void MX_TIM5_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -117,9 +127,25 @@ void StartDefaultTask(void *argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+/* the following reroutes printf to uart */
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE
+{
+  HAL_UART_Transmit(&huart4, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
+  return ch;
+}
+
 int _write(int file, char* ptr, int len) {
-  HAL_UART_Transmit_DMA(&huart4, (uint8_t *)ptr, len);
-  
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++) {
+    __io_putchar( *ptr++ );
+  }
   return len;
 }
 
@@ -128,94 +154,134 @@ int _write(int file, char* ptr, int len) {
 const void print_bms_stats(acc_data_t *acc_data)
 {
 	static nertimer_t debug_stat_timer;
-	static const uint16_t PRINT_STAT_WAIT = 500; //ms
+	static const uint16_t PRINT_STAT_WAIT = 1000; //ms
 
 	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
+  #ifdef DEBUG_OTHER
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
 	// printf("Prev Fault: %#x", previousFault);
-  printf("CAN Error:\t%ld\r\n", HAL_CAN_GetError(&hcan1));
-  printf("Current * 10: %d\r\n", (acc_data->pack_current));
-  printf("Min, Max, Avg Temps: %ld, %ld, %d\r\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\r\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
-  printf("DCL: %d\r\n", acc_data->discharge_limit);
-  printf("CCL: %d\r\n", acc_data->charge_limit);
-  printf("Cont CCL %d\r\n", acc_data->cont_CCL);
-  printf("SoC: %d\r\n", acc_data->soc);
-  printf("Is Balancing?: %d\r\n", segment_is_balancing());
+
+  printf("CAN Error:\t%ld\n", HAL_CAN_GetError(&hcan1));
+  printf("Current * 10: %d\n", (acc_data->pack_current));
+  printf("Min, Max, Avg Temps: %ld, %ld, %d\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
+  #endif
+
+  #ifdef DEBUG_VOLTAGES
+  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
+  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val / 10000.0, acc_data->max_voltage.val / 10000.0, acc_data->avg_voltage / 10000.0, acc_data->delt_voltage / 10000.0);
+  #endif
+
+  #ifdef DEBUG_OTHER
+  printf("DCL: %d\n", acc_data->discharge_limit);
+  printf("CCL: %d\n", acc_data->charge_limit);
+  printf("Cont CCL %d\n", acc_data->cont_CCL);
+  printf("SoC: %d\n", acc_data->soc);
+  printf("Is Balancing?: %d\n", segment_is_balancing(acc_data->chips));
   printf("State: ");
-  if (current_state == 0) printf("BOOT\r\n");
-  else if (current_state == 1) printf("READY\r\n");
-  else if (current_state == 2) printf("CHARGING\r\n");
-  else if (current_state == 3) printf("FAULTED: %lX\r\n", acc_data->fault_code);
+  if (current_state == 0) printf("BOOT\n");
+  else if (current_state == 1) printf("READY\n");
+  else if (current_state == 2) printf("CHARGING\n");
+  else if (current_state == 3) printf("FAULTED: %lX\n", acc_data->fault_code);
 
-  printf("Voltage Noise Percent:\r\n");
-  printf("Seg 1: %d\r\n", acc_data->segment_noise_percentage[0]);
-  printf("Seg 2: %d\r\n", acc_data->segment_noise_percentage[1]);
-  printf("Seg 3: %d\r\n", acc_data->segment_noise_percentage[2]);
-  printf("Seg 4: %d\r\n", acc_data->segment_noise_percentage[3]);
-  printf("Seg 5: %d\r\n", acc_data->segment_noise_percentage[4]);
-  printf("Seg 6: %d\r\n", acc_data->segment_noise_percentage[5]);
+  printf("Voltage Noise Percent:\n");
+  printf("Seg 1: %d\n", acc_data->segment_noise_percentage[0]);
+  printf("Seg 2: %d\n", acc_data->segment_noise_percentage[1]);
+  printf("Seg 3: %d\n", acc_data->segment_noise_percentage[2]);
+  printf("Seg 4: %d\n", acc_data->segment_noise_percentage[3]);
+  printf("Seg 5: %d\n", acc_data->segment_noise_percentage[4]);
+  printf("Seg 6: %d\n", acc_data->segment_noise_percentage[5]);
+  #endif
 
-  printf("Raw Cell Voltage:\r\n");
+  #ifdef DEBUG_RAW_VOLTAGES
+  printf("Raw Cell Voltage:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
     {
-        printf("%d\t", acc_data->chip_data[c].voltage[cell]);
+        printf("%d\t", acc_data->chips[c].cell.c_codes[cell]);
     }
-    printf("\r\n");
+    printf("\n");
   }
+  #endif
 
-  printf("Open Cell Voltage:\r\n");
+  #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
+    for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.3f\t", getVoltage(acc_data->chips[c].fcell.fc_codes[cell]));
+    }
+    printf("\n");
+  }
+  #endif
+
+  #ifdef DEBUG_OCV
+  printf("Open Cell Voltage:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-    for(uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++)
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
     }
-    printf("\r\n");
+    printf("\n");
   }
+  #endif
 
-  printf("Thermistors with Disabling:\r\n");
+#define DEBUG_THERM_VOLTS
+  #ifdef DEBUG_THERM_VOLTS
+  printf("THERM VOLTS: \n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
-     printf("Chip %d:  ", c);
-
-	for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
-
-          //if (THERM_DISABLE[c][cell]) continue;
-          printf("%d ", acc_data->chip_data[c].thermistor_value[cell]);
-        }
-      
-        printf("\r\n");
+    for(uint8_t gpio = 0; gpio < 10; gpio++)
+    {
+        printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
+    }
+    printf("\n");
   }
-    
-  printf("UnFiltered Thermistor Temps:\r\n");
+  #endif
+
+  #ifdef DEBUG_OTHER
+  
+  printf("UnFiltered Thermistor Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
 
-    for (uint8_t cell = 0; cell < NUM_THERMS_PER_CHIP; cell++) {
-
-          printf("%d ", acc_data->chip_data[c].thermistor_reading[cell]);
-        }
-      
-        printf("\r\n");
+    uint8_t num_therms;
+    if (acc_data->chip_data->alpha) {
+      num_therms = 7;
+    } else {
+      num_therms = 6;
     }
 
-   printf("Cell Temps:\r\n");
+    for (uint8_t therm = 0; therm < num_therms; therm++) {
+
+          printf("%d ", acc_data->chips[c].aux.a_codes[therm]);
+        }
+      
+        printf("\n");
+    }
+
+  #endif
+
+  #ifdef DEUBG_THERMS
+   printf("Cell Temps:\n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     printf("Chip %d:  ", c);
-
-    for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for (uint8_t cell = 0; cell < num_cells; cell++) {
 
           printf("%d ", acc_data->chip_data[c].cell_temp[cell]);
         }
       
-        printf("\r\n");
+        printf("\n");
     }
+  #endif
 
   start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
 }
@@ -241,6 +307,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *phuart)
   */
 int main(void)
 {
+
   /* USER CODE BEGIN 1 */
 
   /* USER CODE END 1 */
@@ -284,6 +351,7 @@ int main(void)
   MX_ADC1_Init();
   MX_ADC2_Init();
   MX_IWDG_Init();
+  MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
  //for (int i = 0; i < 58; i++) 
  //{
@@ -299,9 +367,9 @@ int main(void)
 
   HAL_Delay(500);
 	init_both_can(&hcan1, &hcan2);
-  segment_init();
+  segment_init(acc_data);
   compute_init();
-  printf("Init passed\r\n");
+  printf("Init passed\n");
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -325,13 +393,14 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, (void*) acc_data, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   
   /* Messaging */
   can_dispatch_handle = osThreadNew(vCanDispatch, &hcan1, &can_dispatch_attributes);
   assert(can_dispatch_handle);
+  
   can_receive_thread = osThreadNew(vCanReceive, NULL, &can_receive_attributes);
   assert(can_receive_thread);
 
@@ -347,6 +416,11 @@ int main(void)
   state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
   assert(state_machine_thread);
 
+  if (DEBUG_MODE_ENABLED) {
+    debug_mode_thread = osThreadNew(vDebugMode, acc_data, &debug_mode_attrs);
+    assert(debug_mode_thread);
+  }
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -357,6 +431,7 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   for(;;) {
@@ -766,7 +841,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -879,7 +954,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 0;
+  htim2.Init.Prescaler = 16;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -900,8 +975,53 @@ static void MX_TIM2_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN TIM2_Init 2 */
-
+  HAL_TIM_Base_Start(&htim2);
   /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
+  * @brief TIM5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM5_Init(void)
+{
+
+  /* USER CODE BEGIN TIM5_Init 0 */
+
+  /* USER CODE END TIM5_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM5_Init 1 */
+
+  /* USER CODE END TIM5_Init 1 */
+  htim5.Instance = TIM5;
+  htim5.Init.Prescaler = 0;
+  htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim5.Init.Period = 4294967295;
+  htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim5, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim5, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM5_Init 2 */
+
+  /* USER CODE END TIM5_Init 2 */
 
 }
 
@@ -1229,7 +1349,7 @@ void send_git_version_message() {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	acc_data_t *bmsdata = (acc_data_t *)argument;
+  acc_data_t* bmsdata = (acc_data_t*) argument;
 
   bool alt = true;
 
@@ -1241,25 +1361,45 @@ void StartDefaultTask(void *argument)
     #endif
 
     if (alt) {
-      printf(".\r\n");
+      printf(".\n");
     } else {
-      printf("..\r\n");
+      printf("..\n");
     }
 
     alt = !alt;
 
     compute_send_bms_status_message(bmsdata, current_state,
-					segment_is_balancing());
+					segment_is_balancing(bmsdata->chips));
     compute_send_fault_status_message(bmsdata);
 
     send_git_version_message();
   
-
     HAL_IWDG_Refresh(&hiwdg);
 
     osDelay(1000);
   }
   /* USER CODE END 5 */
+}
+
+/**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM3 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM3) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+
+  /* USER CODE END Callback 1 */
 }
 
 /**

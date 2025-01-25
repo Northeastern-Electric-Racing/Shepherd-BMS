@@ -11,23 +11,6 @@ extern uint8_t THERM_DISABLE[NUM_CHIPS][NUM_THERMS_PER_CHIP];
 
 extern const uint8_t NO_THERM;
 extern const uint8_t MUX_OFFSET;
-
-/**
- * @brief Mapping the Relevant Thermistors for each cell based on cell #
- * @note 0xFF indicates the end of the relevant therms
- * @note Low side
- */
-extern const uint8_t RELEVANT_THERM_MAP_L[NUM_CELLS_PER_CHIP]
-					 [NUM_RELEVANT_THERMS];
-
-/**
- * @brief Mapping the Relevant Thermistors for each cell based on cell #
- * @note 0xFF indicates the end of the relevant therms
- * @note High side
- */
-extern const uint8_t RELEVANT_THERM_MAP_H[NUM_CELLS_PER_CHIP]
-					 [NUM_RELEVANT_THERMS];
-
 /*
  * List of therms that we actually read from, NOT reordered by cell
  */
@@ -43,6 +26,14 @@ extern const uint8_t POPULATED_THERM_LIST_H[NUM_THERMS_PER_CHIP];
 #define ANALYSIS_INTERVAL VOLTAGE_WAIT_TIME
 
 //#define MAX_SIZE_OF_HIST_QUEUE  300000U //bytes
+
+/**
+ * @brief Get the number of cells on a chip.
+ * 
+ * @param chip_data Pointer to struct containing chip data.
+ * @return uint8_t The number of cells in the chip.
+ */
+uint8_t get_num_cells(chipdata_t *chip_data);
 
 /**
  * @brief Calculate thermistor values and cell temps using thermistors.

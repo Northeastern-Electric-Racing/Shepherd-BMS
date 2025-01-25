@@ -6,29 +6,32 @@
 #include "bmsConfig.h"
 #include "timer.h"
 #include "cmsis_os2.h"
+#include "adBms6830Data.h"
 
 /**
  * @brief Individual chip data
  * @note stores thermistor values, voltage readings, and the discharge status
  */
 typedef struct {
-	/* These are retrieved from the initial LTC comms */
-	uint16_t voltage
-		[NUM_CELLS_PER_CHIP]; /* store voltage readings from each chip */
-	int8_t thermistor_reading
-		[NUM_THERMS_PER_CHIP]; /* store all therm readings from each chip */
-	int8_t thermistor_value[NUM_THERMS_PER_CHIP];
 	int error_reading;
 
 	/* These are calculated during the analysis of data */
-	int8_t cell_temp[NUM_CELLS_PER_CHIP];
-	float cell_resistance[NUM_CELLS_PER_CHIP];
-	uint16_t open_cell_voltage[NUM_CELLS_PER_CHIP];
+
+	/* Cell temperature in celsius */
+	int8_t cell_temp[NUM_CELLS_ALPHA];
+	float cell_resistance[NUM_CELLS_ALPHA];
+	uint16_t open_cell_voltage[NUM_CELLS_ALPHA];
 
 	uint8_t noise_reading
-		[NUM_CELLS_PER_CHIP]; /* bool representing noise ignored read */
+		[NUM_CELLS_ALPHA]; /* bool representing noise ignored read */
 	uint8_t consecutive_noise
-		[NUM_CELLS_PER_CHIP]; /* count representing consecutive noisy reads */
+		[NUM_CELLS_ALPHA]; /* count representing consecutive noisy reads */
+
+	/* True if chip is alpha, False if Chip is Beta */
+	bool alpha;
+
+	/* For temperatures of on-board therms. Length 1 if Alpha, length 2 if Beta. */
+	int8_t on_board_temp;
 } chipdata_t;
 
 /**
@@ -82,8 +85,13 @@ typedef struct {
 #define ACCUMULATOR_FRAME_SIZE sizeof(acc_data_t);
 
 typedef struct {
+	/* chip_data and chips are parallel arrays. */
+
 	/* Array of data from all chips in the system */
 	chipdata_t chip_data[NUM_CHIPS];
+
+	/* Array of structs containing raw data from and configurations for the ADBMS6830 chips */
+	cell_asic chips[NUM_CHIPS];
 
 	int fault_status; // FIXME: this field is unused
 

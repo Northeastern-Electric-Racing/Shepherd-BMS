@@ -44,18 +44,18 @@ typedef union _bms_fault_t {
 } bms_fault_t;
 
 /* private function prototypes */
-void init_boot(void);
-void init_ready(void);
-void init_charging(void);
-void init_faulted(void);
+void init_boot(acc_data_t *bmsdata);
+void init_ready(acc_data_t *bmsdata);
+void init_charging(acc_data_t *bmsdata);
+void init_faulted(acc_data_t *bmsdata);
 void handle_boot(acc_data_t *bmsdata);
 void handle_ready(acc_data_t *bmsdata);
 void handle_charging(acc_data_t *bmsdata);
 void handle_faulted(acc_data_t *bmsdata);
-void request_transition(BMSState_t next_state);
+void request_transition(acc_data_t *bmsdata, BMSState_t next_state);
 
 typedef void (*HandlerFunction_t)(acc_data_t *bmsdata);
-typedef void (*InitFunction_t)();
+typedef void (*InitFunction_t)(acc_data_t *bmsdata);
 
 const InitFunction_t init_LUT[NUM_STATES] = { &init_boot, &init_ready,
 					      &init_charging, &init_faulted };
@@ -64,7 +64,7 @@ const HandlerFunction_t handler_LUT[NUM_STATES] = { &handle_boot, &handle_ready,
 						    &handle_charging,
 						    &handle_faulted };
 
-void init_boot()
+void init_boot(acc_data_t *bmsdata)
 {
 	return;
 }
@@ -72,7 +72,7 @@ void init_boot()
 void handle_boot(acc_data_t *bmsdata)
 {
 	prevAccData = NULL;
-	segment_enable_balancing(false);
+	segment_disable_balancing(bmsdata);
 	compute_enable_charging(false);
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
@@ -80,13 +80,13 @@ void handle_boot(acc_data_t *bmsdata)
 	compute_set_fault(1);
 	// bmsdata->fault_code = FAULTS_CLEAR;
 
-	request_transition(READY_STATE);
+	request_transition(bmsdata, READY_STATE);
 	return;
 }
 
-void init_ready()
+void init_ready(acc_data_t *bmsdata)
 {
-	segment_enable_balancing(false);
+	segment_disable_balancing(bmsdata);
 	compute_enable_charging(false);
 	return;
 }
@@ -96,23 +96,24 @@ void handle_ready(acc_data_t *bmsdata)
 	/* check for charger connection */
 	if (compute_charger_connected() &&
 	    is_timer_expired(&bootup_timer)) { // TODO Fix once charger works
-		request_transition(READY_STATE);
+		request_transition(bmsdata, READY_STATE);
 	} else {
 		sm_broadcast_current_limit(bmsdata);
 		return;
 	}
 }
 
-void init_charging()
+void init_charging(acc_data_t *bmsdata)
 {
 	cancel_timer(&charger_settle_countup);
 	return;
 }
 
+// TODO: Improve algorithm. Change for new cells. Make more configurable.
 void handle_charging(acc_data_t *bmsdata)
 {
 	if (!compute_charger_connected()) {
-		request_transition(READY_STATE);
+		request_transition(bmsdata, READY_STATE);
 		return;
 
 	} else {
@@ -128,24 +129,25 @@ void handle_charging(acc_data_t *bmsdata)
 		if (sm_balancing_check(bmsdata))
 			sm_balance_cells(bmsdata);
 		else
-			segment_enable_balancing(false);
+			segment_disable_balancing(bmsdata);
 
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) ||
 		    !is_timer_active(&charger_message_timer)) {
-			compute_send_charging_message((MAX_CHARGE_VOLT *
-						       NUM_CELLS_PER_CHIP *
-						       NUM_CHIPS),
-						      5, bmsdata);
+			compute_send_charging_message(
+				(MAX_CHARGE_VOLT *
+				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
+				 NUM_CHIPS),
+				5, bmsdata);
 			start_timer(&charger_message_timer,
 				    CHARGE_MESSAGE_WAIT);
 		}
 	}
 }
 
-void init_faulted()
+void init_faulted(acc_data_t *bmsdata)
 {
-	segment_enable_balancing(false);
+	segment_disable_balancing(bmsdata);
 	compute_enable_charging(false);
 	entered_faulted = true;
 	return;
@@ -163,15 +165,12 @@ void handle_faulted(acc_data_t *bmsdata)
 
 	if (bmsdata->fault_code_crit == FAULTS_CLEAR) {
 		compute_set_fault(1);
-		request_transition(BOOT_STATE);
+		request_transition(bmsdata, BOOT_STATE);
 		return;
 	}
 
 	else {
 		compute_set_fault(0);
-
-		// TODO update to HAL
-		// digitalWrite(CHARGE_SAFETY_RELAY, 0);
 	}
 	return;
 }
@@ -188,7 +187,7 @@ void sm_handle_state(acc_data_t *bmsdata)
 
 	if (bmsdata->fault_code_crit != FAULTS_CLEAR) {
 		bmsdata->discharge_limit = 0;
-		request_transition(FAULTED_STATE);
+		request_transition(bmsdata, FAULTED_STATE);
 	}
 
 	handler_LUT[current_state](bmsdata);
@@ -198,14 +197,14 @@ void sm_handle_state(acc_data_t *bmsdata)
 	sm_broadcast_current_limit(bmsdata);
 }
 
-void request_transition(BMSState_t next_state)
+void request_transition(acc_data_t *bmsdata, BMSState_t next_state)
 {
 	if (current_state == next_state)
 		return;
 	if (!valid_transition_from_to[current_state][next_state])
 		return;
 
-	init_LUT[next_state]();
+	init_LUT[next_state](bmsdata);
 	current_state = next_state;
 }
 
@@ -424,6 +423,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 	}
 }
 
+// TODO: Improve algorithm.
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
 	if (!compute_charger_connected())
@@ -481,17 +481,20 @@ void sm_broadcast_current_limit(acc_data_t *bmsdata)
 	}
 }
 
-void sm_balance_cells(acc_data_t *bms_data)
+//TODO: Improve algorithm
+void sm_balance_cells(acc_data_t *bmsdata)
 {
-	bool balanceConfig[NUM_CHIPS][NUM_CELLS_PER_CHIP];
+	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA];
 
 	/* For all cells of all the chips, figure out if we need to balance by
    * comparing the difference in voltages */
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			uint16_t delta =
-				bms_data->chip_data[chip].voltage[cell] -
-				(uint16_t)bms_data->min_voltage.val;
+				bmsdata->chips[chip].fcell.fc_codes[cell] -
+				(uint16_t)bmsdata->min_voltage.val;
 			if (delta > MAX_DELTA_V * 10000)
 				balanceConfig[chip][cell] = true;
 			else
@@ -502,7 +505,8 @@ void sm_balance_cells(acc_data_t *bms_data)
 #ifdef DEBUG_CHARGING
 	printf("Cell Balancing:");
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		for (uint8_t cell = 0; cell < NUM_CELLS_PER_CHIP; cell++) {
+		uint8_t num_cells = get_num_cells(bmsdata->chip_data[c]);
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			printf(balanceConfig[c][cell]);
 			printf("\t");
 		}
@@ -510,12 +514,12 @@ void sm_balance_cells(acc_data_t *bms_data)
 	}
 #endif
 
-	segment_configure_balancing(balanceConfig);
+	segment_configure_balancing(bmsdata, balanceConfig);
 }
 
 void calculate_pwm(acc_data_t *bmsdata)
 {
-	// todo actually implement algorithm
+	// TODO: actually implement algorithm
 	// this should include:
 	// 1. set PWM based on temp of "nearby" cells
 	// 2. automate seleciton of htim rather than hardcode
