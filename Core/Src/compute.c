@@ -435,42 +435,6 @@ void compute_send_cell_voltage_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
-void compute_send_cell_voltage_message(uint8_t cell_id,
-				       uint16_t instant_voltage,
-				       uint16_t internal_Res, uint8_t shunted,
-				       uint16_t open_voltage)
-{
-	struct __attribute__((__packed__)) {
-		uint8_t cellID;
-		uint16_t instantVoltage;
-		uint16_t internalResistance;
-		uint8_t shunted;
-		uint16_t openVoltage;
-	} cell_voltage_msg_data;
-
-	cell_voltage_msg_data.cellID = cell_id;
-	cell_voltage_msg_data.instantVoltage = instant_voltage;
-	cell_voltage_msg_data.internalResistance = internal_Res;
-	cell_voltage_msg_data.shunted = shunted;
-	cell_voltage_msg_data.openVoltage = open_voltage;
-
-	/* convert to big endian */
-	endian_swap(&cell_voltage_msg_data.instantVoltage,
-		    sizeof(cell_voltage_msg_data.instantVoltage));
-	endian_swap(&cell_voltage_msg_data.internalResistance,
-		    sizeof(cell_voltage_msg_data.internalResistance));
-	endian_swap(&cell_voltage_msg_data.openVoltage,
-		    sizeof(cell_voltage_msg_data.openVoltage));
-
-	can_msg_t msg;
-	msg.id = CELL_VOLTAGE_CANID;
-	msg.len = CELL_VOLTAGE_SIZE;
-
-	memcpy(msg.data, &cell_voltage_msg_data, sizeof(cell_voltage_msg_data));
-
-	queue_can_msg(msg);
-}
-
 void compute_send_current_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {

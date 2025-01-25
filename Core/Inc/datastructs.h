@@ -93,7 +93,6 @@ typedef struct {
 	/* Array of structs containing raw data from and configurations for the ADBMS6830 chips */
 	cell_asic chips[NUM_CHIPS];
 
-	int fault_status;
 	int fault_status; // FIXME: this field is unused
 
 	int16_t pack_current; /* this value is multiplied by 10 to account for decimal precision */

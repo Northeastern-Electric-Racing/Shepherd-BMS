@@ -13,13 +13,11 @@
 #define T_SLEEP 1.8 /* seconds minimum, typ is 2, max is 2.2 */
 #define T_REFUP 2.7 /* milliseconds minimum, typ is 3.5, max is 4.4 */
 
-#define THERM_WAIT_TIME	   500 /* ms */
-#define VOLTAGE_WAIT_TIME  500 /* ms */
-#define THERM_AVG	   15 /* Number of values to average */
-#define MAX_VOLT_DELTA	   2500
-#define MAX_CONSEC_NOISE   10
-#define GPIO_EXPANDER_ADDR 0x40
-#define GPIO_REGISTER_ADDR 0x09
+#define THERM_WAIT_TIME	  500 /* ms */
+#define VOLTAGE_WAIT_TIME 500 /* ms */
+#define THERM_AVG	  15 /* Number of values to average */
+#define MAX_VOLT_DELTA	  2500
+#define MAX_CONSEC_NOISE  10
 
 extern TIM_HandleTypeDef htim2;
 
