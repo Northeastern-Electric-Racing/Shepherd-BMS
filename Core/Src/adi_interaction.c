@@ -107,7 +107,7 @@ void set_discharge_timeout(cell_asic *chip, uint8_t timeout)
 
 // void start_cell_voltages_adc(cell_asic chips[NUM_CHIPS])
 // {
-// 	adbms_wake();
+// 	adbms_wake_isospi();
 // 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 // 	adBmsPollAdc(PLCADC);
 // }
@@ -133,15 +133,27 @@ inline void delay_us(uint16_t us)
 }
 
 /**
- * @brief Wake every ADBMS6830 IC in the daisy chain. Blocking wait for around 30us * NUM_CHIPS.
+ * @brief Wake the isoSPI of every ADBMS6830 IC in the daisy chain. Blocking wait for around 30us * NUM_CHIPS.
  * 
  */
-void adbms_wake()
+void adbms_wake_isospi()
 {
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
 		delay_us(20);
+	}
+}
+
+/**
+ * @brief Wake the chip of every ADBMS6830 IC.  Blocking wait about 1ms * NUM_CHIPS
+ * 
+ */
+void adbms_wake_core() {
+	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
+		adBmsCsLow();
+		adBmsCsHigh();
+		delay_us(1000);
 	}
 }
 
@@ -156,7 +168,7 @@ void adbms_wake()
 void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 		      GRP group)
 {
-	adbms_wake();
+	adbms_wake_isospi();
 
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 		adBmsWriteData(NUM_CHIPS, &chips[chip], command, type, group);
@@ -174,7 +186,7 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 		     GRP group)
 {
-	adbms_wake();
+	adbms_wake_isospi();
 
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 		adBmsReadData(NUM_CHIPS, &chips[chip], command, type, group);
@@ -215,6 +227,11 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 }
 
 // --- BEGIN WRITE COMMANDS ---
+
+void soft_reset_chips(cell_asic chips[NUM_CHIPS]) {
+	write_adbms_data(chips, SRST, Comm, NONE);
+	adbms_wake_core();
+} 
 
 void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
@@ -257,7 +274,7 @@ void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
 void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 {
 	// TODO only poll correct GPIOs
-	adbms_wake();
+	adbms_wake_isospi();
 	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
 	adBmsPollAdc(PLAUX2);
 
@@ -269,7 +286,7 @@ void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 
 void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS])
 {
-	adbms_wake();
+	adbms_wake_isospi();
 	adBms6830_Adax2(AUX_ALL);
 	adBmsPollAdc(PLAUX2);
 
@@ -304,7 +321,7 @@ void read_serial_id(cell_asic chips[NUM_CHIPS])
 
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
-	adbms_wake();
+	adbms_wake_isospi();
 	// Take single shot measurement
 	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
@@ -314,11 +331,11 @@ void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	write_config_regs(chips);
-	adbms_wake();
+	adbms_wake_isospi();
 	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLSADC);
 
-	adbms_wake();
+	adbms_wake_isospi();
 	read_adbms_data(chips, RDSALL, Rdsall, ALL_GRP);
 	// read_adbms_data(chip, RDSVA, S_volt, A);
 	// read_adbms_data(chip, RDSVB, S_volt, B);
@@ -330,33 +347,33 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 
 void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
-	adbms_wake();
+	adbms_wake_isospi();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 
-	adbms_wake();
+	adbms_wake_isospi();
 	read_adbms_data(chips, RDACALL, Rdacall, ALL_GRP);
 }
 
 void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
-	adbms_wake();
+	adbms_wake_isospi();
 	read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
 }
 
 void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
-	adbms_wake();
+	adbms_wake_isospi();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc(PLCADC);
 
-	adbms_wake();
+	adbms_wake_isospi();
 	read_adbms_data(chips, RDCSALL, Rdcsall, ALL_GRP);
 }
 
 void start_c_adc_conv()
 {
-	adbms_wake();
+	adbms_wake_isospi();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
 }
 

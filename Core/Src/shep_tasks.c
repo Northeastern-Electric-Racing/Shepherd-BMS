@@ -29,9 +29,21 @@ const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
 void vGetSegmentData(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
+	int i = 0;
 	for (;;) {
 		// printf("Get segment data\n");
 		segment_retrieve_data(bmsdata);
+
+		if (DEBUG_MODE_ENABLED) {
+			segment_retrieve_debug_data(bmsdata);
+		}
+
+		if (++i % (45 * SAMPLE_RATE) == 0) {
+			printf(" ***********  REBOOTING SEGMENT\n\n");
+			segment_restart(bmsdata);
+		}
+
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
 	}
@@ -111,12 +123,6 @@ void vDebugMode(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	while (69 < 420) {
-		// get_adc_comparison(bmsdata);
-
-		// read_serial_id(bmsdata->chips);
-
-		segment_retrieve_debug_data(bmsdata);
-
 		for (int chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
 				get_num_cells(&bmsdata->chip_data[chip]);

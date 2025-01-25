@@ -46,6 +46,15 @@ void segment_configure_balancing(
  */
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS]);
 
+
+/**
+ * @brief Reset, then wake, then re-configure all chips
+ * 
+ * @param bmsdata 
+ */
+void segment_restart(acc_data_t *bmsdata);
+
+
 /**
  * @brief Do a single shot, redundant C-ADC measurement and read
  * the contents of Status Register Group C, which contains the 

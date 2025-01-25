@@ -124,6 +124,13 @@ void set_discharge_timeout(cell_asic *chip, uint8_t timeout);
 // --- BEGIN WRITE COMMANDS ---
 
 /**
+ * @brief Soft reset all chips, then re-wake them
+ * 
+ * @param chips 
+ */
+void soft_reset_chips(cell_asic chips[NUM_CHIPS]);
+
+/**
  * @brief Write config registers. Wakes chips before writing.
  * 
  * @param chips Array of chips to write config registers of.

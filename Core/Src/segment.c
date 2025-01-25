@@ -44,7 +44,7 @@ void init_chip(cell_asic *chip)
 {
 	set_REFON(chip, PWR_UP);
 	// WARNING, THE ENUM IS WRONG, CHECK TABLE 102
-	set_volt_adc_comp_thresh(chip, CVT_45mV);
+	set_volt_adc_comp_thresh(chip, CVT_135mV);
 	chip->tx_cfga.flag_d = 0;
 
 	// Short soak on ADAX
@@ -207,6 +207,13 @@ void segment_retrieve_debug_data(acc_data_t *bmsdata)
 
 	// read the above into status registers
 	read_status_registers(bmsdata->chips);
+
+	//segment_adc_comparison(bmsdata);
+}
+
+void segment_restart(acc_data_t *bmsdata) {
+	soft_reset_chips(bmsdata->chips);
+	segment_init(bmsdata);
 }
 
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
