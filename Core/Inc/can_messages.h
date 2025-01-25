@@ -201,8 +201,10 @@ void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
  * @param vref2 Second reference voltage for ADBMS6830.
  * @param v_analog Analog power supply voltage.
  * @param v_digital Digital power supply voltage.
+ * @param flt_reg The fault register of the chip (statc)
  */
 void send_alpha_status_b_message(uint16_t v_res, uint8_t chip, uint16_t vref2,
-				 uint16_t v_analog, uint16_t v_digital);
+				 uint16_t v_analog, uint16_t v_digital,
+				 stc_ *flt_reg);
 
 #endif

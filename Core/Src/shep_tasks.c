@@ -225,7 +225,8 @@ void vDebugMode(void *pv_params)
 					10000 * getVoltage(bmsdata->chips[chip]
 								   .statb.va),
 					10000 * getVoltage(bmsdata->chips[chip]
-								   .statb.vd));
+								   .statb.vd),
+					&bmsdata->chips[chip].statc);
 			}
 		}
 	}

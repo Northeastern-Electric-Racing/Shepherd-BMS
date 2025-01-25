@@ -581,8 +581,6 @@ void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
 		uint8_t va_uv : 1;
 		uint8_t vd_ov : 1;
 		uint8_t vd_uv : 1;
-		uint8_t otp1_med : 1;
-		uint8_t otp2_med : 1;
 		uint8_t vde : 1;
 		uint8_t vdel : 1;
 		uint8_t spiflt : 1;
@@ -596,8 +594,6 @@ void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
 	alpha_status_a_data.va_uv = flt_reg->va_uv;
 	alpha_status_a_data.vd_ov = flt_reg->vd_ov;
 	alpha_status_a_data.vd_uv = flt_reg->vd_uv;
-	alpha_status_a_data.otp1_med = flt_reg->otp1_med;
-	alpha_status_a_data.otp2_med = flt_reg->otp2_med;
 	alpha_status_a_data.vde = flt_reg->vde;
 	alpha_status_a_data.vdel = flt_reg->vdel;
 	alpha_status_a_data.spiflt = flt_reg->spiflt;
@@ -622,7 +618,8 @@ void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
 }
 
 void send_alpha_status_b_message(uint16_t v_res, uint8_t chip, uint16_t vref2,
-				 uint16_t v_analog, uint16_t v_digital)
+				 uint16_t v_analog, uint16_t v_digital,
+				 stc_ *flt_reg)
 {
 	endian_swap(&v_res, sizeof(v_res));
 	endian_swap(&vref2, sizeof(vref2));
@@ -635,7 +632,12 @@ void send_alpha_status_b_message(uint16_t v_res, uint8_t chip, uint16_t vref2,
 		uint16_t vref2 : 13;
 		uint16_t v_analog : 13;
 		uint16_t v_digital : 13;
+		uint8_t otp1_med : 1;
+		uint8_t otp2_med : 1;
 	} alpha_status_b_data;
+
+	alpha_status_b_data.otp1_med = flt_reg->otp1_med;
+	alpha_status_b_data.otp2_med = flt_reg->otp2_med;
 
 	alpha_status_b_data.v_res = v_res;
 	alpha_status_b_data.chip = chip;
