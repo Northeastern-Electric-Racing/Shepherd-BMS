@@ -40,17 +40,17 @@
 #define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
 
-#define ALPHA_CELL_CANID    0x6FA
-#define BETA_CELL_CANID	    0x6FB
-#define CELL_MSG_SIZE	    7
-#define BETA_STAT_A_CANID   0x6FD
-#define BETA_STAT_A_SIZE    8
-#define BETA_STAT_B_CANID   0x6FE
-#define BETA_STAT_B_SIZE    8
-#define ALPHA_STAT_A_CANID  0x6FC
-#define ALPHA_STAT_A_SIZE   7
-#define ALPHA_STAT_B_CANID  0x6FF
-#define ALPHA_STAT_B_SIZE   7
+#define ALPHA_CELL_CANID   0x6FA
+#define BETA_CELL_CANID	   0x6FB
+#define CELL_MSG_SIZE	   7
+#define BETA_STAT_A_CANID  0x6FD
+#define BETA_STAT_A_SIZE   8
+#define BETA_STAT_B_CANID  0x6FE
+#define BETA_STAT_B_SIZE   8
+#define ALPHA_STAT_A_CANID 0x6FC
+#define ALPHA_STAT_A_SIZE  7
+#define ALPHA_STAT_B_CANID 0x6FF
+#define ALPHA_STAT_B_SIZE  7
 
 typedef struct {
 	uint32_t prev_tick;
@@ -74,9 +74,9 @@ typedef enum {
 	RL_MSG_COUNT
 } rate_lim_t;
 
-#define DEBUG_SIZE	    8
-#define FAULT_TIMER_CANID   0x6FF
-#define FAULT_TIMER_SIZE    4
+#define DEBUG_SIZE	  8
+#define FAULT_TIMER_CANID 0x6FF
+#define FAULT_TIMER_SIZE  4
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
 
