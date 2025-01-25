@@ -1,11 +1,9 @@
 #include "segment.h"
-#include <math.h>
+
+#include "adi_interaction.h"
 #include "analyzer.h"
 #include "c_utils.h"
-
 #include "serialPrintResult.h"
-#include "adBms6830ParseCreate.h"
-#include "adi_interaction.h"
 
 #define T_READY 10 /* microseconds*/
 #define T_IDLE	4.3 /* milliseconds, minimum. typ is 5.5, max is 6.7 */
@@ -145,7 +143,7 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
-	read_status_registers(chips);
+	read_status_register_c(chips);
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		if (chips[chip].statc.va_ov) {
 			printf("A OV FLT\n");
@@ -174,9 +172,10 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 		if (chips[chip].statc.thsd) {
 			printf("THERMAL FLT\n");
 		}
-		if (chips[chip].statc.oscchk) {
-			printf("OSC FLT\n");
+		if (chips[chip].statc.tmodchk) {
+			printf("TMODE FLT\n");
 		}
+
 		if (chips[chip].statc.otp1_med) {
 			printf("CMED? FLT\n");
 		}
@@ -184,7 +183,7 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 			printf("SMED? FLT\n");
 		}
 	}
-	// clear them
+	// clear them.  they will still be in memory for usage until this function or read_status_registers is called
 	write_clear_flags(chips);
 }
 
@@ -193,9 +192,6 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 {
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
-
-	// check our fault flags
-	segment_monitor_flts(bmsdata->chips);
 
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
@@ -209,6 +205,8 @@ void segment_retrieve_debug_data(acc_data_t *bmsdata)
 	read_status_registers(bmsdata->chips);
 
 	//segment_adc_comparison(bmsdata);
+	// check our fault flags
+	segment_monitor_flts(bmsdata->chips);
 }
 
 void segment_restart(acc_data_t *bmsdata)

@@ -1,9 +1,7 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
 
-//#include <nerduino.h> Replace
 #include "datastructs.h"
-#include "segment.h"
 
 // this is a simple empirical mapping of which therms are returning good data
 // Only in use because we can not seem to correclty map incoming therms - this allows us to forcibley select those that we visually noticed were good

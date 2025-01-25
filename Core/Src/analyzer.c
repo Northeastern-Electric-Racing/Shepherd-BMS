@@ -1,11 +1,8 @@
 #include "analyzer.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
 
-#include "compute.h"
-
+#include "can_messages.h"
 #include "serialPrintResult.h"
 
 #define GPIO1  0
@@ -276,7 +273,7 @@ void calc_pack_temps(acc_data_t *bmsdata)
 	/* Takes the average of all the cell temperatures. */
 	bmsdata->avg_temp = total_temp / NUM_CELLS;
 
-	compute_send_cell_temp_message(bmsdata);
+	send_cell_temp_message(bmsdata);
 }
 
 void calc_pack_voltage_stats(acc_data_t *bmsdata)
@@ -367,8 +364,8 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->pack_ocv = total_ocv / 1000; /* convert to voltage * 10 */
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
 
-	compute_send_acc_status_message(bmsdata);
-	compute_send_cell_voltage_message(bmsdata);
+	send_acc_status_message(bmsdata);
+	send_cell_voltage_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)
@@ -469,8 +466,8 @@ void calc_dcl(acc_data_t *bmsdata)
 		prev_dcl -= DCDC_CURRENT_DRAW;
 	}
 
-	compute_send_mc_discharge_message(bmsdata);
-	compute_send_current_message(bmsdata);
+	send_mc_discharge_message(bmsdata);
+	send_current_message(bmsdata);
 }
 
 //TODO: Fix for new cells and BMS
@@ -519,8 +516,8 @@ void calcCCL(acc_data_t *bmsdata)
 		bmsdata->charge_limit = currentLimit;
 	}
 
-	compute_send_mc_charge_message(bmsdata);
-	compute_send_current_message(bmsdata);
+	send_mc_charge_message(bmsdata);
+	send_current_message(bmsdata);
 }
 
 //TODO: Change for P45B electrical characteristics.
@@ -696,7 +693,7 @@ void calc_state_of_charge(acc_data_t *bmsdata)
 		bmsdata->soc = 0;
 	}
 
-	compute_send_acc_status_message(bmsdata);
+	send_acc_status_message(bmsdata);
 }
 
 // NOTE: This function is broken or something.

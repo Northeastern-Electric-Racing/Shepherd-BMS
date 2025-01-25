@@ -1,8 +1,8 @@
 #include "can_handler.h"
-#include <stdio.h>
+
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define CAN_MSG_QUEUE_SIZE 50 /* messages */
 
