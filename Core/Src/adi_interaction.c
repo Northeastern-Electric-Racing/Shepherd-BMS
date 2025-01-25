@@ -54,7 +54,7 @@ void set_open_wire_soak_time(cell_asic *chip, OWA time)
 	chip->tx_cfga.owa = time;
 }
 
-void set_gpio_mode(cell_asic *chip, uint8_t gpio, bool input)
+void set_gpio_pull(cell_asic *chip, uint8_t gpio, bool input)
 {
 	if (gpio > 10 || gpio < 1) {
 		printf("ERROR: Invalid GPIO pin %d\n", gpio);

@@ -57,18 +57,18 @@ void init_chip(cell_asic *chip)
 	set_open_wire_soak_time(chip, OWA0);
 
 	// Set therm GPIOs
-	set_gpio_mode(chip, 1, true);
-	set_gpio_mode(chip, 2, true);
-	set_gpio_mode(chip, 3, true);
-	set_gpio_mode(chip, 4, true);
-	set_gpio_mode(chip, 5, true);
-	set_gpio_mode(chip, 6, true);
-	set_gpio_mode(chip, 7, true); // this is a on board therm for beta only
-	set_gpio_mode(chip, 8, true); // this is a on board therm
+	set_gpio_pull(chip, 1, true);
+	set_gpio_pull(chip, 2, true);
+	set_gpio_pull(chip, 3, true);
+	set_gpio_pull(chip, 4, true);
+	set_gpio_pull(chip, 5, true);
+	set_gpio_pull(chip, 6, true);
+	set_gpio_pull(chip, 7, true); // this is a on board therm for beta only
+	set_gpio_pull(chip, 8, true); // this is a on board therm
 
 	// set outputs, 9=iso led 10=bal LED
-	set_gpio_mode(chip, 9, false);
-	set_gpio_mode(chip, 10, false);
+	set_gpio_pull(chip, 9, false);
+	set_gpio_pull(chip, 10, false);
 
 	// Registers are unfrozen
 	set_snapshot(chip, SNAP_OFF);

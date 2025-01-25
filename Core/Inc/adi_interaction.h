@@ -55,13 +55,13 @@ void set_aux_soak_range(cell_asic *chip, OWRNG range);
 void set_open_wire_soak_time(cell_asic *chip, OWA time);
 
 /**
- * @brief Set the mode of a GPIO pin on an ADBMS8630.
+ * @brief Set the pull of a GPIO pin on an ADBMS8630.
  * 
  * @param chip ADBMS6830 chip
  * @param gpio Number of the GPIO pin to change (1-10)
- * @param input True is input, False is output.
+ * @param input True is no pull down, False is pull down.
  */
-void set_gpio_mode(cell_asic *chip, uint8_t gpio, bool input);
+void set_gpio_pull(cell_asic *chip, uint8_t gpio, bool input);
 
 /**
  * @brief Set the corner frequency of the IIR filter.
