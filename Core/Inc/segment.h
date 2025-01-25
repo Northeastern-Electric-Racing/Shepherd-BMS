@@ -12,9 +12,14 @@ void segment_init(acc_data_t *bmsdata);
 /**
  * @brief Pulls all cell data from the segments and returns all cell data
  *
- * @todo make sure that retrieving cell data doesn't block code too much
  */
 void segment_retrieve_data(acc_data_t *bmsdata);
+
+/**
+ * @brief Fetch extra data for segment
+ * 
+ */
+void segment_retrieve_debug_data(acc_data_t *bmsdata);
 
 /**
  * @brief Disables balancing for all cells.
@@ -31,15 +36,6 @@ void segment_disable_balancing(acc_data_t *bmsdata);
  */
 void segment_configure_balancing(
 	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA]);
-
-/**
- * @brief Returns if a specific cell is balancing
- *
- * @param chip_num
- * @return true
- * @return false
- */
-bool cell_is_balancing(uint8_t chip_num, uint8_t cell_num);
 
 /**
  * @brief Returns if any cells are balancing.
@@ -73,6 +69,6 @@ void read_serial_id(cell_asic chips[NUM_CHIPS]);
  * 
  * @param chips Array of chips to get voltages of.
  */
-void read_aux2_registers(cell_asic chips[NUM_CHIPS]);
+void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
 
 #endif

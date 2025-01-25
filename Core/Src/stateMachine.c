@@ -455,7 +455,7 @@ void sm_balance_cells(acc_data_t *bmsdata)
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			uint16_t delta =
-				bmsdata->chips[chip].cell.c_codes[cell] -
+				bmsdata->chips[chip].fcell.fc_codes[cell] -
 				(uint16_t)bmsdata->min_voltage.val;
 			if (delta > MAX_DELTA_V * 10000)
 				balanceConfig[chip][cell] = true;

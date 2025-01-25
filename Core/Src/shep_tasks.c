@@ -115,7 +115,7 @@ void vDebugMode(void *pv_params)
 
 		// read_serial_id(bmsdata->chips);
 
-		read_aux2_registers(bmsdata->chips);
+		segment_retrieve_debug_data(bmsdata);
 
 		for (int chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
@@ -149,7 +149,7 @@ void vDebugMode(void *pv_params)
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 (cell + 1)) &
 						1);
-				osDelay(6);
+				osDelay(1000 / NUM_CHIPS);
 			}
 
 			// Send chip status messages
@@ -171,10 +171,11 @@ void vDebugMode(void *pv_params)
 							    .stata.itmp) /
 					 0.0075) -
 						273,
-					10000 * getVoltage(
+					10000 * 20 *
+						getVoltage( // VPV is ra_code 11 w/ different scale
 							bmsdata->chips[chip]
 								.raux
-								.ra_codes[9]));
+								.ra_codes[11]));
 				compute_send_beta_status_b_message(
 					10000 * getVoltage(
 							bmsdata->chips[chip]
@@ -186,10 +187,11 @@ void vDebugMode(void *pv_params)
 					chip,
 					10000 * getVoltage(bmsdata->chips[chip]
 								   .statb.vr4k),
-					10000 * getVoltage(
+					10000 * 20 *
+						getVoltage( // VMV is ra_code 10
 							bmsdata->chips[chip]
 								.raux
-								.ra_codes[8]));
+								.ra_codes[10]));
 			} else {
 				compute_send_alpha_status_a_message(
 					bmsdata->chip_data->on_board_temp, chip,
