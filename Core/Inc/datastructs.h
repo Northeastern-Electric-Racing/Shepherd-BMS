@@ -18,9 +18,11 @@ typedef struct {
 	/* These are calculated during the analysis of data */
 
 	/* Cell temperature in celsius */
-	int8_t cell_temp[NUM_CELLS_ALPHA];
+	float cell_temp[NUM_CELLS_ALPHA];
 	float cell_resistance[NUM_CELLS_ALPHA];
-	uint16_t open_cell_voltage[NUM_CELLS_ALPHA];
+	float open_cell_voltage[NUM_CELLS_ALPHA];
+
+	float cell_voltages[NUM_CELLS_ALPHA];
 
 	uint8_t noise_reading
 		[NUM_CELLS_ALPHA]; /* bool representing noise ignored read */
@@ -30,7 +32,7 @@ typedef struct {
 	/* True if chip is alpha, False if Chip is Beta */
 	bool alpha;
 
-	/* For temperatures of on-board therms. Length 1 if Alpha, length 2 if Beta. */
+	/* For temperatures of on-board therms. */
 	int8_t on_board_temp;
 } chipdata_t;
 
@@ -73,7 +75,7 @@ enum {
  *
  */
 typedef struct {
-	int32_t val;
+	float val;
 	uint8_t chipIndex;
 	uint8_t cellNum;
 } crit_cellval_t;
@@ -95,18 +97,18 @@ typedef struct {
 
 	int fault_status; // FIXME: this field is unused
 
-	int16_t pack_current; /* this value is multiplied by 10 to account for decimal precision */
-	uint16_t pack_voltage;
-	uint16_t pack_ocv;
-	uint16_t pack_res;
+	float pack_current; /* this value is multiplied by 10 to account for decimal precision */
+	float pack_voltage;
+	float pack_ocv;
+	float pack_res;
 
-	uint16_t discharge_limit;
-	uint16_t charge_limit;
-	uint16_t cont_DCL;
-	uint16_t cont_CCL;
-	uint8_t soc;
+	float discharge_limit;
+	float charge_limit;
+	float cont_DCL;
+	float cont_CCL;
+	float soc;
 
-	int8_t segment_average_temps[NUM_SEGMENTS];
+	float segment_average_temps[NUM_SEGMENTS];
 	uint8_t segment_noise_percentage[NUM_SEGMENTS];
 
 	/**
@@ -119,7 +121,7 @@ typedef struct {
 	/* Max, min, and avg thermistor readings */
 	crit_cellval_t max_temp;
 	crit_cellval_t min_temp;
-	int8_t avg_temp;
+	float avg_temp;
 
 	/* Max and min cell resistances */
 	crit_cellval_t max_res;
@@ -128,13 +130,13 @@ typedef struct {
 	/* Max, min, and avg voltage of the cells */
 	crit_cellval_t max_voltage;
 	crit_cellval_t min_voltage;
-	uint16_t avg_voltage;
-	uint16_t delt_voltage;
+	float avg_voltage;
+	float delt_voltage;
 
 	crit_cellval_t max_ocv;
 	crit_cellval_t min_ocv;
-	uint16_t avg_ocv;
-	uint16_t delt_ocv;
+	float avg_ocv;
+	float delt_ocv;
 
 	uint16_t boost_setting;
 

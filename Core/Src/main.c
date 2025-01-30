@@ -168,8 +168,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   #endif
 
   #ifdef DEBUG_VOLTAGES
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
-  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val / 10000.0, acc_data->max_voltage.val / 10000.0, acc_data->avg_voltage / 10000.0, acc_data->delt_voltage / 10000.0);
+  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
   #endif
 
   #ifdef DEBUG_OTHER

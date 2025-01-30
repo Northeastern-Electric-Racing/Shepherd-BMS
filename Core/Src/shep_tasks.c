@@ -65,6 +65,7 @@ void vAnalyzer(void *pv_params)
 
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
+		calc_cell_voltages(bmsdata);
 		calc_pack_voltage_stats(bmsdata);
 		calc_open_cell_voltage(bmsdata);
 		calc_cell_resistances(bmsdata);
@@ -78,7 +79,7 @@ void vAnalyzer(void *pv_params)
 		compute_send_current_message(bmsdata);
 		// temporary end
 
-		calc_state_of_charge(bmsdata);
+		// calc_state_of_charge(bmsdata);
 		// calc_noise_volt_percent(bmsdata);
 
 		osMutexRelease(bmsdata->mutex);

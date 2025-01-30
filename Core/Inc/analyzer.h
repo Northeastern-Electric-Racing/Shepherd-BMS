@@ -48,6 +48,13 @@ void calc_cell_temps(acc_data_t *bmsdata);
 void calc_pack_temps(acc_data_t *bmsdata);
 
 /**
+ * @brief Calclaute the voltage of every cell in the pack.
+ * 
+ * @param bmsdata Pointer to BMS data struct.
+ */
+void calc_cell_voltages(acc_data_t* bmsdata);
+
+/**
  * @brief Calculate statistics about pack voltage, such as min and max cell volt, pack and avg voltage, pack and avg OCV, and deltas.
  * 
  */
