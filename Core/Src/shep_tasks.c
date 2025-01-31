@@ -124,7 +124,7 @@ void vDebugMode(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	while (69 < 420) {
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
 				get_num_cells(&bmsdata->chip_data[chip]);
 			for (int cell = 0; cell < num_cells; cell += 2) {
@@ -199,6 +199,8 @@ void vDebugMode(void *pv_params)
 							bmsdata->chips[chip]
 								.raux
 								.ra_codes[10]));
+				send_beta_status_c_message(
+					chip, &bmsdata->chips[chip].statc);
 			} else {
 				send_alpha_status_a_message(
 					bmsdata->chip_data->on_board_temp, chip,

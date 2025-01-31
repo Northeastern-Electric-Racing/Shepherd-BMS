@@ -562,6 +562,46 @@ void send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
 	queue_can_msg(msg);
 }
 
+void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t chip : 4;
+		uint8_t va_ov : 1;
+		uint8_t va_uv : 1;
+		uint8_t vd_ov : 1;
+		uint8_t vd_uv : 1;
+		uint8_t vde : 1;
+		uint8_t vdel : 1;
+		uint8_t spiflt : 1;
+		uint8_t sleep : 1;
+		uint8_t thsd : 1;
+		uint8_t tmodchk : 1;
+		uint8_t oscchk : 1;
+	} beta_status_b_data;
+
+	beta_status_b_data.chip = chip;
+
+	beta_status_b_data.va_ov = flt_reg->va_ov;
+	beta_status_b_data.va_uv = flt_reg->va_uv;
+	beta_status_b_data.vd_ov = flt_reg->vd_ov;
+	beta_status_b_data.vd_uv = flt_reg->vd_uv;
+	beta_status_b_data.vde = flt_reg->vde;
+	beta_status_b_data.vdel = flt_reg->vdel;
+	beta_status_b_data.spiflt = flt_reg->spiflt;
+	beta_status_b_data.sleep = flt_reg->sleep;
+	beta_status_b_data.thsd = flt_reg->thsd;
+	beta_status_b_data.tmodchk = flt_reg->tmodchk;
+	beta_status_b_data.oscchk = flt_reg->oscchk;
+
+	can_msg_t msg;
+	msg.id = BETA_STAT_C_CANID;
+	msg.len = BETA_STAT_C_SIZE;
+
+	memcpy(msg.data, &beta_status_b_data, BETA_STAT_C_SIZE);
+
+	queue_can_msg(msg);
+}
+
 void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
 				 uint16_t die_temperature, uint16_t vpv,
 				 uint16_t vmv, stc_ *flt_reg)
