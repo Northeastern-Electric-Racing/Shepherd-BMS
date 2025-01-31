@@ -40,10 +40,13 @@ void vGetSegmentData(void *pv_params)
 			segment_retrieve_debug_data(bmsdata);
 		}
 
+// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
+#ifndef CHARGING_ENABLED
 		if (++i % (45 * SAMPLE_RATE) == 0) {
 			printf(" ***********  REBOOTING SEGMENT\n\n");
 			segment_restart(bmsdata);
 		}
+#endif
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
