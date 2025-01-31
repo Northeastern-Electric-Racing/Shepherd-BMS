@@ -48,7 +48,7 @@
 #define BETA_STAT_B_CANID  0x6FE
 #define BETA_STAT_B_SIZE   8
 #define BETA_STAT_C_CANID  0x6F0
-#define BETA_STAT_C_SIZE   2
+#define BETA_STAT_C_SIZE   3
 #define ALPHA_STAT_A_CANID 0x6FC
 #define ALPHA_STAT_A_SIZE  8
 #define ALPHA_STAT_B_CANID 0x6FF

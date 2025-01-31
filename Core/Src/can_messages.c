@@ -577,6 +577,8 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 		uint8_t thsd : 1;
 		uint8_t tmodchk : 1;
 		uint8_t oscchk : 1;
+		uint8_t otp1_med : 1;
+		uint8_t otp2_med : 1;
 	} beta_status_b_data;
 
 	beta_status_b_data.chip = chip;
@@ -592,6 +594,8 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 	beta_status_b_data.thsd = flt_reg->thsd;
 	beta_status_b_data.tmodchk = flt_reg->tmodchk;
 	beta_status_b_data.oscchk = flt_reg->oscchk;
+	beta_status_b_data.otp1_med = flt_reg->otp1_med;
+	beta_status_b_data.otp1_med = flt_reg->otp1_med;
 
 	can_msg_t msg;
 	msg.id = BETA_STAT_C_CANID;
