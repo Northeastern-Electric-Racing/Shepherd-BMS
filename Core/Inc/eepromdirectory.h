@@ -1,7 +1,6 @@
 #ifndef EEPROMDIRECTORY_H
 #define EEPROMDIRECTORY_H
 
-#include "bmsConfig.h"
 #include <stdint.h>
 #include <stdbool.h>
 

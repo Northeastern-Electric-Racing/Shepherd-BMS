@@ -1,3 +1,6 @@
+#ifndef ADI_INTERACTION_H
+#define ADI_INTERACTION_H
+
 #include "adBms6830Data.h"
 #include "bmsConfig.h"
 
@@ -177,6 +180,13 @@ void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
 void read_status_registers(cell_asic chips[NUM_CHIPS]);
 
 /**
+ * @brief Read status register c, containing chip level faults.
+ * 
+ * @param chips 
+ */
+void read_status_register_c(cell_asic chips[NUM_CHIPS]);
+
+/**
  * @brief Read status and aux registers in one command.
  * 
  * @param chips Array of chips to read.
@@ -236,3 +246,5 @@ void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
 void start_c_adc_conv();
 
 // --- END ADC POLL ---
+
+#endif

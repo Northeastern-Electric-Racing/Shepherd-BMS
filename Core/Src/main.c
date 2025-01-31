@@ -15,19 +15,16 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "segment.h"
-#include "compute.h"
-#include "datastructs.h"
+#include <assert.h>
+
 #include "analyzer.h"
-#include "stateMachine.h"
 #include "can_handler.h"
-#include <stdio.h>
-#include "shep_tasks.h"
-
-#include "assert.h"
-#include "string.h"
-
+#include "can_messages.h"
+#include "datastructs.h"
+#include "compute.h"
+#include "segment.h"
 #include "serialPrintResult.h"
+#include "shep_tasks.h"
 
 /* USER CODE END Includes */
 
@@ -38,6 +35,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+extern BMSState_t current_state;
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
@@ -1368,9 +1367,9 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
-    compute_send_bms_status_message(bmsdata, current_state,
+    send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing(bmsdata->chips));
-    compute_send_fault_status_message(bmsdata);
+    send_fault_status_message(bmsdata);
 
     send_git_version_message();
   

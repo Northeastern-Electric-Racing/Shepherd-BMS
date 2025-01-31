@@ -48,9 +48,9 @@
 #define BETA_STAT_B_CANID  0x6FE
 #define BETA_STAT_B_SIZE   8
 #define ALPHA_STAT_A_CANID 0x6FC
-#define ALPHA_STAT_A_SIZE  7
+#define ALPHA_STAT_A_SIZE  8
 #define ALPHA_STAT_B_CANID 0x6FF
-#define ALPHA_STAT_B_SIZE  7
+#define ALPHA_STAT_B_SIZE  8
 
 typedef struct {
 	uint32_t prev_tick;

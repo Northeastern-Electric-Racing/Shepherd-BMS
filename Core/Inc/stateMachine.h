@@ -2,10 +2,6 @@
 #define BMS_STATES_H
 
 #include "analyzer.h"
-#include "compute.h"
-#include "datastructs.h"
-#include "segment.h"
-#include "timer.h"
 
 /* global that can be read for debugging in main */
 extern BMSState_t current_state;
