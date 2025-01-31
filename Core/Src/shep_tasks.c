@@ -9,13 +9,14 @@
  */
 
 #include "shep_tasks.h"
+
 #include "bmsConfig.h"
-#include "stm32f4xx_hal.h"
-#include "can_handler.h"
-#include "analyzer.h"
+#include "can_messages.h"
+#include "c_utils.h"
 #include "compute.h"
-#include <stdio.h>
+#include "segment.h"
 #include "serialPrintResult.h"
+#include "stateMachine.h"
 
 #define STATE_MACHINE_FLAG 1
 
@@ -75,8 +76,8 @@ void vAnalyzer(void *pv_params)
 		calc_cont_ccl(bmsdata);
 		// temporary
 		bmsdata->charge_limit = bmsdata->cont_CCL;
-		compute_send_mc_charge_message(bmsdata);
-		compute_send_current_message(bmsdata);
+		send_mc_charge_message(bmsdata);
+		send_current_message(bmsdata);
 		// temporary end
 
 		// calc_state_of_charge(bmsdata);
@@ -95,8 +96,8 @@ void vCurrentMonitor(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		bmsdata->pack_current = compute_get_pack_current();
-		compute_send_acc_status_message(bmsdata);
-		compute_send_current_message(bmsdata);
+		send_acc_status_message(bmsdata);
+		send_current_message(bmsdata);
 		osDelay(1000 / SAMPLE_RATE);
 	}
 }
@@ -128,7 +129,7 @@ void vDebugMode(void *pv_params)
 			uint8_t num_cells =
 				get_num_cells(&bmsdata->chip_data[chip]);
 			for (int cell = 0; cell < num_cells; cell += 2) {
-				compute_send_cell_data_message(
+				send_cell_data_message(
 					bmsdata->chip_data[chip].alpha,
 
 					bmsdata->chip_data[chip].cell_temp[cell],
@@ -161,7 +162,7 @@ void vDebugMode(void *pv_params)
 
 			// Send chip status messages
 			if (!bmsdata->chip_data[chip].alpha) {
-				compute_send_beta_status_a_message(
+				send_beta_status_a_message(
 					10000 * getVoltage(
 							bmsdata->chip_data[chip]
 								.cell_temp[10]),
@@ -183,7 +184,7 @@ void vDebugMode(void *pv_params)
 							bmsdata->chips[chip]
 								.raux
 								.ra_codes[11]));
-				compute_send_beta_status_b_message(
+				send_beta_status_b_message(
 					10000 * getVoltage(
 							bmsdata->chips[chip]
 								.stata.vref2),
@@ -200,7 +201,7 @@ void vDebugMode(void *pv_params)
 								.raux
 								.ra_codes[10]));
 			} else {
-				compute_send_alpha_status_a_message(
+				send_alpha_status_a_message(
 					bmsdata->chip_data->on_board_temp, chip,
 					(getVoltage(bmsdata->chips[chip]
 							    .stata.itmp) /
@@ -213,8 +214,9 @@ void vDebugMode(void *pv_params)
 					10000 * getVoltage(
 							bmsdata->chips[chip]
 								.raux
-								.ra_codes[8]));
-				compute_send_alpha_status_b_message(
+								.ra_codes[8]),
+					&bmsdata->chips[chip].statc);
+				send_alpha_status_b_message(
 					10000 * getVoltage(bmsdata->chips[chip]
 								   .statb.vr4k),
 					chip,
@@ -224,7 +226,8 @@ void vDebugMode(void *pv_params)
 					10000 * getVoltage(bmsdata->chips[chip]
 								   .statb.va),
 					10000 * getVoltage(bmsdata->chips[chip]
-								   .statb.vd));
+								   .statb.vd),
+					&bmsdata->chips[chip].statc);
 			}
 		}
 	}

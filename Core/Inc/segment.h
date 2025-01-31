@@ -1,7 +1,6 @@
 #ifndef SEGMENT_H
 #define SEGMENT_H
 
-#include "bmsConfig.h"
 #include "datastructs.h"
 
 /**

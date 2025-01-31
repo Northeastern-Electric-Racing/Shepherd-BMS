@@ -1,7 +1,5 @@
 #include "analyzer.h"
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
 #include <float.h>
 
@@ -292,19 +290,6 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 	}
 }
 
-void calc_cell_voltages(acc_data_t *bmsdata)
-{
-	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
-
-		for (uint8_t cell = 0; cell < num_cells; cell++) {
-			bmsdata->chip_data[chip].cell_voltages[cell] =
-				getVoltage(bmsdata->chips[chip]
-						   .fcell.fc_codes[cell]);
-		}
-	}
-}
-
 void calc_pack_voltage_stats(acc_data_t *bmsdata)
 {
 	bmsdata->max_voltage.val = FLT_MIN;
@@ -386,8 +371,8 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->pack_ocv = total_ocv;
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
 
-	compute_send_acc_status_message(bmsdata);
-	compute_send_cell_voltage_message(bmsdata);
+	send_acc_status_message(bmsdata);
+	send_cell_voltage_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)
@@ -488,8 +473,8 @@ void calc_dcl(acc_data_t *bmsdata)
 		prev_dcl -= DCDC_CURRENT_DRAW;
 	}
 
-	compute_send_mc_discharge_message(bmsdata);
-	compute_send_current_message(bmsdata);
+	send_mc_discharge_message(bmsdata);
+	send_current_message(bmsdata);
 }
 
 //TODO: Fix for new cells and BMS
@@ -538,8 +523,8 @@ void calcCCL(acc_data_t *bmsdata)
 		bmsdata->charge_limit = currentLimit;
 	}
 
-	compute_send_mc_charge_message(bmsdata);
-	compute_send_current_message(bmsdata);
+	send_mc_charge_message(bmsdata);
+	send_current_message(bmsdata);
 }
 
 //TODO: Change for P45B electrical characteristics.
@@ -565,7 +550,6 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 //TODO: Change for new cells (probs not needed).
 void calc_open_cell_voltage(acc_data_t *bmsdata)
 {
-
 	//TODO: MAKE NOT SHIT :)
 
 	// static chipdata_t prev_chipdata[12];

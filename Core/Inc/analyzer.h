@@ -1,9 +1,7 @@
 #ifndef ANALYZER_H
 #define ANALYZER_H
 
-//#include <nerduino.h> Replace
 #include "datastructs.h"
-#include "segment.h"
 
 // this is a simple empirical mapping of which therms are returning good data
 // Only in use because we can not seem to correclty map incoming therms - this allows us to forcibley select those that we visually noticed were good
@@ -52,7 +50,7 @@ void calc_pack_temps(acc_data_t *bmsdata);
  * 
  * @param bmsdata Pointer to BMS data struct.
  */
-void calc_cell_voltages(acc_data_t* bmsdata);
+void calc_cell_voltages(acc_data_t *bmsdata);
 
 /**
  * @brief Calculate statistics about pack voltage, such as min and max cell volt, pack and avg voltage, pack and avg OCV, and deltas.

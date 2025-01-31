@@ -70,6 +70,7 @@ Core/Src/segment.c \
 Core/Src/adi_interaction.c \
 Core/Src/stateMachine.c \
 Core/Src/can_handler.c \
+Core/Src/can_messages.c \
 Core/Src/shep_tasks.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
