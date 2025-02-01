@@ -137,16 +137,11 @@ void vDebugMode(void *pv_params)
 
 					bmsdata->chip_data[chip].cell_temp[cell],
 
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_voltages
-									[cell]),
+					10000 * bmsdata->chip_data[chip]
+							.cell_voltages[cell],
 
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_voltages
-									[cell +
-									 1]),
+					10000 * bmsdata->chip_data[chip]
+							.cell_voltages[cell + 1],
 
 					chip,
 
@@ -166,13 +161,10 @@ void vDebugMode(void *pv_params)
 			// Send chip status messages
 			if (!bmsdata->chip_data[chip].alpha) {
 				send_beta_status_a_message(
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_temp[10]),
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_voltages
-									[10]),
+					10000 * bmsdata->chip_data[chip]
+							.cell_temp[10],
+					10000 * bmsdata->chip_data[chip]
+							.cell_voltages[10],
 					NER_GET_BIT(
 						bmsdata->chips[chip].tx_cfgb.dcc,
 						10),
