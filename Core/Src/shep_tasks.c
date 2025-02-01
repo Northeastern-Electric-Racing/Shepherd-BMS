@@ -66,6 +66,7 @@ void vAnalyzer(void *pv_params)
 
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
+		calc_cell_voltages(bmsdata);
 		calc_pack_voltage_stats(bmsdata);
 		calc_open_cell_voltage(bmsdata);
 		calc_cell_resistances(bmsdata);
@@ -79,7 +80,7 @@ void vAnalyzer(void *pv_params)
 		send_current_message(bmsdata);
 		// temporary end
 
-		calc_state_of_charge(bmsdata);
+		// calc_state_of_charge(bmsdata);
 		// calc_noise_volt_percent(bmsdata);
 
 		osMutexRelease(bmsdata->mutex);
@@ -134,14 +135,14 @@ void vDebugMode(void *pv_params)
 					bmsdata->chip_data[chip].cell_temp[cell],
 
 					10000 * getVoltage(
-							bmsdata->chips[chip]
-								.cell
-								.c_codes[cell]),
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[cell]),
 
 					10000 * getVoltage(
-							bmsdata->chips[chip]
-								.cell
-								.c_codes[cell +
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[cell +
 									 1]),
 
 					chip,
@@ -166,9 +167,9 @@ void vDebugMode(void *pv_params)
 							bmsdata->chip_data[chip]
 								.cell_temp[10]),
 					10000 * getVoltage(
-							bmsdata->chips[chip]
-								.cell
-								.c_codes[10]),
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[10]),
 					NER_GET_BIT(
 						bmsdata->chips[chip].tx_cfgb.dcc,
 						10),
