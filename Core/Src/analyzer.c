@@ -1,6 +1,7 @@
 #include "analyzer.h"
 
 #include <math.h>
+#include <float.h>
 
 #include "can_messages.h"
 #include "serialPrintResult.h"
@@ -150,9 +151,9 @@ uint8_t get_num_cells(chipdata_t *chip_data)
  * @brief Calculate a cell temperature based on the thermistor reading.
  * 
  * @param x The thremistor reading.
- * @return int8_t Temperature in celsius.
+ * @return float The temperature in degrees Celsius.
  */
-int8_t calc_cell_temp(uint16_t x)
+float calc_cell_temp(uint16_t x)
 {
 	/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
 	return 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) - 10.278 * pow(x, 2) +
@@ -226,16 +227,16 @@ void calc_cell_temps(acc_data_t *bmsdata)
 
 void calc_pack_temps(acc_data_t *bmsdata)
 {
-	bmsdata->max_temp.val = MIN_TEMP;
+	bmsdata->max_temp.val = FLT_MIN;
 	bmsdata->max_temp.cellNum = 0;
 	bmsdata->max_temp.chipIndex = 0;
 
-	bmsdata->min_temp.val = MAX_TEMP;
+	bmsdata->min_temp.val = FLT_MAX;
 	bmsdata->min_temp.cellNum = 0;
 	bmsdata->min_temp.chipIndex = 0;
 
-	int total_temp = 0;
-	int total_seg_temp = 0;
+	float total_temp = 0;
+	float total_seg_temp = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
@@ -265,7 +266,7 @@ void calc_pack_temps(acc_data_t *bmsdata)
 		if (c % 2 == 0) {
 			bmsdata->segment_average_temps[c / 2] =
 				total_seg_temp /
-				(NUM_CELLS_ALPHA + NUM_CELLS_BETA);
+				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
 			total_seg_temp = 0;
 		}
 	}
@@ -276,21 +277,34 @@ void calc_pack_temps(acc_data_t *bmsdata)
 	send_cell_temp_message(bmsdata);
 }
 
+void calc_cell_voltages(acc_data_t *bmsdata)
+{
+	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+
+		for (uint8_t cell = 0; cell < num_cells; cell++) {
+			bmsdata->chip_data[chip].cell_voltages[cell] =
+				getVoltage(bmsdata->chips[chip]
+						   .fcell.fc_codes[cell]);
+		}
+	}
+}
+
 void calc_pack_voltage_stats(acc_data_t *bmsdata)
 {
-	bmsdata->max_voltage.val = MIN_VOLT_MEAS;
+	bmsdata->max_voltage.val = FLT_MIN;
 	bmsdata->max_voltage.cellNum = 0;
 	bmsdata->max_voltage.chipIndex = 0;
 
-	bmsdata->max_ocv.val = MIN_VOLT_MEAS;
+	bmsdata->max_ocv.val = FLT_MIN;
 	bmsdata->max_ocv.cellNum = 0;
 	bmsdata->max_ocv.chipIndex = 0;
 
-	bmsdata->min_voltage.val = MAX_VOLT_MEAS;
+	bmsdata->min_voltage.val = FLT_MAX;
 	bmsdata->min_voltage.cellNum = 0;
 	bmsdata->min_voltage.chipIndex = 0;
 
-	bmsdata->min_ocv.val = MAX_VOLT_MEAS;
+	bmsdata->min_ocv.val = FLT_MAX;
 	bmsdata->min_ocv.cellNum = 0;
 	bmsdata->min_ocv.chipIndex = 0;
 
@@ -301,14 +315,11 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* fings out the maximum cell voltage and location */
-			if (getVoltage(bmsdata->chips[c].fcell.fc_codes[cell]) *
-				    10000 >
+			if (bmsdata->chip_data[c].cell_voltages[cell] >
 			    bmsdata->max_voltage.val) {
 				bmsdata->max_voltage.val =
-					getVoltage(
-						bmsdata->chips[c]
-							.fcell.fc_codes[cell]) *
-					10000;
+					bmsdata->chip_data[c]
+						.cell_voltages[cell];
 				bmsdata->max_voltage.chipIndex = c;
 				bmsdata->max_voltage.cellNum = cell;
 			}
@@ -323,14 +334,11 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			}
 
 			/* finds out the minimum cell voltage and location */
-			if (getVoltage(bmsdata->chips[c].fcell.fc_codes[cell]) *
-				    10000 <
+			if (bmsdata->chip_data[c].cell_voltages[cell] <
 			    bmsdata->min_voltage.val) {
 				bmsdata->min_voltage.val =
-					getVoltage(
-						bmsdata->chips[c]
-							.fcell.fc_codes[cell]) *
-					10000;
+					bmsdata->chip_data[c]
+						.cell_voltages[cell];
 				bmsdata->min_voltage.chipIndex = c;
 				bmsdata->min_voltage.cellNum = cell;
 			}
@@ -344,8 +352,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 				bmsdata->min_ocv.cellNum = cell;
 			}
 
-			total_volt += getVoltage(
-				bmsdata->chips[c].fcell.fc_codes[cell]);
+			total_volt += bmsdata->chip_data[c].cell_voltages[cell];
 			total_ocv +=
 				bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
@@ -353,15 +360,15 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 
 	/* calculate some voltage stats */
 	// TODO: Make this based on total cells when actual segment is here
-	bmsdata->avg_voltage = (total_volt * 10000) / 16;
+	bmsdata->avg_voltage = total_volt / NUM_CELLS;
 
-	bmsdata->pack_voltage = total_volt * 10; /* convert to voltage * 10 */
+	bmsdata->pack_voltage = total_volt;
 
 	bmsdata->delt_voltage =
 		bmsdata->max_voltage.val - bmsdata->min_voltage.val;
 
 	bmsdata->avg_ocv = total_ocv / NUM_CELLS;
-	bmsdata->pack_ocv = total_ocv / 1000; /* convert to voltage * 10 */
+	bmsdata->pack_ocv = total_ocv;
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
 
 	send_acc_status_message(bmsdata);
@@ -414,7 +421,7 @@ void calc_dcl(acc_data_t *bmsdata)
 			 * account for the voltage units */
 			uint16_t tmpDCL =
 				(bmsdata->chip_data[c].open_cell_voltage[cell] -
-				 ((MIN_VOLT + VOLT_SAG_MARGIN) * 10000)) /
+				 (MIN_VOLT + VOLT_SAG_MARGIN)) /
 				(bmsdata->chip_data[c].cell_resistance[cell] *
 				 10);
 
@@ -495,9 +502,9 @@ void calcCCL(acc_data_t *bmsdata)
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			/* Apply equation */
 			uint16_t tmpCCL =
-				((MAX_VOLT * 10000) -
+				(MAX_VOLT -
 				 (bmsdata->chip_data[c].open_cell_voltage[cell] +
-				  (VOLT_SAG_MARGIN * 10000))) /
+				  VOLT_SAG_MARGIN)) /
 				(bmsdata->chip_data[c].cell_resistance[cell] *
 				 10);
 			/* Multiplying resistance by 10 to convert from mOhm to Ohm and then to Ohm * 10000 to
@@ -543,101 +550,101 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 //TODO: Change for new cells (probs not needed).
 void calc_open_cell_voltage(acc_data_t *bmsdata)
 {
-	static chipdata_t prev_chipdata[12];
+	//TODO: MAKE NOT SHIT :)
 
-	/* if there is no previous data point, set inital open cell voltage to current reading */
-	if (is_first_reading_) {
-		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-			uint8_t num_cells =
-				get_num_cells(&bmsdata->chip_data[chip]);
-			for (uint8_t cell = 0; cell < num_cells; cell++) {
-				bmsdata->chip_data[chip]
-					.open_cell_voltage[cell] =
-					bmsdata->chips[chip]
-						.fcell.fc_codes[cell];
-				prev_chipdata[chip].open_cell_voltage[cell] =
-					bmsdata->chips[chip]
-						.fcell.fc_codes[cell];
-			}
-		}
-		return;
-	}
-	/* If we are within the current threshold for open voltage measurments */
-	else if (bmsdata->pack_current < (OCV_CURR_THRESH * 10) &&
-		 bmsdata->pack_current > (-OCV_CURR_THRESH * 10)) {
-		if (is_timer_expired(&ocvTimer) ||
-		    !is_timer_active(&ocvTimer)) {
-			for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-				uint8_t num_cells = get_num_cells(
-					&bmsdata->chip_data[chip]);
-				for (uint8_t cell = 0; cell < num_cells;
-				     cell++) {
-					/* Sets open cell voltage to a moving average of OCV_AVG values */
-					bmsdata->chip_data[chip]
-						.open_cell_voltage[cell] =
-						((uint32_t)(bmsdata->chips[chip]
-								    .fcell
-								    .fc_codes[cell]) +
-						 ((uint32_t)(prev_chipdata[chip].open_cell_voltage
-								     [cell]) *
-						  (OCV_AVG - 1))) /
-						OCV_AVG;
-					bmsdata->chip_data[chip]
-						.open_cell_voltage[cell] =
-						bmsdata->chips[chip]
-							.fcell.fc_codes[cell];
+	// static chipdata_t prev_chipdata[12];
 
-					if (bmsdata->chip_data[chip]
-						    .open_cell_voltage[cell] >
-					    MAX_VOLT * 10000) {
-						bmsdata->chip_data[chip]
-							.open_cell_voltage[cell] =
-							prev_chipdata[chip]
-								.open_cell_voltage
-									[cell];
-					} else if (bmsdata->chip_data[chip]
-							   .open_cell_voltage
-								   [cell] <
-						   MIN_VOLT * 10000) {
-						bmsdata->chip_data[chip]
-							.open_cell_voltage[cell] =
-							prev_chipdata[chip]
-								.open_cell_voltage
-									[cell];
-					}
-				}
-			}
-			return;
-		}
-	} else {
-		start_timer(&ocvTimer, 1000);
-	}
-	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
-		for (uint8_t cell = 0; cell < num_cells; cell++) {
-			/* Set OCV to the previous/existing OCV */
-			bmsdata->chip_data[chip].open_cell_voltage[cell] =
-				prev_chipdata[chip].open_cell_voltage[cell];
-		}
-	}
+	// /* if there is no previous data point, set inital open cell voltage to current reading */
+	// if (is_first_reading_) {
+	// 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+	// 		uint8_t num_cells =
+	// 			get_num_cells(&bmsdata->chip_data[chip]);
+	// 		for (uint8_t cell = 0; cell < num_cells; cell++) {
+	// 			bmsdata->chip_data[chip]
+	// 				.open_cell_voltage[cell] =
+	// 				bmsdata->chip_data[chip]
+	// 					.cell_voltages[cell];
+	// 			prev_chipdata[chip].open_cell_voltage[cell] =
+	// 				bmsdata->chip_data[chip]
+	// 					.cell_voltages[cell];
+	// 		}
+	// 	}
+	// 	return;
+	// }
+	// /* If we are within the current threshold for open voltage measurments */
+	// else if (bmsdata->pack_current < (OCV_CURR_THRESH * 10) &&
+	// 	 bmsdata->pack_current > (-OCV_CURR_THRESH * 10)) {
+	// 	if (is_timer_expired(&ocvTimer) ||
+	// 	    !is_timer_active(&ocvTimer)) {
+	// 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+	// 			uint8_t num_cells = get_num_cells(
+	// 				&bmsdata->chip_data[chip]);
+	// 			for (uint8_t cell = 0; cell < num_cells;
+	// 			     cell++) {
+	// 				/* Sets open cell voltage to a moving average of OCV_AVG values */
+	// 				bmsdata->chip_data[chip]
+	// 					.open_cell_voltage[cell] =
+	// 					((bmsdata->chip_data[chip].cell_voltages[cell];
+	// 					 ((prev_chipdata[chip].open_cell_voltage
+	// 							     [cell]) *
+	// 					  (OCV_AVG - 1))) /
+	// 					OCV_AVG;
+	// 				bmsdata->chip_data[chip]
+	// 					.open_cell_voltage[cell] =
+	// 					bmsdata->chips[chip]
+	// 						.fcell.fc_codes[cell];
+
+	// 				if (bmsdata->chip_data[chip]
+	// 					    .open_cell_voltage[cell] >
+	// 				    MAX_VOLT * 10000) {
+	// 					bmsdata->chip_data[chip]
+	// 						.open_cell_voltage[cell] =
+	// 						prev_chipdata[chip]
+	// 							.open_cell_voltage
+	// 								[cell];
+	// 				} else if (bmsdata->chip_data[chip]
+	// 						   .open_cell_voltage
+	// 							   [cell] <
+	// 					   MIN_VOLT * 10000) {
+	// 					bmsdata->chip_data[chip]
+	// 						.open_cell_voltage[cell] =
+	// 						prev_chipdata[chip]
+	// 							.open_cell_voltage
+	// 								[cell];
+	// 				}
+	// 			}
+	// 		}
+	// 		return;
+	// 	}
+	// } else {
+	// 	start_timer(&ocvTimer, 1000);
+	// }
+	// for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+	// 	uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+	// 	for (uint8_t cell = 0; cell < num_cells; cell++) {
+	// 		/* Set OCV to the previous/existing OCV */
+	// 		bmsdata->chip_data[chip].open_cell_voltage[cell] =
+	// 			prev_chipdata[chip].open_cell_voltage[cell];
+	// 	}
+	// }
 }
 
 //TODO: Change for new fans and cell temps
-uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
-{
-	/* Resistance LUT increments by 5C for each index, plus we account for negative minimum */
-	uint8_t min_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5;
-	/* Ints are roounded down, so this would be the value if rounded up */
-	uint8_t max_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5 + 1;
-	/* Determine how far into the 5C interval the temp is */
-	uint8_t part_of_index = (bmsdata->max_temp.val - MIN_TEMP) % 5;
+// uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
+// {
+// 	/* Resistance LUT increments by 5C for each index, plus we account for negative minimum */
+// 	uint8_t min_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5;
+// 	/* Ints are roounded down, so this would be the value if rounded up */
+// 	uint8_t max_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5 + 1;
+// 	/* Determine how far into the 5C interval the temp is */
+// 	uint8_t part_of_index = (bmsdata->max_temp.val - MIN_TEMP) % 5;
 
-	/* Uses fan LUT and finds low and upper end. Then takes average, weighted to how far into the
-	 * interval the exact temp is */
-	return ((FAN_CURVE[max_res_index] * part_of_index) +
-		(FAN_CURVE[min_res_index] * (5 - part_of_index))) /
-	       (2 * 5);
-}
+// 	/* Uses fan LUT and finds low and upper end. Then takes average, weighted to how far into the
+// 	 * interval the exact temp is */
+// 	return ((FAN_CURVE[max_res_index] * part_of_index) +
+// 		(FAN_CURVE[min_res_index] * (5 - part_of_index))) /
+// 	       (2 * 5);
+// }
 
 // void disable_therms(acc_data_t *bmsdata)
 // {
@@ -666,35 +673,35 @@ uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
 //TODO: Change for P45B electrical characteristics.
 //TODO: Add coulomb couting.
 // FUTURE: State of power calcs.
-void calc_state_of_charge(acc_data_t *bmsdata)
-{
-	/* Spltting the delta voltage into 18 increments */
-	const uint16_t increments =
-		((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) /
-		 ((MAX_VOLT - MIN_VOLT) * 10));
+// void calc_state_of_charge(acc_data_t *bmsdata)
+// {
+// 	/* Spltting the delta voltage into 18 increments */
+// 	const uint16_t increments =
+// 		((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) /
+// 		 ((MAX_VOLT - MIN_VOLT) * 10));
 
-	/* Retrieving a index of 0-18 */
-	uint8_t index =
-		((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
+// 	/* Retrieving a index of 0-18 */
+// 	uint8_t index =
+// 		((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
 
-	bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
+// 	bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
 
-	if (bmsdata->soc != 100) {
-		float interpolation = (float)(STATE_OF_CHARGE_CURVE[index + 1] -
-					      STATE_OF_CHARGE_CURVE[index]) /
-				      increments;
-		bmsdata->soc += (uint8_t)(interpolation *
-					  (((bmsdata->min_ocv.val) -
-					    (int32_t)(MIN_VOLT * 10000)) %
-					   increments));
-	}
+// 	if (bmsdata->soc != 100) {
+// 		float interpolation = (float)(STATE_OF_CHARGE_CURVE[index + 1] -
+// 					      STATE_OF_CHARGE_CURVE[index]) /
+// 				      increments;
+// 		bmsdata->soc += (uint8_t)(interpolation *
+// 					  (((bmsdata->min_ocv.val) -
+// 					    (int32_t)(MIN_VOLT * 10000)) %
+// 					   increments));
+// 	}
 
-	if (bmsdata->soc < 0) {
-		bmsdata->soc = 0;
-	}
+// 	if (bmsdata->soc < 0) {
+// 		bmsdata->soc = 0;
+// 	}
 
-	send_acc_status_message(bmsdata);
-}
+// 	send_acc_status_message(bmsdata);
+// }
 
 // NOTE: This function is broken or something.
 // void calc_noise_volt_percent(acc_data_t *bmsdata)
