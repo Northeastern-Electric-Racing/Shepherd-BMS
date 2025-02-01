@@ -198,7 +198,7 @@ const void print_bms_stats(acc_data_t *acc_data)
     uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
     for(uint8_t cell = 0; cell < num_cells; cell++)
     {
-        printf("%d\t", acc_data->chips[c].cell.c_codes[cell]);
+        printf("%d\t", acc_data->chip_data[chip].cell_voltages[cell]);
     }
     printf("\n");
   }
@@ -210,7 +210,7 @@ const void print_bms_stats(acc_data_t *acc_data)
     uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
     for(uint8_t cell = 0; cell < num_cells; cell++)
     {
-        printf("%.3f\t", getVoltage(acc_data->chips[c].fcell.fc_codes[cell]));
+        printf("%.3f\t", acc_data->chip_data[c].cell_voltages[cell]);
     }
     printf("\n");
   }

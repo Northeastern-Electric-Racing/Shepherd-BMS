@@ -135,14 +135,14 @@ void vDebugMode(void *pv_params)
 					bmsdata->chip_data[chip].cell_temp[cell],
 
 					10000 * getVoltage(
-							bmsdata->chips[chip]
-								.cell
-								.c_codes[cell]),
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[cell]),
 
 					10000 * getVoltage(
-							bmsdata->chips[chip]
-								.cell
-								.c_codes[cell +
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[cell +
 									 1]),
 
 					chip,
@@ -167,9 +167,9 @@ void vDebugMode(void *pv_params)
 							bmsdata->chip_data[chip]
 								.cell_temp[10]),
 					10000 * getVoltage(
-							bmsdata->chips[chip]
-								.cell
-								.c_codes[10]),
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[10]),
 					NER_GET_BIT(
 						bmsdata->chips[chip].tx_cfgb.dcc,
 						10),
