@@ -546,7 +546,7 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 	}
 }
 
-static void calc_open_cell_voltage(acc_data_t *bmsdata)
+void calc_open_cell_voltage(acc_data_t *bmsdata)
 {
 	uint16_t ocv_value = 0;
 	uint16_t avg_ocv = 0;
