@@ -548,31 +548,10 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
 {
-	uint16_t ocv_value = 0;
-	uint16_t avg_ocv = 0;
-
-	// If there is no previous data point, set inital open cell voltage to current reading
-	if (is_first_reading_) {
-		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-			uint8_t num_cells =
-				get_num_cells(&bmsdata->chip_data[chip]);
-			for (uint8_t cell = 0; cell < num_cells; cell++) {
-				// Actual OCV value in the cell
-				ocv_value = bmsdata->chip_data[chip]
-						    .cell_voltages[cell];
-
-				// Set OCV values
-				bmsdata->chip_data[chip]
-					.open_cell_voltage[cell] = ocv_value;
-			}
-		}
-		is_first_reading_ = false;
-		return;
-	}
-
 	// If we are within the current threshold for open voltage measurments (1.5 mA)
-	else if (bmsdata->pack_current < (OCV_CURR_THRESH / 1000) &&
-		 bmsdata->pack_current > (-OCV_CURR_THRESH / 1000)) {
+	if (bmsdata->pack_current < OCV_CURR_THRESH &&
+	    bmsdata->pack_current > -1 * OCV_CURR_THRESH) {
+		// Timer expired or not active
 		if (is_timer_expired(&ocvTimer) ||
 		    !is_timer_active(&ocvTimer)) {
 			for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
@@ -582,46 +561,16 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 				for (uint8_t cell = 0; cell < num_cells;
 				     cell++) {
 					// This is the actual OCV value in the cell
-					ocv_value =
+					uint16_t ocv_value =
 						bmsdata->chip_data[chip]
 							.cell_voltages[cell];
 
-					if (ocv_value < MAX_VOLT ||
-					    ocv_value > MIN_VOLT) {
-						// Set current OCV value
-						bmsdata->chip_data[chip]
-							.open_cell_voltage[cell] =
-							ocv_value;
-
-						// Find max and min OCV values
-						if (ocv_value >
-						    bmsdata->max_ocv.val) {
-							bmsdata->max_ocv.val =
-								ocv_value;
-							bmsdata->max_ocv
-								.cellNum = cell;
-							bmsdata->max_ocv
-								.chipIndex =
-								chip;
-						} else if (ocv_value <
-							   bmsdata->min_ocv.val) {
-							bmsdata->min_ocv.val =
-								ocv_value;
-							bmsdata->min_ocv
-								.cellNum = cell;
-							bmsdata->min_ocv
-								.chipIndex =
-								chip;
-						}
-
-						avg_ocv +=
-							ocv_value / NUM_CELLS;
-					}
+					// Set current OCV value
+					bmsdata->chip_data[chip]
+						.open_cell_voltage[cell] =
+						ocv_value;
 				}
 			}
-			bmsdata->delt_ocv = avg_ocv - bmsdata->avg_ocv;
-			bmsdata->avg_ocv = avg_ocv;
-			bmsdata->pack_ocv = avg_ocv * 10;
 		} else {
 			start_timer(&ocvTimer, 1000);
 		}
