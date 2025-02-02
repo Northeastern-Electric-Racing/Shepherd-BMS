@@ -619,7 +619,6 @@ static void calc_open_cell_voltage(acc_data_t *bmsdata)
 					}
 				}
 			}
-			avg_ocv;
 			bmsdata->delt_ocv = avg_ocv - bmsdata->avg_ocv;
 			bmsdata->avg_ocv = avg_ocv;
 			bmsdata->pack_ocv = avg_ocv * 10;
