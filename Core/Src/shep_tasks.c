@@ -135,7 +135,8 @@ void vDebugMode(void *pv_params)
 				send_cell_data_message(
 					bmsdata->chip_data[chip].alpha,
 
-					bmsdata->chip_data[chip].cell_temp[cell],
+					10 * bmsdata->chip_data[chip]
+							.cell_temp[cell],
 
 					10000 * bmsdata->chip_data[chip]
 							.cell_voltages[cell],
