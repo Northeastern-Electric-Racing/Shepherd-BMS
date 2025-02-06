@@ -5,6 +5,18 @@
 #include "can.h"
 #include "can_handler.h"
 
+#define BYTE_TO_BITS 8
+#define THERM_BITS   10
+#define VOLT_BITS    13
+#define AUX_ADC	     13
+#define CHIP_ID_BTIS 4
+#define CELL_ID_BITS 4
+#define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
+
+/* For bit shifting */
+#define LEFT  true
+#define RIGHT false
+
 extern is_charging_enabled;
 
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
@@ -447,6 +459,61 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	queue_can_msg(msg);
 }
 
+struct shift {
+	bool left;
+	uint32_t shifts;
+};
+
+uint8_t set_uint8_bits(size_t values[], struct shift shifts[],
+		       uint32_t num_values)
+{
+	uint8_t ret = 0;
+
+	for (uint32_t i = 0; i < num_values; i++) {
+		if (shifts[i].left) {
+			ret = ret | (values[i] << shifts[i].shifts);
+		} else {
+			ret = ret | (values[i] >> shifts[i].shifts);
+		}
+	}
+
+	return ret;
+}
+
+#include <stdint.h>
+#include <stdbool.h>
+
+bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit, uint32_t num_bits,
+		   uint32_t source, uint32_t source_start_bit)
+{
+	if (dest == NULL || num_bits == 0 || dest_start_bit + num_bits > 8 ||
+	    source_start_bit + num_bits > 32) {
+		return false; // Handle invalid input (dest only 8 bits, source 32 bits)
+	}
+
+	if (num_bits > 8) {
+		return false; // Can't set more than 8 bits in the uint8_t
+	}
+
+	// 1. Create a mask for the destination range (uint8_t):
+	uint8_t dest_mask = ((1u << num_bits) - 1) << dest_start_bit;
+
+	// 2. Clear the bits in the destination range (uint8_t):
+	*dest &= ~dest_mask;
+
+	// 3. Extract the bits from the uint32_t source:
+	uint32_t source_bits = (source >> source_start_bit) &
+			       ((1u << num_bits) - 1);
+
+	// 4. Shift the extracted source bits to the correct *uint8_t* destination position:
+	source_bits <<= dest_start_bit;
+
+	// 5. Cast and OR the shifted source bits into the uint8_t destination:
+	*dest |= (uint8_t)source_bits; // The crucial cast!
+
+	return true;
+}
+
 void send_cell_data_message(bool alpha, uint16_t temperature,
 			    uint16_t voltage_a, uint16_t voltage_b,
 			    uint8_t chip_ID, uint8_t cell_a, uint8_t cell_b,
@@ -483,6 +550,16 @@ void send_cell_data_message(bool alpha, uint16_t temperature,
 		msg.id = BETA_CELL_CANID;
 	}
 	msg.len = CELL_MSG_SIZE;
+
+	set_bit_range(&msg.data[0], 0, 8, temperature, 2);
+
+	set_bit_range(&msg.data[1], 6, 2, temperature, 0);
+	set_bit_range(&msg.data[1], 0, 6, voltage_a, VOLT_BITS - 6);
+
+	set_bit_range(&msg.data[2], 1, 7, voltage_a, 0);
+	set_bit_range(&msg.data[2], 0, 1, voltage_b, VOLT_BITS);
+
+	 
 
 	memcpy(msg.data, &cell_data_msg_data, CELL_MSG_SIZE);
 
