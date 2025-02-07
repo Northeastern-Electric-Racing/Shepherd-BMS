@@ -138,10 +138,10 @@ void vDebugMode(void *pv_params)
 					10 * bmsdata->chip_data[chip]
 							.cell_temp[cell],
 
-					10000 * bmsdata->chip_data[chip]
+					1000 * bmsdata->chip_data[chip]
 							.cell_voltages[cell],
 
-					10000 * bmsdata->chip_data[chip]
+					1000 * bmsdata->chip_data[chip]
 							.cell_voltages[cell + 1],
 
 					chip,

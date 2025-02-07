@@ -519,9 +519,6 @@ void send_cell_data_message(bool alpha, uint16_t temperature,
 			    uint8_t chip_ID, uint8_t cell_a, uint8_t cell_b,
 			    bool discharging_a, bool discharging_b)
 {
-	endian_swap(&temperature, sizeof(temperature));
-	endian_swap(&voltage_a, sizeof(voltage_a));
-	endian_swap(&voltage_b, sizeof(voltage_b));
 
 	can_msg_t msg;
 	if (alpha) {
@@ -544,8 +541,8 @@ void send_cell_data_message(bool alpha, uint16_t temperature,
 	set_bit_range(&msg.data[4], 4, 4, voltage_b, VOLT_BITS - 1 - 8 - 4);
 	set_bit_range(&msg.data[4], 0, CHIP_ID_BTIS, chip_ID, 0);
 
-	set_bit_range(&msg.data[5], 4, CELL_ID_BITS, cell_a, 0);
-	set_bit_range(&msg.data[5], 0, CELL_ID_BITS, cell_b, 0);
+	set_bit_range(&msg.data[5], 4, CELL_ID_BITS, reverse_bits(cell_a) >> 4, 0);
+	set_bit_range(&msg.data[5], 0, CELL_ID_BITS, reverse_bits(cell_b) >> 4, 0);
 
 	msg.data[6] = 0;
 	set_bit_range(&msg.data[6], 7, 1, discharging_a, 0);

@@ -153,7 +153,7 @@ uint8_t get_num_cells(chipdata_t *chip_data)
  * @param x The thremistor reading.
  * @return float The temperature in degrees Celsius.
  */
-float calc_cell_temp(uint16_t x)
+float calc_cell_temp(float x)
 {
 	/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
 	return 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) - 10.278 * pow(x, 2) +
@@ -166,8 +166,9 @@ void calc_cell_temps(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 
 		for (int cell = 0; cell < num_cells; cell++) {
-			int16_t x = bmsdata->chips[chip]
-					    .raux.ra_codes[THERM_MAP[cell]];
+			float x = getVoltage(
+				bmsdata->chips[chip]
+					.raux.ra_codes[THERM_MAP[cell]]);
 
 			bmsdata->chip_data[chip].cell_temp[cell] =
 				calc_cell_temp(x);
