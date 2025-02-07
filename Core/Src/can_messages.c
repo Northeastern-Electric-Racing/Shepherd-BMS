@@ -480,9 +480,6 @@ uint8_t set_uint8_bits(size_t values[], struct shift shifts[],
 	return ret;
 }
 
-#include <stdint.h>
-#include <stdbool.h>
-
 bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit, uint32_t num_bits,
 		   uint32_t source, uint32_t source_start_bit)
 {
