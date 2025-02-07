@@ -13,11 +13,49 @@
 #define CELL_ID_BITS 4
 #define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
 
-/* For bit shifting */
-#define LEFT  true
-#define RIGHT false
-
 extern is_charging_enabled;
+
+static bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit,
+			  uint32_t num_bits, uint32_t source,
+			  uint32_t source_start_bit);
+static unsigned short reverse_short(unsigned short val);
+
+static bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit,
+			  uint32_t num_bits, uint32_t source,
+			  uint32_t source_start_bit)
+{
+	if (dest == NULL || num_bits == 0 || dest_start_bit + num_bits > 8 ||
+	    source_start_bit + num_bits > 32) {
+		return false; // Handle invalid input (dest only 8 bits, source 32 bits)
+	}
+
+	if (num_bits > 8) {
+		return false; // Can't set more than 8 bits in the uint8_t
+	}
+
+	// 1. Create a mask for the destination range (uint8_t):
+	uint8_t dest_mask = ((1u << num_bits) - 1) << dest_start_bit;
+
+	// 2. Clear the bits in the destination range (uint8_t):
+	*dest &= ~dest_mask;
+
+	// 3. Extract the bits from the uint32_t source:
+	uint32_t source_bits = (source >> source_start_bit) &
+			       ((1u << num_bits) - 1);
+
+	// 4. Shift the extracted source bits to the correct *uint8_t* destination position:
+	source_bits <<= dest_start_bit;
+
+	// 5. Cast and OR the shifted source bits into the uint8_t destination:
+	*dest |= (uint8_t)source_bits; // The crucial cast!
+
+	return true;
+}
+
+static unsigned short reverse_short(unsigned short val)
+{
+	return reverse_bits(val) >> 4;
+}
 
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 			  acc_data_t *bms_data)
@@ -459,64 +497,11 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	queue_can_msg(msg);
 }
 
-struct shift {
-	bool left;
-	uint32_t shifts;
-};
-
-uint8_t set_uint8_bits(size_t values[], struct shift shifts[],
-		       uint32_t num_values)
+void send_cell_data_message(bool alpha, float temperature, float voltage_a,
+			    float voltage_b, uint8_t chip_ID, uint8_t cell_a,
+			    uint8_t cell_b, bool discharging_a,
+			    bool discharging_b)
 {
-	uint8_t ret = 0;
-
-	for (uint32_t i = 0; i < num_values; i++) {
-		if (shifts[i].left) {
-			ret = ret | (values[i] << shifts[i].shifts);
-		} else {
-			ret = ret | (values[i] >> shifts[i].shifts);
-		}
-	}
-
-	return ret;
-}
-
-bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit, uint32_t num_bits,
-		   uint32_t source, uint32_t source_start_bit)
-{
-	if (dest == NULL || num_bits == 0 || dest_start_bit + num_bits > 8 ||
-	    source_start_bit + num_bits > 32) {
-		return false; // Handle invalid input (dest only 8 bits, source 32 bits)
-	}
-
-	if (num_bits > 8) {
-		return false; // Can't set more than 8 bits in the uint8_t
-	}
-
-	// 1. Create a mask for the destination range (uint8_t):
-	uint8_t dest_mask = ((1u << num_bits) - 1) << dest_start_bit;
-
-	// 2. Clear the bits in the destination range (uint8_t):
-	*dest &= ~dest_mask;
-
-	// 3. Extract the bits from the uint32_t source:
-	uint32_t source_bits = (source >> source_start_bit) &
-			       ((1u << num_bits) - 1);
-
-	// 4. Shift the extracted source bits to the correct *uint8_t* destination position:
-	source_bits <<= dest_start_bit;
-
-	// 5. Cast and OR the shifted source bits into the uint8_t destination:
-	*dest |= (uint8_t)source_bits; // The crucial cast!
-
-	return true;
-}
-
-void send_cell_data_message(bool alpha, uint16_t temperature,
-			    uint16_t voltage_a, uint16_t voltage_b,
-			    uint8_t chip_ID, uint8_t cell_a, uint8_t cell_b,
-			    bool discharging_a, bool discharging_b)
-{
-
 	can_msg_t msg;
 	if (alpha) {
 		msg.id = ALPHA_CELL_CANID;
@@ -525,7 +510,12 @@ void send_cell_data_message(bool alpha, uint16_t temperature,
 	}
 	msg.len = CELL_MSG_SIZE;
 
-	set_bit_range(&msg.data[0], 0, 8, temperature, 2);
+	/* Multiply data by scaling factor before converting to int */
+	temperature *= 10;
+	voltage_a *= 1000;
+	voltage_b *= 1000;
+
+	set_bit_range(&msg.data[0], 0, 8, temperature * 10, 2);
 
 	set_bit_range(&msg.data[1], 6, 2, temperature, 0);
 	set_bit_range(&msg.data[1], 0, 6, voltage_a, VOLT_BITS - 6);
@@ -536,32 +526,31 @@ void send_cell_data_message(bool alpha, uint16_t temperature,
 	set_bit_range(&msg.data[3], 0, 8, voltage_b, VOLT_BITS - 1 - 8);
 
 	set_bit_range(&msg.data[4], 4, 4, voltage_b, VOLT_BITS - 1 - 8 - 4);
-	set_bit_range(&msg.data[4], 0, CHIP_ID_BTIS, chip_ID, 0);
+	set_bit_range(&msg.data[4], 0, CHIP_ID_BTIS, reverse_short(chip_ID), 0);
 
-	set_bit_range(&msg.data[5], 4, CELL_ID_BITS, reverse_bits(cell_a) >> 4, 0);
-	set_bit_range(&msg.data[5], 0, CELL_ID_BITS, reverse_bits(cell_b) >> 4, 0);
+	set_bit_range(&msg.data[5], 4, CELL_ID_BITS, reverse_short(cell_a), 0);
+	set_bit_range(&msg.data[5], 0, CELL_ID_BITS, reverse_short(cell_b), 0);
 
-	msg.data[6] = 0;
 	set_bit_range(&msg.data[6], 7, 1, discharging_a, 0);
 	set_bit_range(&msg.data[6], 6, 1, discharging_b, 0);
 
 	queue_can_msg(msg);
 }
 
-void send_beta_status_a_message(uint16_t cell_temperature, uint16_t voltage,
+void send_beta_status_a_message(float cell_temperature, float voltage,
 				bool discharging, uint8_t chip,
-				uint16_t segment_temperature,
-				uint16_t die_temperature, uint16_t vpv)
+				float segment_temperature,
+				float die_temperature, float vpv)
 {
-	endian_swap(&cell_temperature, sizeof(cell_temperature));
-	endian_swap(&voltage, sizeof(voltage));
-	endian_swap(&segment_temperature, sizeof(segment_temperature));
-	endian_swap(&die_temperature, sizeof(die_temperature));
-	endian_swap(&vpv, sizeof(vpv));
-
 	can_msg_t msg;
 	msg.id = BETA_STAT_A_CANID;
 	msg.len = BETA_STAT_A_SIZE;
+
+	cell_temperature *= 10;
+	voltage *= 1000;
+	segment_temperature *= 10;
+	die_temperature *= 100;
+	vpv *= 1000;
 
 	set_bit_range(&msg.data[0], 0, 8, cell_temperature, 2);
 
@@ -571,7 +560,8 @@ void send_beta_status_a_message(uint16_t cell_temperature, uint16_t voltage,
 	set_bit_range(&msg.data[2], 1, 7, voltage, VOLT_BITS - 6 - 7);
 	set_bit_range(&msg.data[2], 0, 1, discharging, 0);
 
-	set_bit_range(&msg.data[3], 4, 4, chip, CHIP_ID_BTIS - 4);
+	set_bit_range(&msg.data[3], 4, 4, reverse_short(chip),
+		      CHIP_ID_BTIS - 4);
 	set_bit_range(&msg.data[3], 0, 4, segment_temperature, THERM_BITS - 4);
 
 	set_bit_range(&msg.data[4], 2, 6, segment_temperature,
@@ -584,25 +574,23 @@ void send_beta_status_a_message(uint16_t cell_temperature, uint16_t voltage,
 	set_bit_range(&msg.data[6], 8 - 3, 3, die_temperature, 0);
 	set_bit_range(&msg.data[6], 0, 8 - 3, vpv, AUX_ADC_BITS - (8 - 3));
 
-	msg.data[7] = 0;
 	set_bit_range(&msg.data[7], 1, 7, vpv, 0);
 
 	queue_can_msg(msg);
 }
 
-void send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
-				uint16_t v_digital, uint8_t chip,
-				uint16_t v_res, uint16_t vmv)
+void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
+				uint8_t chip, float v_res, float vmv)
 {
-	endian_swap(&vref2, sizeof(vref2));
-	endian_swap(&v_analog, sizeof(v_analog));
-	endian_swap(&v_digital, sizeof(v_digital));
-	endian_swap(&v_res, sizeof(v_res));
-	endian_swap(&vmv, sizeof(vmv));
-
 	can_msg_t msg;
 	msg.id = BETA_STAT_B_CANID;
 	msg.len = BETA_STAT_B_SIZE;
+
+	vref2 *= 1000;
+	v_analog *= 100;
+	v_digital *= 100;
+	v_res *= 1000;
+	vmv *= 1000;
 
 	set_bit_range(&msg.data[0], 0, 8, vref2, AUX_ADC_BITS - 8);
 
@@ -615,7 +603,7 @@ void send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
 	set_bit_range(&msg.data[3], 0, 8, v_digital, VA_VD_BITS - 1 - 8);
 
 	set_bit_range(&msg.data[4], 7, 1, v_digital, 0);
-	set_bit_range(&msg.data[4], 3, 4, chip, 0);
+	set_bit_range(&msg.data[4], 3, 4, reverse_short(chip), 0);
 	set_bit_range(&msg.data[4], 0, 3, v_res, AUX_ADC_BITS - 3);
 
 	set_bit_range(&msg.data[5], 0, 8, v_res, AUX_ADC_BITS - 3 - 8);
@@ -623,7 +611,6 @@ void send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
 	set_bit_range(&msg.data[6], 6, 2, v_res, 0);
 	set_bit_range(&msg.data[6], 0, 6, vmv, AUX_ADC_BITS - 6);
 
-	msg.data[7] = 0;
 	set_bit_range(&msg.data[7], 1, 7, vmv, 0);
 
 	queue_can_msg(msg);
@@ -635,7 +622,7 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 	msg.id = BETA_STAT_C_CANID;
 	msg.len = BETA_STAT_C_SIZE;
 
-	set_bit_range(&msg.data[0], 4, 4, chip, 0);
+	set_bit_range(&msg.data[0], 4, 4, reverse_short(chip), 0);
 	set_bit_range(&msg.data[0], 3, 1, flt_reg->va_ov, 0);
 	set_bit_range(&msg.data[0], 2, 1, flt_reg->va_uv, 0);
 	set_bit_range(&msg.data[0], 1, 1, flt_reg->vd_ov, 0);
@@ -650,82 +637,71 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 	set_bit_range(&msg.data[1], 1, 1, flt_reg->oscchk, 0);
 	set_bit_range(&msg.data[1], 0, 1, flt_reg->otp1_med, 0);
 
-	msg.data[2] = 0;
 	set_bit_range(&msg.data[2], 7, 1, flt_reg->otp2_med, 0);
 
 	queue_can_msg(msg);
 }
 
-void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
-				 uint16_t die_temperature, uint16_t vpv,
-				 uint16_t vmv, stc_ *flt_reg)
+void send_alpha_status_a_message(float segment_temp, uint8_t chip,
+				 float die_temperature, float vpv, float vmv,
+				 stc_ *flt_reg)
 {
-	endian_swap(&segment_temp, sizeof(segment_temp));
-	endian_swap(&die_temperature, sizeof(die_temperature));
-	endian_swap(&vpv, sizeof(vpv));
-	endian_swap(&vmv, sizeof(vmv));
-
-	struct __attribute__((__packed__)) {
-		uint16_t segment_temp : 10;
-		uint8_t chip : 4;
-		uint16_t die_temperature : 13;
-		uint16_t vpv : 13;
-		uint16_t vmv : 13;
-		uint8_t va_ov : 1;
-		uint8_t va_uv : 1;
-		uint8_t vd_ov : 1;
-		uint8_t vd_uv : 1;
-		uint8_t vde : 1;
-		uint8_t vdel : 1;
-		uint8_t spiflt : 1;
-		uint8_t sleep : 1;
-		uint8_t thsd : 1;
-		uint8_t tmodchk : 1;
-		uint8_t oscchk : 1;
-	} alpha_status_a_data;
-
-	alpha_status_a_data.va_ov = flt_reg->va_ov;
-	alpha_status_a_data.va_uv = flt_reg->va_uv;
-	alpha_status_a_data.vd_ov = flt_reg->vd_ov;
-	alpha_status_a_data.vd_uv = flt_reg->vd_uv;
-	alpha_status_a_data.vde = flt_reg->vde;
-	alpha_status_a_data.vdel = flt_reg->vdel;
-	alpha_status_a_data.spiflt = flt_reg->spiflt;
-	alpha_status_a_data.sleep = flt_reg->sleep;
-	alpha_status_a_data.thsd = flt_reg->thsd;
-	alpha_status_a_data.tmodchk = flt_reg->tmodchk;
-	alpha_status_a_data.oscchk = flt_reg->oscchk;
-
-	alpha_status_a_data.segment_temp = segment_temp;
-	alpha_status_a_data.chip = chip;
-	alpha_status_a_data.die_temperature = die_temperature;
-	alpha_status_a_data.vpv = vpv;
-	alpha_status_a_data.vmv = vmv;
-
 	can_msg_t msg;
 	msg.id = ALPHA_STAT_A_CANID;
 	msg.len = ALPHA_STAT_A_SIZE;
 
-	memcpy(msg.data, &alpha_status_a_data, ALPHA_STAT_A_SIZE);
+	segment_temp *= 10;
+	die_temperature *= 100;
+	vpv *= 1000;
+	vmv *= 1000;
+
+	set_bit_range(&msg.data[0], 0, 8, segment_temp, THERM_BITS - 8);
+
+	set_bit_range(&msg.data[1], 6, 2, segment_temp, 0);
+	set_bit_range(&msg.data[1], 2, 4, reverse_short(chip), 0);
+	set_bit_range(&msg.data[1], 0, 2, die_temperature, AUX_ADC_BITS - 2);
+
+	set_bit_range(&msg.data[2], 0, 8, die_temperature,
+		      AUX_ADC_BITS - 2 - 8);
+
+	set_bit_range(&msg.data[3], 5, 3, die_temperature, 0);
+	set_bit_range(&msg.data[3], 0, 5, vpv, AUX_ADC_BITS - 5);
+
+	set_bit_range(&msg.data[4], 0, 8, vpv, AUX_ADC_BITS - 5 - 8);
+
+	set_bit_range(&msg.data[5], 0, 8, vmv, AUX_ADC_BITS - 8);
+
+	set_bit_range(&msg.data[6], 3, 5, vpv, AUX_ADC_BITS - 8 - 5);
+	set_bit_range(&msg.data[6], 2, 1, flt_reg->va_ov, 0);
+	set_bit_range(&msg.data[6], 1, 1, flt_reg->va_uv, 0);
+	set_bit_range(&msg.data[6], 0, 1, flt_reg->vd_ov, 0);
+
+	set_bit_range(&msg.data[7], 7, 1, flt_reg->vd_uv, 0);
+	set_bit_range(&msg.data[7], 6, 1, flt_reg->vde, 0);
+	set_bit_range(&msg.data[7], 5, 1, flt_reg->vdel, 0);
+	set_bit_range(&msg.data[7], 4, 1, flt_reg->spiflt, 0);
+	set_bit_range(&msg.data[7], 3, 1, flt_reg->sleep, 0);
+	set_bit_range(&msg.data[7], 2, 1, flt_reg->thsd, 0);
+	set_bit_range(&msg.data[7], 1, 1, flt_reg->tmodchk, 0);
+	set_bit_range(&msg.data[7], 0, 1, flt_reg->oscchk, 0);
 
 	queue_can_msg(msg);
 }
 
-void send_alpha_status_b_message(uint16_t v_res, uint8_t chip, uint16_t vref2,
-				 uint16_t v_analog, uint16_t v_digital,
-				 stc_ *flt_reg)
+void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
+				 float v_analog, float v_digital, stc_ *flt_reg)
 {
-	endian_swap(&v_res, sizeof(v_res));
-	endian_swap(&vref2, sizeof(vref2));
-	endian_swap(&v_analog, sizeof(v_analog));
-	endian_swap(&v_digital, sizeof(v_digital));
-
 	can_msg_t msg;
 	msg.id = ALPHA_STAT_B_CANID;
 	msg.len = ALPHA_STAT_B_SIZE;
 
+	v_res *= 1000;
+	vref2 *= 1000;
+	v_analog *= 100;
+	v_digital *= 100;
+
 	set_bit_range(&msg.data[0], 0, 8, v_res, AUX_ADC_BITS - 8);
-	
+
 	set_bit_range(&msg.data[1], 3, 5, v_res, 0);
 	set_bit_range(&msg.data[1], 0, 3, chip, CHIP_ID_BTIS - 3);
 
@@ -742,7 +718,6 @@ void send_alpha_status_b_message(uint16_t v_res, uint8_t chip, uint16_t vref2,
 
 	set_bit_range(&msg.data[6], 0, 8, v_digital, 0);
 
-	msg.data[7] = 0;
 	set_bit_range(&msg.data[7], 7, 1, flt_reg->otp1_med, 0);
 	set_bit_range(&msg.data[7], 6, 1, flt_reg->otp2_med, 0);
 
