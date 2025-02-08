@@ -65,7 +65,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata);
 void calc_open_cell_voltage(acc_data_t *bmsdata);
 
 /**
- * @brief Calculate cell resistances using Rin = ( Voc - V )/I
+ * @brief Calculate cell resistances using cell temperatures and a cell temp to resistance lookup table.
  * 
  */
 void calc_cell_resistances(acc_data_t *bmsdata);
