@@ -32,6 +32,21 @@ typedef enum {
 //TODO: CHANGE ALL FOR NEW CELLS
 
 /**
+ * @brief Mapping Cell temperature to the cell resistance based on the
+ *      nominal cell resistance curve profile of the Samsung 186500 INR in the
+ *      Orion BMS software utility app
+ *
+ * @note Units are in mOhms and indicies are in (degrees C)/5, stops at 65C
+ * @note Resistance should be *interpolated* from these values (i.e. if we are
+ *      at 27C, we should take the resistance that is halfway between 25C and 30C)
+ */
+const float TEMP_TO_CELL_RES[14] =
+{
+	5.52 * (7/5), 4.84 * (7/5), 4.27 * (7/5), 3.68 * (7/5), 3.16 * (7/5), 2.74 * (7/5), 2.4 * (7/5),
+	2.12 * (7/5), 1.98 * (7/5), 1.92 * (7/5), 1.90 * (7/5), 1.90 * (7/5), 1.90 * (7/5), 1.90 * (7/5)
+};
+
+/**
  * @brief Mapping Cell temperatue to the discharge current limit based on the
  *      temperature discharge limit curve profile of the Samsung 186500 INR
  *      in the Orion BMS software utility app
@@ -366,10 +381,25 @@ void calc_cell_resistances(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
+			uint8_t cell_temp =
+				bmsdata->chip_data[c].cell_temp[cell];
+
+			/* resistance LUT increments by 5C for each index */
+			uint8_t resIndex = (cell_temp - MIN_TEMP) / 5;
+
 			bmsdata->chip_data[c].cell_resistance[cell] =
-				(bmsdata->chip_data[c].open_cell_voltage[cell] -
-				 bmsdata->chip_data[c].cell_voltages[cell]) /
-				bmsdata->pack_current;
+				TEMP_TO_CELL_RES[resIndex];
+
+			/* Linear interpolation to more accurately represent cell resistances in between
+			 * increments of 5C */
+			if (cell_temp != MAX_TEMP) {
+				float interpolation =
+					(TEMP_TO_CELL_RES[resIndex + 1] -
+					 TEMP_TO_CELL_RES[resIndex]) /
+					5;
+				bmsdata->chip_data[c].cell_resistance[cell] +=
+					(interpolation * (cell_temp % 5));
+			}
 		}
 	}
 }
