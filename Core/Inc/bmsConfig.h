@@ -4,6 +4,8 @@
 #define DEBUG_MODE_ENABLED true
 #define DEBUG_STATS
 
+#define DEBUG_MODE_ENABLED true
+
 // Hardware definition
 #define NUM_SEGMENTS	1
 #define NUM_CHIPS	1 //NUM_SEGMENTS * 2

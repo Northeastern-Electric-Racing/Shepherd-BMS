@@ -136,7 +136,7 @@ void handle_charging(acc_data_t *bmsdata)
 		/* Send CAN message, but not too often */
 		if (is_timer_expired(&charger_message_timer) ||
 		    !is_timer_active(&charger_message_timer)) {
-			send_charging_message(
+			compute_send_charging_message(
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
@@ -493,7 +493,7 @@ void sm_balance_cells(acc_data_t *bmsdata)
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			uint16_t delta =
-				bmsdata->chips[chip].fcell.fc_codes[cell] -
+				bmsdata->chips[chip].cell.c_codes[cell] -
 				(uint16_t)bmsdata->min_voltage.val;
 			if (delta > MAX_DELTA_V * 10000)
 				balanceConfig[chip][cell] = true;

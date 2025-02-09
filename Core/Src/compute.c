@@ -201,6 +201,341 @@ int16_t compute_get_pack_current()
 	return -high_current;
 }
 
+void compute_send_mc_discharge_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint16_t max_discharge;
+	} discharge_data;
+
+	/* scale to A * 10 */
+	discharge_data.max_discharge = 10 * bmsdata->discharge_limit;
+
+	/* convert to big endian */
+	endian_swap(&discharge_data.max_discharge,
+		    sizeof(discharge_data.max_discharge));
+
+	memcpy(bms_can_msgs[DISCHARGE].data, &discharge_data,
+	       sizeof(discharge_data));
+
+	queue_can_msg(bms_can_msgs[DISCHARGE]);
+}
+
+void compute_send_mc_charge_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		int16_t max_charge;
+	} charge_data;
+
+	/* scale to A * 10 */
+	charge_data.max_charge = -10 * bmsdata->charge_limit;
+
+	/* convert to big endian */
+	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
+
+	memcpy(bms_can_msgs[CHARGE].data, &charge_data, sizeof(charge_data));
+
+	queue_can_msg(bms_can_msgs[CHARGE]);
+}
+
+void compute_send_acc_status_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint16_t packVolt;
+		uint16_t pack_current;
+		uint16_t pack_ah;
+		uint8_t pack_soc;
+		uint8_t pack_health;
+	} acc_status_msg_data;
+
+	acc_status_msg_data.packVolt = bmsdata->pack_voltage;
+	acc_status_msg_data.pack_current =
+		(uint16_t)(bmsdata->pack_current); // convert with 2s complement
+	acc_status_msg_data.pack_ah = 0;
+	acc_status_msg_data.pack_soc = bmsdata->soc;
+	acc_status_msg_data.pack_health = 0;
+
+	/* convert to big endian */
+	endian_swap(&acc_status_msg_data.packVolt,
+		    sizeof(acc_status_msg_data.packVolt));
+	endian_swap(&acc_status_msg_data.pack_current,
+		    sizeof(acc_status_msg_data.pack_current));
+	endian_swap(&acc_status_msg_data.pack_ah,
+		    sizeof(acc_status_msg_data.pack_ah));
+
+	memcpy(bms_can_msgs[ACC_STATUS].data, &acc_status_msg_data,
+	       sizeof(acc_status_msg_data));
+
+	queue_can_msg(bms_can_msgs[ACC_STATUS]);
+}
+
+void compute_send_bms_status_message(acc_data_t *bmsdata, int bms_state,
+				     bool balance)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t state;
+		uint32_t fault;
+		int8_t temp_avg;
+		uint8_t temp_internal;
+		uint8_t balance;
+	} bms_status_msg_data;
+
+	bms_status_msg_data.temp_avg = (int8_t)(bmsdata->avg_temp);
+	bms_status_msg_data.state = (uint8_t)(bms_state);
+	bms_status_msg_data.fault = bmsdata->fault_code;
+	bms_status_msg_data.temp_internal = (uint8_t)(0);
+	bms_status_msg_data.balance = (uint8_t)(balance);
+
+	/* convert to big endian */
+	endian_swap(&bms_status_msg_data.fault,
+		    sizeof(bms_status_msg_data.fault));
+
+	memcpy(bms_can_msgs[BMS_STATUS].data, &bms_status_msg_data,
+	       sizeof(bms_status_msg_data));
+
+	queue_can_msg(bms_can_msgs[BMS_STATUS]);
+}
+
+void compute_send_shutdown_ctrl_message(uint8_t mpe_state)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t mpeState;
+	} shutdown_control_msg_data;
+
+	shutdown_control_msg_data.mpeState = mpe_state;
+
+	memcpy(bms_can_msgs[SHUTDOWN_CTRL].data, &shutdown_control_msg_data,
+	       sizeof(shutdown_control_msg_data));
+
+	queue_can_msg(bms_can_msgs[SHUTDOWN_CTRL]);
+}
+
+void compute_send_cell_voltage_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint16_t high_cell_voltage;
+		uint8_t high_cell_id;
+		uint16_t low_cell_voltage;
+		uint8_t low_cell_id;
+		uint16_t volt_avg;
+	} cell_data_msg_data;
+
+	cell_data_msg_data.high_cell_voltage = bmsdata->max_voltage.val;
+	cell_data_msg_data.high_cell_id =
+		(bmsdata->max_voltage.chipIndex << 4) |
+		bmsdata->max_voltage.cellNum;
+	cell_data_msg_data.low_cell_voltage = bmsdata->min_voltage.val;
+	cell_data_msg_data.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) |
+					 bmsdata->min_voltage.cellNum;
+	cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
+
+	/* convert to big endian */
+	endian_swap(&cell_data_msg_data.high_cell_voltage,
+		    sizeof(cell_data_msg_data.high_cell_voltage));
+	endian_swap(&cell_data_msg_data.low_cell_voltage,
+		    sizeof(cell_data_msg_data.low_cell_voltage));
+	endian_swap(&cell_data_msg_data.volt_avg,
+		    sizeof(cell_data_msg_data.volt_avg));
+
+	memcpy(bms_can_msgs[CELL_DATA].data, &cell_data_msg_data,
+	       sizeof(cell_data_msg_data));
+
+	queue_can_msg(bms_can_msgs[CELL_DATA]);
+}
+
+void compute_send_cell_data_message(uint8_t cell_id, uint16_t instant_voltage,
+				    uint16_t internal_Res, uint8_t temperature,
+				    bool discharging)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t cellID;
+		uint16_t instantVoltage;
+		uint16_t internalResistance;
+		int8_t temperature;
+		bool discharging;
+	} cell_voltage_msg_data;
+
+	cell_voltage_msg_data.cellID = cell_id;
+	cell_voltage_msg_data.instantVoltage = instant_voltage;
+	cell_voltage_msg_data.internalResistance = internal_Res;
+	cell_voltage_msg_data.temperature = temperature;
+	cell_voltage_msg_data.discharging = discharging;
+
+	/* convert to big endian */
+	endian_swap(&cell_voltage_msg_data.instantVoltage,
+		    sizeof(cell_voltage_msg_data.instantVoltage));
+	endian_swap(&cell_voltage_msg_data.internalResistance,
+		    sizeof(cell_voltage_msg_data.internalResistance));
+
+	memcpy(bms_can_msgs[CELL_VOLTAGE].data, &cell_voltage_msg_data,
+	       sizeof(cell_voltage_msg_data));
+
+	queue_can_msg(bms_can_msgs[CELL_VOLTAGE]);
+}
+
+void compute_send_current_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint16_t dcl;
+		int16_t ccl;
+		uint16_t pack_curr;
+	} current_status_msg_data;
+
+	current_status_msg_data.dcl = bmsdata->discharge_limit;
+	current_status_msg_data.ccl = -1 * bmsdata->charge_limit;
+	current_status_msg_data.pack_curr = bmsdata->pack_current;
+
+	/* convert to big endian */
+	endian_swap(&current_status_msg_data.dcl,
+		    sizeof(current_status_msg_data.dcl));
+	endian_swap(&current_status_msg_data.ccl,
+		    sizeof(current_status_msg_data.ccl));
+	endian_swap(&current_status_msg_data.pack_curr,
+		    sizeof(current_status_msg_data.pack_curr));
+
+	memcpy(bms_can_msgs[CURRENT].data, &current_status_msg_data,
+	       sizeof(current_status_msg_data));
+
+	queue_can_msg(bms_can_msgs[CURRENT]);
+}
+
+void compute_send_cell_temp_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint16_t max_cell_temp;
+		uint8_t max_cell_id;
+		uint16_t min_cell_temp;
+		uint8_t min_cell_id;
+		uint16_t average_temp;
+	} cell_temp_msg_data;
+
+	cell_temp_msg_data.max_cell_temp = bmsdata->max_temp.val;
+	cell_temp_msg_data.max_cell_id = (bmsdata->max_temp.chipIndex << 4) |
+					 (bmsdata->max_temp.cellNum - 17);
+	cell_temp_msg_data.min_cell_temp = bmsdata->min_temp.val;
+	cell_temp_msg_data.min_cell_id = (bmsdata->min_temp.chipIndex << 4) |
+					 (bmsdata->min_temp.cellNum - 17);
+	cell_temp_msg_data.average_temp = bmsdata->avg_temp;
+
+	/* convert to big endian */
+	endian_swap(&cell_temp_msg_data.max_cell_temp,
+		    sizeof(cell_temp_msg_data.max_cell_temp));
+	endian_swap(&cell_temp_msg_data.min_cell_temp,
+		    sizeof(cell_temp_msg_data.min_cell_temp));
+	endian_swap(&cell_temp_msg_data.average_temp,
+		    sizeof(cell_temp_msg_data.average_temp));
+
+	memcpy(bms_can_msgs[CELL_TEMP].data, &cell_temp_msg_data,
+	       sizeof(cell_temp_msg_data));
+
+	queue_can_msg(bms_can_msgs[CELL_TEMP]);
+}
+
+void compute_send_segment_temp_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		int8_t segment1_average_temp;
+		int8_t segment2_average_temp;
+		int8_t segment3_average_temp;
+		int8_t segment4_average_temp;
+		int8_t segment5_average_temp;
+		int8_t segment6_average_temp;
+
+	} segment_temp_msg_data;
+
+	segment_temp_msg_data.segment1_average_temp =
+		bmsdata->segment_average_temps[0];
+	segment_temp_msg_data.segment2_average_temp =
+		bmsdata->segment_average_temps[1];
+	segment_temp_msg_data.segment3_average_temp =
+		bmsdata->segment_average_temps[2];
+	segment_temp_msg_data.segment4_average_temp =
+		bmsdata->segment_average_temps[3];
+	segment_temp_msg_data.segment5_average_temp =
+		bmsdata->segment_average_temps[4];
+	segment_temp_msg_data.segment6_average_temp =
+		bmsdata->segment_average_temps[5];
+
+	memcpy(bms_can_msgs[SEGMENT_TEMP].data, &segment_temp_msg_data,
+	       sizeof(segment_temp_msg_data));
+
+	queue_can_msg(bms_can_msgs[SEGMENT_TEMP]);
+}
+
+void compute_send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t status;
+		int16_t pack_curr;
+		int16_t dcl;
+	} fault_msg_data;
+
+	fault_msg_data.status = status;
+	fault_msg_data.pack_curr = curr;
+	fault_msg_data.dcl = in_dcl;
+
+	endian_swap(&fault_msg_data.pack_curr,
+		    sizeof(fault_msg_data.pack_curr));
+	endian_swap(&fault_msg_data.dcl, sizeof(fault_msg_data.dcl));
+
+	memcpy(bms_can_msgs[FAULT].data, &fault_msg_data,
+	       sizeof(fault_msg_data));
+
+	queue_can_msg(bms_can_msgs[FAULT]);
+}
+
+void compute_send_voltage_noise_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t seg1_noise;
+		uint8_t seg2_noise;
+		uint8_t seg3_noise;
+		uint8_t seg4_noise;
+		uint8_t seg5_noise;
+		uint8_t seg6_noise;
+	} voltage_noise_msg_data;
+
+	voltage_noise_msg_data.seg1_noise =
+		bmsdata->segment_noise_percentage[0];
+	voltage_noise_msg_data.seg2_noise =
+		bmsdata->segment_noise_percentage[1];
+	voltage_noise_msg_data.seg3_noise =
+		bmsdata->segment_noise_percentage[2];
+	voltage_noise_msg_data.seg4_noise =
+		bmsdata->segment_noise_percentage[3];
+	voltage_noise_msg_data.seg5_noise =
+		bmsdata->segment_noise_percentage[4];
+	voltage_noise_msg_data.seg6_noise =
+		bmsdata->segment_noise_percentage[5];
+
+	memcpy(bms_can_msgs[NOISE].data, &voltage_noise_msg_data,
+	       sizeof(voltage_noise_msg_data));
+
+	queue_can_msg(bms_can_msgs[NOISE]);
+}
+
+void compute_send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
+				uint32_t debug3)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t debug0;
+		uint8_t debug1;
+		uint16_t debug2;
+		uint32_t debug3;
+	} debug_msg_data;
+
+	debug_msg_data.debug0 = debug0;
+	debug_msg_data.debug1 = debug1;
+	debug_msg_data.debug2 = debug2;
+	debug_msg_data.debug3 = debug3;
+
+	endian_swap(&debug_msg_data.debug2, sizeof(debug_msg_data.debug2));
+	endian_swap(&debug_msg_data.debug3, sizeof(debug_msg_data.debug3));
+
+	memcpy(bms_can_msgs[DEBUG].data, &debug_msg_data, 8);
+
+	queue_can_msg(bms_can_msgs[DEBUG]);
+}
+
 void change_adc1_channel(uint8_t channel)
 {
 	ADC_ChannelConfTypeDef sConfig = { 0 };

@@ -1,6 +1,7 @@
 #ifndef SEGMENT_H
 #define SEGMENT_H
 
+#include "bmsConfig.h"
 #include "datastructs.h"
 
 /**
@@ -13,12 +14,6 @@ void segment_init(acc_data_t *bmsdata);
  *
  */
 void segment_retrieve_data(acc_data_t *bmsdata);
-
-/**
- * @brief Fetch extra data for segment
- * 
- */
-void segment_retrieve_debug_data(acc_data_t *bmsdata);
 
 /**
  * @brief Disables balancing for all cells.
@@ -53,28 +48,12 @@ bool segment_is_balancing(cell_asic chips[NUM_CHIPS]);
 void segment_restart(acc_data_t *bmsdata);
 
 /**
- * @brief Do a single shot, redundant C-ADC measurement and read
- * the contents of Status Register Group C, which contains the 
- * CSxFLT bits indicating whether the difference between the 
- * C and S ADC measurements was above the CTH[2:0] set in config
- * register A.
+ * @brief Returns if any cells are balancing.
  * 
- * @param chips Pointer to accumulator data struct.
+ * @param chips Array of ADBMS6830 chips.
+ * @return true 
+ * @return false 
  */
-void get_adc_comparison(acc_data_t *bmsdata);
-
-/**
- * @brief Read the serial ID of the chip.
- * 
- * @param chips Array of chips to read.
- */
-void read_serial_id(cell_asic chips[NUM_CHIPS]);
-
-/**
- * @brief Read voltages in every register connected to AUX2 ADC.
- * 
- * @param chips Array of chips to get voltages of.
- */
-void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
+bool segment_is_balancing(cell_asic chips[NUM_CHIPS]);
 
 #endif

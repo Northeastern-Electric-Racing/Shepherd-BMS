@@ -18,11 +18,9 @@ typedef struct {
 	/* These are calculated during the analysis of data */
 
 	/* Cell temperature in celsius */
-	float cell_temp[NUM_CELLS_ALPHA];
+	int8_t cell_temp[NUM_CELLS_ALPHA];
 	float cell_resistance[NUM_CELLS_ALPHA];
-	float open_cell_voltage[NUM_CELLS_ALPHA];
-
-	float cell_voltages[NUM_CELLS_ALPHA];
+	uint16_t open_cell_voltage[NUM_CELLS_ALPHA];
 
 	uint8_t noise_reading
 		[NUM_CELLS_ALPHA]; /* bool representing noise ignored read */
@@ -34,6 +32,10 @@ typedef struct {
 
 	/* For temperatures of on-board therms. */
 	int8_t on_board_temp;
+		[NUM_CELLS_ALPHA]; /* count representing consecutive noisy reads */
+
+	/* True if chip is alpha, False if Chip is Beta */
+	bool alpha;
 } chipdata_t;
 
 /**
@@ -94,6 +96,8 @@ typedef struct {
 
 	/* Array of structs containing raw data from and configurations for the ADBMS6830 chips */
 	cell_asic chips[NUM_CHIPS];
+
+	int fault_status;
 
 	int fault_status; // FIXME: this field is unused
 
