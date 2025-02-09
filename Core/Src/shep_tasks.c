@@ -40,10 +40,13 @@ void vGetSegmentData(void *pv_params)
 			segment_retrieve_debug_data(bmsdata);
 		}
 
+// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
+#ifndef CHARGING_ENABLED
 		if (++i % (45 * SAMPLE_RATE) == 0) {
 			printf(" ***********  REBOOTING SEGMENT\n\n");
 			segment_restart(bmsdata);
 		}
+#endif
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
@@ -125,7 +128,7 @@ void vDebugMode(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	while (69 < 420) {
-		for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
 				get_num_cells(&bmsdata->chip_data[chip]);
 			for (int cell = 0; cell < num_cells; cell += 2) {
@@ -134,16 +137,11 @@ void vDebugMode(void *pv_params)
 
 					bmsdata->chip_data[chip].cell_temp[cell],
 
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_voltages
-									[cell]),
+					10000 * bmsdata->chip_data[chip]
+							.cell_voltages[cell],
 
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_voltages
-									[cell +
-									 1]),
+					10000 * bmsdata->chip_data[chip]
+							.cell_voltages[cell + 1],
 
 					chip,
 
@@ -163,13 +161,10 @@ void vDebugMode(void *pv_params)
 			// Send chip status messages
 			if (!bmsdata->chip_data[chip].alpha) {
 				send_beta_status_a_message(
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_temp[10]),
-					10000 * getVoltage(
-							bmsdata->chip_data[chip]
-								.cell_voltages
-									[10]),
+					10000 * bmsdata->chip_data[chip]
+							.cell_temp[10],
+					10000 * bmsdata->chip_data[chip]
+							.cell_voltages[10],
 					NER_GET_BIT(
 						bmsdata->chips[chip].tx_cfgb.dcc,
 						10),
@@ -200,6 +195,8 @@ void vDebugMode(void *pv_params)
 							bmsdata->chips[chip]
 								.raux
 								.ra_codes[10]));
+				send_beta_status_c_message(
+					chip, &bmsdata->chips[chip].statc);
 			} else {
 				send_alpha_status_a_message(
 					bmsdata->chip_data->on_board_temp, chip,
