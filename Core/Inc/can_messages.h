@@ -180,6 +180,15 @@ void send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
 				uint16_t v_res, uint16_t vmv);
 
 /**
+ * @brief Send a message for the faults of beta chips.
+ * TODO: remove thus
+ * 
+ * @param chip ID of chip
+ * @param flt_reg  the fault data register
+ */
+void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg);
+
+/**
  * @brief Send message containing ADBMS6830 diagnostic data and onboard therm data.
  * 
  * @param segment_temp Temperature reading from on-board therm.

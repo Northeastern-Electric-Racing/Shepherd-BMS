@@ -247,7 +247,7 @@ void segment_configure_balancing(
 			set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
-	// write_config_regs(bmsdata->chips);
+	write_config_regs(bmsdata->chips);
 }
 
 // void averaging_therm_check(chipdata_t segment_data[NUM_CHIPS])
