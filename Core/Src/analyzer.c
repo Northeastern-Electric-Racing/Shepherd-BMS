@@ -366,10 +366,17 @@ void calc_cell_resistances(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
-			bmsdata->chip_data[c].cell_resistance[cell] =
-				(bmsdata->chip_data[c].open_cell_voltage[cell] -
-				 bmsdata->chip_data[c].cell_voltages[cell]) /
-				bmsdata->pack_current;
+			if (bmsdata->pack_current != 0) {
+				bmsdata->chip_data[c].cell_resistance[cell] =
+					(bmsdata->chip_data[c]
+						 .open_cell_voltage[cell] -
+					 bmsdata->chip_data[c]
+						 .cell_voltages[cell]) /
+					bmsdata->pack_current;
+			} else {
+				bmsdata->chip_data[c].cell_resistance[cell] =
+					0.015; // default resistance from data sheet
+			}
 		}
 	}
 }
