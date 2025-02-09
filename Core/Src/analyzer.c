@@ -432,13 +432,13 @@ void calc_dcl(acc_data_t *bmsdata)
 	}
 
 	/* ceiling for current limit */
-	if (current_limit > MAX_CELL_CURR) {
-		bmsdata->discharge_limit = MAX_CELL_CURR;
+	if (current_limit > MAX_DISCHG_CURR) {
+		bmsdata->discharge_limit = MAX_DISCHG_CURR;
 		return;
 	}
 
 	/* protection against being init to a high value */
-	if (bmsdata->discharge_limit > MAX_CELL_CURR) {
+	if (bmsdata->discharge_limit > MAX_DISCHG_CURR) {
 		bmsdata->discharge_limit = 0;
 		prev_dcl = 0;
 	}
@@ -517,8 +517,8 @@ void calcCCL(acc_data_t *bmsdata)
 	}
 
 	/* ceiling for current limit */
-	if (currentLimit > MAX_CHG_CELL_CURR) {
-		bmsdata->charge_limit = MAX_CHG_CELL_CURR;
+	if (currentLimit > MAX_CHG_CURR) {
+		bmsdata->charge_limit = MAX_CHG_CURR;
 	} else {
 		bmsdata->charge_limit = currentLimit;
 	}
@@ -541,93 +541,124 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		bmsdata->cont_CCL = TEMP_TO_CCL[max_res_index];
 	}
 
-	if (bmsdata->cont_CCL > MAX_CHG_CELL_CURR) {
-		bmsdata->cont_CCL = MAX_CHG_CELL_CURR;
+	if (bmsdata->cont_CCL > MAX_CHG_CURR) {
+		bmsdata->cont_CCL = MAX_CHG_CURR;
+	}
+}
+
+void calc_open_cell_voltage(acc_data_t *bmsdata)
+{
+	// If we are within the current threshold for open voltage measurments (1.5 mA)
+	if (bmsdata->pack_current < OCV_CURR_THRESH &&
+	    bmsdata->pack_current > -1 * OCV_CURR_THRESH) {
+		// Timer expired or not active
+		if (is_timer_expired(&ocvTimer) ||
+		    !is_timer_active(&ocvTimer)) {
+			for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+				// Number of cells in the chip
+				uint8_t num_cells = get_num_cells(
+					&bmsdata->chip_data[chip]);
+				for (uint8_t cell = 0; cell < num_cells;
+				     cell++) {
+					// This is the actual OCV value in the cell
+					uint16_t ocv_value =
+						bmsdata->chip_data[chip]
+							.cell_voltages[cell];
+
+					// Set current OCV value
+					bmsdata->chip_data[chip]
+						.open_cell_voltage[cell] =
+						ocv_value;
+				}
+			}
+		} else {
+			start_timer(&ocvTimer, 1000);
+		}
 	}
 }
 
 //TODO: Make it actually calc OCVs. Revise algorithm and stuff.
 //TODO: Change for new cells (probs not needed).
-void calc_open_cell_voltage(acc_data_t *bmsdata)
-{
-	//TODO: MAKE NOT SHIT :)
+//void calc_open_cell_voltage(acc_data_t *bmsdata)
+//{
+//TODO: MAKE NOT SHIT :)
 
-	// static chipdata_t prev_chipdata[12];
+// static chipdata_t prev_chipdata[12];
 
-	// /* if there is no previous data point, set inital open cell voltage to current reading */
-	// if (is_first_reading_) {
-	// 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-	// 		uint8_t num_cells =
-	// 			get_num_cells(&bmsdata->chip_data[chip]);
-	// 		for (uint8_t cell = 0; cell < num_cells; cell++) {
-	// 			bmsdata->chip_data[chip]
-	// 				.open_cell_voltage[cell] =
-	// 				bmsdata->chip_data[chip]
-	// 					.cell_voltages[cell];
-	// 			prev_chipdata[chip].open_cell_voltage[cell] =
-	// 				bmsdata->chip_data[chip]
-	// 					.cell_voltages[cell];
-	// 		}
-	// 	}
-	// 	return;
-	// }
-	// /* If we are within the current threshold for open voltage measurments */
-	// else if (bmsdata->pack_current < (OCV_CURR_THRESH * 10) &&
-	// 	 bmsdata->pack_current > (-OCV_CURR_THRESH * 10)) {
-	// 	if (is_timer_expired(&ocvTimer) ||
-	// 	    !is_timer_active(&ocvTimer)) {
-	// 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-	// 			uint8_t num_cells = get_num_cells(
-	// 				&bmsdata->chip_data[chip]);
-	// 			for (uint8_t cell = 0; cell < num_cells;
-	// 			     cell++) {
-	// 				/* Sets open cell voltage to a moving average of OCV_AVG values */
-	// 				bmsdata->chip_data[chip]
-	// 					.open_cell_voltage[cell] =
-	// 					((bmsdata->chip_data[chip].cell_voltages[cell];
-	// 					 ((prev_chipdata[chip].open_cell_voltage
-	// 							     [cell]) *
-	// 					  (OCV_AVG - 1))) /
-	// 					OCV_AVG;
-	// 				bmsdata->chip_data[chip]
-	// 					.open_cell_voltage[cell] =
-	// 					bmsdata->chips[chip]
-	// 						.fcell.fc_codes[cell];
+// /* if there is no previous data point, set inital open cell voltage to current reading */
+// if (is_first_reading_) {
+// 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+// 		uint8_t num_cells =
+// 			get_num_cells(&bmsdata->chip_data[chip]);
+// 		for (uint8_t cell = 0; cell < num_cells; cell++) {
+// 			bmsdata->chip_data[chip]
+// 				.open_cell_voltage[cell] =
+// 				bmsdata->chip_data[chip]
+// 					.cell_voltages[cell];
+// 			prev_chipdata[chip].open_cell_voltage[cell] =
+// 				bmsdata->chip_data[chip]
+// 					.cell_voltages[cell];
+// 		}
+// 	}
+// 	return;
+// }
+// /* If we are within the current threshold for open voltage measurments */
+// else if (bmsdata->pack_current < (OCV_CURR_THRESH * 10) &&
+// 	 bmsdata->pack_current > (-OCV_CURR_THRESH * 10)) {
+// 	if (is_timer_expired(&ocvTimer) ||
+// 	    !is_timer_active(&ocvTimer)) {
+// 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+// 			uint8_t num_cells = get_num_cells(
+// 				&bmsdata->chip_data[chip]);
+// 			for (uint8_t cell = 0; cell < num_cells;
+// 			     cell++) {
+// 				/* Sets open cell voltage to a moving average of OCV_AVG values */
+// 				bmsdata->chip_data[chip]
+// 					.open_cell_voltage[cell] =
+// 					((bmsdata->chip_data[chip].cell_voltages[cell];
+// 					 ((prev_chipdata[chip].open_cell_voltage
+// 							     [cell]) *
+// 					  (OCV_AVG - 1))) /
+// 					OCV_AVG;
+// 				bmsdata->chip_data[chip]
+// 					.open_cell_voltage[cell] =
+// 					bmsdata->chips[chip]
+// 						.fcell.fc_codes[cell];
 
-	// 				if (bmsdata->chip_data[chip]
-	// 					    .open_cell_voltage[cell] >
-	// 				    MAX_VOLT * 10000) {
-	// 					bmsdata->chip_data[chip]
-	// 						.open_cell_voltage[cell] =
-	// 						prev_chipdata[chip]
-	// 							.open_cell_voltage
-	// 								[cell];
-	// 				} else if (bmsdata->chip_data[chip]
-	// 						   .open_cell_voltage
-	// 							   [cell] <
-	// 					   MIN_VOLT * 10000) {
-	// 					bmsdata->chip_data[chip]
-	// 						.open_cell_voltage[cell] =
-	// 						prev_chipdata[chip]
-	// 							.open_cell_voltage
-	// 								[cell];
-	// 				}
-	// 			}
-	// 		}
-	// 		return;
-	// 	}
-	// } else {
-	// 	start_timer(&ocvTimer, 1000);
-	// }
-	// for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-	// 	uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
-	// 	for (uint8_t cell = 0; cell < num_cells; cell++) {
-	// 		/* Set OCV to the previous/existing OCV */
-	// 		bmsdata->chip_data[chip].open_cell_voltage[cell] =
-	// 			prev_chipdata[chip].open_cell_voltage[cell];
-	// 	}
-	// }
-}
+// 				if (bmsdata->chip_data[chip]
+// 					    .open_cell_voltage[cell] >
+// 				    MAX_VOLT * 10000) {
+// 					bmsdata->chip_data[chip]
+// 						.open_cell_voltage[cell] =
+// 						prev_chipdata[chip]
+// 							.open_cell_voltage
+// 								[cell];
+// 				} else if (bmsdata->chip_data[chip]
+// 						   .open_cell_voltage
+// 							   [cell] <
+// 					   MIN_VOLT * 10000) {
+// 					bmsdata->chip_data[chip]
+// 						.open_cell_voltage[cell] =
+// 						prev_chipdata[chip]
+// 							.open_cell_voltage
+// 								[cell];
+// 				}
+// 			}
+// 		}
+// 		return;
+// 	}
+// } else {
+// 	start_timer(&ocvTimer, 1000);
+// }
+// for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+// 	uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
+// 	for (uint8_t cell = 0; cell < num_cells; cell++) {
+// 		/* Set OCV to the previous/existing OCV */
+// 		bmsdata->chip_data[chip].open_cell_voltage[cell] =
+// 			prev_chipdata[chip].open_cell_voltage[cell];
+// 	}
+// }
+//}
 
 //TODO: Change for new fans and cell temps
 // uint8_t analyzer_calc_fan_pwm(acc_data_t *bmsdata)
