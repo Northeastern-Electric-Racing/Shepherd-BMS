@@ -409,13 +409,13 @@ void calc_dcl(acc_data_t *bmsdata)
 	}
 
 	/* ceiling for current limit */
-	if (current_limit > MAX_CELL_CURR) {
-		bmsdata->discharge_limit = MAX_CELL_CURR;
+	if (current_limit > MAX_DISCHG_CURR) {
+		bmsdata->discharge_limit = MAX_DISCHG_CURR;
 		return;
 	}
 
 	/* protection against being init to a high value */
-	if (bmsdata->discharge_limit > MAX_CELL_CURR) {
+	if (bmsdata->discharge_limit > MAX_DISCHG_CURR) {
 		bmsdata->discharge_limit = 0;
 		prev_dcl = 0;
 	}
@@ -494,8 +494,8 @@ void calcCCL(acc_data_t *bmsdata)
 	}
 
 	/* ceiling for current limit */
-	if (currentLimit > MAX_CHG_CELL_CURR) {
-		bmsdata->charge_limit = MAX_CHG_CELL_CURR;
+	if (currentLimit > MAX_CHG_CURR) {
+		bmsdata->charge_limit = MAX_CHG_CURR;
 	} else {
 		bmsdata->charge_limit = currentLimit;
 	}
@@ -518,8 +518,8 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		bmsdata->cont_CCL = TEMP_TO_CCL[max_res_index];
 	}
 
-	if (bmsdata->cont_CCL > MAX_CHG_CELL_CURR) {
-		bmsdata->cont_CCL = MAX_CHG_CELL_CURR;
+	if (bmsdata->cont_CCL > MAX_CHG_CURR) {
+		bmsdata->cont_CCL = MAX_CHG_CURR;
 	}
 }
 
