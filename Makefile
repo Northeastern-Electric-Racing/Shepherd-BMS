@@ -74,6 +74,7 @@ Core/Src/can_messages.c \
 Core/Src/shep_tasks.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
+Core/Src/cell_data_logging.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \
 Drivers/Embedded-Base/general/src/m24c32.c \
 Drivers/Embedded-Base/general/src/sht30.c \

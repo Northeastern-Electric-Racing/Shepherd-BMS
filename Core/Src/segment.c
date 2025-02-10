@@ -109,6 +109,8 @@ void segment_init(acc_data_t *bmsdata)
 	write_config_regs(bmsdata->chips);
 
 	start_c_adc_conv();
+
+	cell_data_logger_init();
 }
 
 void segment_adc_comparison(acc_data_t *bmsdata)
@@ -195,6 +197,8 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
+
+	cell_data_log_measurement(bmsdata);
 }
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
 {
