@@ -8,54 +8,54 @@
  * 
  */
 
- #ifndef SHEP_TASKS_H
- #define SHEP_TASKS_H
- 
- #include "cmsis_os.h"
- 
- /**
+#ifndef SHEP_TASKS_H
+#define SHEP_TASKS_H
+
+#include "cmsis_os.h"
+
+/**
   * @brief Task for retrieving segment data
   * 
   * @param pv_params Pointer to acc_data_t struct containing BMS data
   */
- void vGetSegmentData(void *pv_params);
- extern osThreadId_t get_segment_data_thread;
- extern const osThreadAttr_t get_segment_data_attrs;
- 
- /**
+void vGetSegmentData(void *pv_params);
+extern osThreadId_t get_segment_data_thread;
+extern const osThreadAttr_t get_segment_data_attrs;
+
+/**
   * @brief Task for analyzing data after it is collected
   * 
   * @param pv_params Pointer to acc_data_t struct containing BMS data
   */
- void vAnalyzer(void *pv_params);
- extern osThreadId_t analyzer_thread;
- extern const osThreadAttr_t analyzer_attrs;
- 
- /**
+void vAnalyzer(void *pv_params);
+extern osThreadId_t analyzer_thread;
+extern const osThreadAttr_t analyzer_attrs;
+
+/**
   * @brief Task for reading the current sensor
   * 
   * @param pv_params Pointer to acc_data_t struct containing BMS data
   */
- void vCurrentMonitor(void *pv_params);
- extern osThreadId_t current_monitor_thread;
- extern const osThreadAttr_t current_monitor_attrs;
- 
- /**
+void vCurrentMonitor(void *pv_params);
+extern osThreadId_t current_monitor_thread;
+extern const osThreadAttr_t current_monitor_attrs;
+
+/**
   * @brief Task for handling state transitions
   * 
   * @param pv_params Pointer to acc_data_t struct containing BMS data
   */
- void vStateMachine(void *pv_params);
- extern osThreadId_t state_machine_thread;
- extern const osThreadAttr_t state_machine_attrs;
- 
- /**
+void vStateMachine(void *pv_params);
+extern osThreadId_t state_machine_thread;
+extern const osThreadAttr_t state_machine_attrs;
+
+/**
   * @brief Task that handles all BMS debug mode functionalities.
   * 
   * @param pv_params Pointer to accumulator data struct.
   */
- void vDebugMode(void *pv_params);
- extern osThreadId_t debug_mode_thread;
- extern const osThreadAttr_t debug_mode_attrs;
- 
- #endif
+void vDebugMode(void *pv_params);
+extern osThreadId_t debug_mode_thread;
+extern const osThreadAttr_t debug_mode_attrs;
+
+#endif

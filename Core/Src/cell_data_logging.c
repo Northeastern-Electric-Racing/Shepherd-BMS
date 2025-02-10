@@ -6,7 +6,7 @@
 extern TIM_HandleTypeDef htim2;
 
 static ringbuf_t cell_log_ring_buff;
-static CellDataEntry_t cell_data_storage[NUM_OF_READINGS] = {0};
+static CellDataEntry_t cell_data_storage[NUM_OF_READINGS] = { 0 };
 
 uint32_t get_us_timestamp(void)
 {
