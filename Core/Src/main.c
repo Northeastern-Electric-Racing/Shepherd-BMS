@@ -26,10 +26,6 @@
 #include "serialPrintResult.h"
 #include "shep_tasks.h"
 
-#include "assert.h"
-
-#include "serialPrintResult.h"
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,7 +40,7 @@ extern BMSState_t current_state;
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
-#define DEBUG_STATS
+// #define DEBUG_STATS
 #define DEBUG_VOLTAGES
 // #define DEBUG_RAW_VOLTAGES
 #define DEBUG_RAW_VOLTAGES_FORMATTED
@@ -91,7 +87,7 @@ PCD_HandleTypeDef hpcd_USB_OTG_FS;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 8,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
@@ -171,8 +167,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   #endif
 
   #ifdef DEBUG_VOLTAGES
-  printf("Min, Max, Avg, Delta Voltages: %ld, %ld, %d, %d\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
-  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val / 10000.0, acc_data->max_voltage.val / 10000.0, acc_data->avg_voltage / 10000.0, acc_data->delt_voltage / 10000.0);
+  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
   #endif
 
   #ifdef DEBUG_OTHER
@@ -203,7 +198,7 @@ const void print_bms_stats(acc_data_t *acc_data)
     uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
     for(uint8_t cell = 0; cell < num_cells; cell++)
     {
-        printf("%d\t", acc_data->chips[c].cell.c_codes[cell]);
+        printf("%d\t", acc_data->chip_data[chip].cell_voltages[cell]);
     }
     printf("\n");
   }
@@ -215,7 +210,7 @@ const void print_bms_stats(acc_data_t *acc_data)
     uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
     for(uint8_t cell = 0; cell < num_cells; cell++)
     {
-        printf("%.3f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
+        printf("%.3f\t", acc_data->chip_data[c].cell_voltages[cell]);
     }
     printf("\n");
   }
@@ -229,6 +224,19 @@ const void print_bms_stats(acc_data_t *acc_data)
     for(uint8_t cell = 0; cell < num_cells; cell++)
     {
         printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
+    }
+    printf("\n");
+  }
+  #endif
+
+#define DEBUG_THERM_VOLTS
+  #ifdef DEBUG_THERM_VOLTS
+  printf("THERM VOLTS: \n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t gpio = 0; gpio < 10; gpio++)
+    {
+        printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
     }
     printf("\n");
   }
@@ -383,7 +391,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, acc_data, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, (void*) acc_data, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   
@@ -831,7 +839,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_32;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -1339,9 +1347,7 @@ void send_git_version_message() {
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-  #ifdef DEBUG_STATS
   acc_data_t* bmsdata = (acc_data_t*) argument;
-  #endif
 
   bool alt = true;
 
@@ -1360,9 +1366,12 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
-    compute_send_bms_status_message(bmsdata, current_state,
+    send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing(bmsdata->chips));
+    send_fault_status_message(bmsdata);
 
+    send_git_version_message();
+  
     HAL_IWDG_Refresh(&hiwdg);
 
     osDelay(1000);
