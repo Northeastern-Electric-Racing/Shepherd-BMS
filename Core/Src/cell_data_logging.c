@@ -67,3 +67,63 @@ void cell_data_log_get_last_n(size_t n, CellDataEntry_t *out_buffer)
 
 	rb_get_last_n(&cell_log_ring_buff, out_buffer, n);
 }
+
+void print_latest_cell_data_log(void)
+{
+	CellDataEntry_t *latest_entry = cell_data_log_get_last();
+
+	if (latest_entry == NULL) {
+		printf("No data available!!\r\n");
+		return;
+	}
+
+	for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
+		int cell_count = (chip_num % 2 == 0) ? NUM_CELLS_ALPHA :
+						       NUM_CELLS_BETA;
+		printf("Chip %d (%s):\n", chip_num,
+		       (chip_num % 2 == 0) ? "Alpha" : "Beta");
+
+		for (int cell = 0; cell < cell_count; cell++) {
+			printf("  Cell %d: Voltage: %.3f V, Temperature: %.2f C, Timestamp: %lu µs\r\n",
+			       cell + 1,
+			       latest_entry->cell_voltages[chip_num][cell],
+			       latest_entry->cell_temperatures[chip_num][cell],
+			       latest_entry->timestamp[chip_num][cell]);
+		}
+	}
+}
+
+void print_last_n_cell_data_logs(size_t n)
+{
+	if (n > NUM_OF_READINGS) {
+		n = NUM_OF_READINGS;
+	}
+
+	CellDataEntry_t log_entries[n];
+	rb_get_last_n(&cell_log_ring_buff, log_entries, n);
+
+	printf("Printing Last %zu Cell Data Logs:\r\n", n);
+
+	for (size_t entry_idx = 0; entry_idx < n; entry_idx++) {
+		printf("\r\n--- Log Entry %zu ---\r\n", entry_idx + 1);
+
+		for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
+			int cell_count = (chip_num % 2 == 0) ? NUM_CELLS_ALPHA :
+							       NUM_CELLS_BETA;
+			printf("Chip %d (%s):\r\n", chip_num,
+			       (chip_num % 2 == 0) ? "Alpha" : "Beta");
+
+			for (int cell = 0; cell < cell_count; cell++) {
+				printf("  Cell %d: Voltage: %.3f V, Temperature: %.2f C, Timestamp: %lu µs\r\n",
+				       cell + 1,
+				       log_entries[entry_idx]
+					       .cell_voltages[chip_num][cell],
+				       log_entries[entry_idx]
+					       .cell_temperatures[chip_num]
+								 [cell],
+				       log_entries[entry_idx]
+					       .timestamp[chip_num][cell]);
+			}
+		}
+	}
+}
