@@ -53,3 +53,17 @@ void cell_data_log_measurement(acc_data_t *bms_data)
 
 	rb_insert(&cell_log_ring_buff, &new_entry);
 }
+
+CellDataEntry_t *cell_data_log_get_last(void)
+{
+	return (CellDataEntry_t *)rb_get_head(&cell_log_ring_buff);
+}
+
+void cell_data_log_get_last_n(size_t n, CellDataEntry_t *out_buffer)
+{
+	if (n > NUM_OF_READINGS) {
+		n = NUM_OF_READINGS;
+	}
+
+	rb_get_last_n(&cell_log_ring_buff, out_buffer, n);
+}
