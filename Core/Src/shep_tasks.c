@@ -155,7 +155,7 @@ void vDebugMode(void *pv_params)
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 (cell + 1)) &
 						1);
-				osDelay(1000 / NUM_CHIPS);
+				osDelay(20 / NUM_CHIPS);
 			}
 
 			// Send chip status messages
@@ -175,11 +175,10 @@ void vDebugMode(void *pv_params)
 							    .stata.itmp) /
 					 0.0075) -
 						273,
-					10000 * 20 *
-						getVoltage( // VPV is ra_code 11 w/ different scale
-							bmsdata->chips[chip]
-								.raux
-								.ra_codes[11]));
+					25 * getVoltage( // VPV is ra_code 11 w/ different scale
+						     bmsdata->chips[chip]
+							     .raux
+							     .ra_codes[11]));
 				send_beta_status_b_message(
 					getVoltage(bmsdata->chips[chip]
 							   .stata.vref2),
@@ -190,10 +189,9 @@ void vDebugMode(void *pv_params)
 					chip,
 					getVoltage(
 						bmsdata->chips[chip].statb.vr4k),
-					20 * getVoltage( // VMV is ra_code 10
-						     bmsdata->chips[chip]
-							     .raux
-							     .ra_codes[10]));
+					getVoltage( // VMV is ra_code 10
+						bmsdata->chips[chip]
+							.raux.ra_codes[10]));
 				send_beta_status_c_message(
 					chip, &bmsdata->chips[chip].statc);
 			} else {
@@ -203,10 +201,12 @@ void vDebugMode(void *pv_params)
 							    .stata.itmp) /
 					 0.0075) -
 						273,
-					getVoltage(bmsdata->chips[chip]
-							   .raux.ra_codes[9]),
-					getVoltage(bmsdata->chips[chip]
-							   .raux.ra_codes[8]),
+					25 * getVoltage( // VPV is ra_code 11 w/ different scale
+						     bmsdata->chips[chip]
+							     .raux.ra_codes[11]),
+					getVoltage( // VMV is ra_code 10
+						bmsdata->chips[chip]
+							.raux.ra_codes[10]),
 					&bmsdata->chips[chip].statc);
 				send_alpha_status_b_message(
 					getVoltage(

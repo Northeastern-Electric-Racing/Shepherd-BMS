@@ -515,7 +515,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	voltage_a *= 1000;
 	voltage_b *= 1000;
 
-	set_bit_range(&msg.data[0], 0, 8, temperature * 10, 2);
+	set_bit_range(&msg.data[0], 0, 8, temperature, 2);
 
 	set_bit_range(&msg.data[1], 6, 2, temperature, 0);
 	set_bit_range(&msg.data[1], 0, 6, voltage_a, VOLT_BITS - 6);
@@ -697,8 +697,8 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 
 	v_res *= 1000;
 	vref2 *= 1000;
-	v_analog *= 100;
-	v_digital *= 100;
+	v_analog *= 1000;
+	v_digital *= 1000;
 
 	set_bit_range(&msg.data[0], 0, 8, v_res, AUX_ADC_BITS - 8);
 
