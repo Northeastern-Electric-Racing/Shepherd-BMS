@@ -197,13 +197,13 @@ void vDebugMode(void *pv_params)
 			} else {
 				send_alpha_status_a_message(
 					bmsdata->chip_data->on_board_temp, chip,
-					(getVoltage(bmsdata->chips[chip]
+					((getVoltage(bmsdata->chips[chip]
 							    .stata.itmp) /
 					 0.0075) -
-						273,
-					25 * getVoltage( // VPV is ra_code 11 w/ different scale
+						273),
+					(25 * getVoltage( // VPV is ra_code 11 w/ different scale
 						     bmsdata->chips[chip]
-							     .raux.ra_codes[11]),
+							     .raux.ra_codes[11])),
 					getVoltage( // VMV is ra_code 10
 						bmsdata->chips[chip]
 							.raux.ra_codes[10]),
