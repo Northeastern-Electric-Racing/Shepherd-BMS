@@ -4,6 +4,7 @@
 
 #include "can.h"
 #include "can_handler.h"
+#include "bitstream.h"
 
 #define BYTE_TO_BITS 8
 #define THERM_BITS   10
@@ -15,42 +16,7 @@
 
 extern is_charging_enabled;
 
-static bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit,
-			  uint32_t num_bits, uint32_t source,
-			  uint32_t source_start_bit);
 static unsigned short reverse_short(unsigned short val);
-
-static bool set_bit_range(uint8_t *dest, uint32_t dest_start_bit,
-			  uint32_t num_bits, uint32_t source,
-			  uint32_t source_start_bit)
-{
-	if (dest == NULL || num_bits == 0 || dest_start_bit + num_bits > 8 ||
-	    source_start_bit + num_bits > 32) {
-		return false; // Handle invalid input (dest only 8 bits, source 32 bits)
-	}
-
-	if (num_bits > 8) {
-		return false; // Can't set more than 8 bits in the uint8_t
-	}
-
-	// 1. Create a mask for the destination range (uint8_t):
-	uint8_t dest_mask = ((1u << num_bits) - 1) << dest_start_bit;
-
-	// 2. Clear the bits in the destination range (uint8_t):
-	*dest &= ~dest_mask;
-
-	// 3. Extract the bits from the uint32_t source:
-	uint32_t source_bits = (source >> source_start_bit) &
-			       ((1u << num_bits) - 1);
-
-	// 4. Shift the extracted source bits to the correct *uint8_t* destination position:
-	source_bits <<= dest_start_bit;
-
-	// 5. Cast and OR the shifted source bits into the uint8_t destination:
-	*dest |= (uint8_t)source_bits; // The crucial cast!
-
-	return true;
-}
 
 static unsigned short reverse_short(unsigned short val)
 {
@@ -502,6 +468,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 			    uint8_t cell_b, bool discharging_a,
 			    bool discharging_b)
 {
+	// clang-format off
 	can_msg_t msg;
 	if (alpha) {
 		msg.id = ALPHA_CELL_CANID;
@@ -515,26 +482,24 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	voltage_a *= 1000;
 	voltage_b *= 1000;
 
-	set_bit_range(&msg.data[0], 0, 8, temperature, 2);
+	bitstream_t cell_data_message;
+	uint8_t bitstream_data[7];
+	bitstream_init(&cell_data_message, bitstream_data, 7); // Create 7-byte bitstream
 
-	set_bit_range(&msg.data[1], 6, 2, temperature, 0);
-	set_bit_range(&msg.data[1], 0, 6, voltage_a, VOLT_BITS - 6);
+	bitstream_add(&cell_data_message, temperature, 10); 			// Cell temperature (10 bits)
+	bitstream_add(&cell_data_message, voltage_a, 13);   			// Voltage A (13 bits)
+	bitstream_add(&cell_data_message, voltage_b, 13);   			// Voltage B (13 bits)
+	bitstream_add(&cell_data_message, reverse_short(chip_ID), 4);   // Chip ID (4 bits)
+	bitstream_add(&cell_data_message, reverse_short(cell_a), 4);    // Cell A (4 bits)
+	bitstream_add(&cell_data_message, reverse_short(cell_b), 4);    // Cell B (4 bits)
+	bitstream_add(&cell_data_message, discharging_a, 1); 			// Discharging A (1 bit)
+	bitstream_add(&cell_data_message, discharging_b, 1); 			// Discharging B (1 bit)
+	bitstream_add(&cell_data_message, 0, 6);             			// Extra (6 bits)
 
-	set_bit_range(&msg.data[2], 1, 7, voltage_a, 0);
-	set_bit_range(&msg.data[2], 0, 1, voltage_b, VOLT_BITS - 1);
-
-	set_bit_range(&msg.data[3], 0, 8, voltage_b, VOLT_BITS - 1 - 8);
-
-	set_bit_range(&msg.data[4], 4, 4, voltage_b, VOLT_BITS - 1 - 8 - 4);
-	set_bit_range(&msg.data[4], 0, CHIP_ID_BTIS, reverse_short(chip_ID), 0);
-
-	set_bit_range(&msg.data[5], 4, CELL_ID_BITS, reverse_short(cell_a), 0);
-	set_bit_range(&msg.data[5], 0, CELL_ID_BITS, reverse_short(cell_b), 0);
-
-	set_bit_range(&msg.data[6], 7, 1, discharging_a, 0);
-	set_bit_range(&msg.data[6], 6, 1, discharging_b, 0);
+	memcpy(msg.data, &bitstream_data, CELL_MSG_SIZE);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
 void send_beta_status_a_message(float cell_temperature, float voltage,
@@ -552,29 +517,26 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 	die_temperature *= 100;
 	vpv *= 1000;
 
-	set_bit_range(&msg.data[0], 0, 8, cell_temperature, 2);
+	bitstream_t beta_status_a_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&beta_status_a_message, bitstream_data,
+		       8); // Create 8-byte bitstream
 
-	set_bit_range(&msg.data[1], 6, 2, cell_temperature, 0);
-	set_bit_range(&msg.data[1], 0, 6, voltage, VOLT_BITS - 6);
+	bitstream_add(&beta_status_a_message, cell_temperature,
+		      10); // Cell temperature (10 bits)
+	bitstream_add(&beta_status_a_message, voltage, 13); // Voltage (13 bits)
+	bitstream_add(&beta_status_a_message, discharging,
+		      1); // Discharging (1 bit)
+	bitstream_add(&beta_status_a_message, reverse_short(chip),
+		      4); // Chip ID (4 bits)
+	bitstream_add(&beta_status_a_message, segment_temperature,
+		      10); // Segment temperature (10 bits)
+	bitstream_add(&beta_status_a_message, die_temperature,
+		      13); // Die temperature (13 bits)
+	bitstream_add(&beta_status_a_message, vpv, 12); // Vpv (12 bits)
+	bitstream_add(&beta_status_a_message, 0, 1); // Extra (1 bit)
 
-	set_bit_range(&msg.data[2], 1, 7, voltage, VOLT_BITS - 6 - 7);
-	set_bit_range(&msg.data[2], 0, 1, discharging, 0);
-
-	set_bit_range(&msg.data[3], 4, 4, reverse_short(chip),
-		      CHIP_ID_BTIS - 4);
-	set_bit_range(&msg.data[3], 0, 4, segment_temperature, THERM_BITS - 4);
-
-	set_bit_range(&msg.data[4], 2, 6, segment_temperature,
-		      THERM_BITS - 4 - 6);
-	set_bit_range(&msg.data[4], 0, 2, die_temperature, AUX_ADC_BITS - 2);
-
-	set_bit_range(&msg.data[5], 0, 8, die_temperature,
-		      AUX_ADC_BITS - 2 - 8);
-
-	set_bit_range(&msg.data[6], 8 - 3, 3, die_temperature, 0);
-	set_bit_range(&msg.data[6], 0, 8 - 3, vpv, AUX_ADC_BITS - (8 - 3));
-
-	set_bit_range(&msg.data[7], 1, 7, vpv, 0);
+	memcpy(msg.data, &bitstream_data, BETA_STAT_A_SIZE);
 
 	queue_can_msg(msg);
 }
@@ -582,6 +544,7 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 				uint8_t chip, float v_res, float vmv)
 {
+	// clang-format off
 	can_msg_t msg;
 	msg.id = BETA_STAT_B_CANID;
 	msg.len = BETA_STAT_B_SIZE;
@@ -592,60 +555,61 @@ void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 	v_res *= 1000;
 	vmv *= 1000;
 
-	set_bit_range(&msg.data[0], 0, 8, vref2, AUX_ADC_BITS - 8);
+	bitstream_t beta_status_b_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&beta_status_b_message, bitstream_data, 8); // Create 8-byte bitstream
 
-	set_bit_range(&msg.data[1], 3, 5, vref2, AUX_ADC_BITS - 8 - 5);
-	set_bit_range(&msg.data[1], 0, 3, v_analog, VA_VD_BITS - 3);
+	bitstream_add(&beta_status_b_message, vref2, 13); 				// Vref2 (13 bits)
+	bitstream_add(&beta_status_b_message, v_analog, 10); 			// Vanalog (10 bits)
+	bitstream_add(&beta_status_b_message, v_digital, 10); 			// Vdigital (10 bits)
+	bitstream_add(&beta_status_b_message, reverse_short(chip), 4); 	// Chip ID (4 bits)
+	bitstream_add(&beta_status_b_message, v_res, 13); 				// Vres (13 bits)
+	bitstream_add(&beta_status_b_message, vmv, 13); 				// Vmv (13 bits)
+	bitstream_add(&beta_status_b_message, 0, 1); 					// Extra (1 bit)
 
-	set_bit_range(&msg.data[2], 1, 7, v_analog, 0);
-	set_bit_range(&msg.data[2], 0, 1, v_digital, VA_VD_BITS - 1);
-
-	set_bit_range(&msg.data[3], 0, 8, v_digital, VA_VD_BITS - 1 - 8);
-
-	set_bit_range(&msg.data[4], 7, 1, v_digital, 0);
-	set_bit_range(&msg.data[4], 3, 4, reverse_short(chip), 0);
-	set_bit_range(&msg.data[4], 0, 3, v_res, AUX_ADC_BITS - 3);
-
-	set_bit_range(&msg.data[5], 0, 8, v_res, AUX_ADC_BITS - 3 - 8);
-
-	set_bit_range(&msg.data[6], 6, 2, v_res, 0);
-	set_bit_range(&msg.data[6], 0, 6, vmv, AUX_ADC_BITS - 6);
-
-	set_bit_range(&msg.data[7], 1, 7, vmv, 0);
+	memcpy(msg.data, &bitstream_data, BETA_STAT_B_SIZE);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
 void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 {
+	// clang-format off
 	can_msg_t msg;
 	msg.id = BETA_STAT_C_CANID;
 	msg.len = BETA_STAT_C_SIZE;
 
-	set_bit_range(&msg.data[0], 4, 4, reverse_short(chip), 0);
-	set_bit_range(&msg.data[0], 3, 1, flt_reg->va_ov, 0);
-	set_bit_range(&msg.data[0], 2, 1, flt_reg->va_uv, 0);
-	set_bit_range(&msg.data[0], 1, 1, flt_reg->vd_ov, 0);
-	set_bit_range(&msg.data[0], 0, 1, flt_reg->vde, 0);
+	bitstream_t beta_status_c_message;
+	uint8_t bitstream_data[3];
+	bitstream_init(&beta_status_c_message, bitstream_data, 3); // Create 3-byte bitstream
 
-	set_bit_range(&msg.data[1], 7, 1, flt_reg->vde, 0);
-	set_bit_range(&msg.data[1], 6, 1, flt_reg->vdel, 0);
-	set_bit_range(&msg.data[1], 5, 1, flt_reg->spiflt, 0);
-	set_bit_range(&msg.data[1], 4, 1, flt_reg->sleep, 0);
-	set_bit_range(&msg.data[1], 3, 1, flt_reg->thsd, 0);
-	set_bit_range(&msg.data[1], 2, 1, flt_reg->tmodchk, 0);
-	set_bit_range(&msg.data[1], 1, 1, flt_reg->oscchk, 0);
-	set_bit_range(&msg.data[1], 0, 1, flt_reg->otp1_med, 0);
+	bitstream_add(&beta_status_c_message, reverse_short(chip), 1);	// Chip ID (4 bits)
+	bitstream_add(&beta_status_c_message, flt_reg->va_ov, 1);		// VA_OV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->va_uv, 1);		// VA_UV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vd_ov, 1);		// VD_OV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vde, 1);			// VDE (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vdel, 2);		// VDEL (2 bits)
+	bitstream_add(&beta_status_c_message, flt_reg->spiflt, 1);		// SPIFLT (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->sleep, 1);		// SLEEP (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->thsd, 1);		// THSD (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->tmodchk, 1);		// TMODCHK (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->oscchk, 1);		// OSCCHK (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->otp1_med, 1);	// OTP1_MED (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->otp2_med, 1);	// OTP2_MED (1 bit)
+	bitstream_add(&beta_status_c_message, 0, 7);					// Extra (7 bits)
 
-	set_bit_range(&msg.data[2], 7, 1, flt_reg->otp2_med, 0);
+	memcpy(msg.data, &bitstream_data, BETA_STAT_C_SIZE);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
 void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 				 float die_temperature, float vpv, float vmv,
 				 stc_ *flt_reg)
 {
+	// clang-format off
 	can_msg_t msg;
 	msg.id = ALPHA_STAT_A_CANID;
 	msg.len = ALPHA_STAT_A_SIZE;
@@ -655,43 +619,36 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	vpv *= 1000;
 	vmv *= 1000;
 
-	set_bit_range(&msg.data[0], 0, 8, segment_temp, THERM_BITS - 8);
+	bitstream_t alpha_status_a_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&alpha_status_a_message, bitstream_data, 8);	// Create 8-byte bitstream
 
-	set_bit_range(&msg.data[1], 6, 2, segment_temp, 0);
-	set_bit_range(&msg.data[1], 2, 4, reverse_short(chip), 0);
-	set_bit_range(&msg.data[1], 0, 2, die_temperature, AUX_ADC_BITS - 2);
-
-	set_bit_range(&msg.data[2], 0, 8, die_temperature,
-		      AUX_ADC_BITS - 2 - 8);
-
-	set_bit_range(&msg.data[3], 5, 3, die_temperature, 0);
-	set_bit_range(&msg.data[3], 0, 5, vpv, AUX_ADC_BITS - 5);
-
-	set_bit_range(&msg.data[4], 0, 8, vpv, AUX_ADC_BITS - 5 - 8);
-
-	set_bit_range(&msg.data[5], 0, 8, vmv, AUX_ADC_BITS - 8);
-
-	set_bit_range(&msg.data[6], 3, 5, vmv, AUX_ADC_BITS - 8 - 5);
-
-	set_bit_range(&msg.data[6], 2, 1, flt_reg->va_ov, 0);
-	set_bit_range(&msg.data[6], 1, 1, flt_reg->va_uv, 0);
-	set_bit_range(&msg.data[6], 0, 1, flt_reg->vd_ov, 0);
-
-	set_bit_range(&msg.data[7], 7, 1, flt_reg->vd_uv, 0);
-	set_bit_range(&msg.data[7], 6, 1, flt_reg->vde, 0);
-	set_bit_range(&msg.data[7], 5, 1, flt_reg->vdel, 0);
-	set_bit_range(&msg.data[7], 4, 1, flt_reg->spiflt, 0);
-	set_bit_range(&msg.data[7], 3, 1, flt_reg->sleep, 0);
-	set_bit_range(&msg.data[7], 2, 1, flt_reg->thsd, 0);
-	set_bit_range(&msg.data[7], 1, 1, flt_reg->tmodchk, 0);
-	set_bit_range(&msg.data[7], 0, 1, flt_reg->oscchk, 0);
+	bitstream_add(&alpha_status_a_message, segment_temp, 10);		// Segment Temp (10 bits)
+	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
+	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)
+	bitstream_add(&alpha_status_a_message, vmv, 8);					// Vmv (8 bits)
+	bitstream_add(&alpha_status_a_message, vpv, 5);					// Vpv (5 bits)
+	bitstream_add(&alpha_status_a_message, flt_reg->va_ov, 1);		// VA_OV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->va_uv, 1);		// VA_UV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vd_ov, 1);		// VD_OV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vd_uv, 1);		// VD_UV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vde, 1);		// VDE (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vdel, 1);		// VDEL (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->spiflt, 1);		// SPIFLT (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->sleep, 1);		// SLEEP (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->thsd, 1);		// THSD (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->tmodchk, 1);	// TMODCHK (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->oscchk, 1);		// OSCCHK (1 bit)
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
 void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 				 float v_analog, float v_digital, stc_ *flt_reg)
 {
+	// clang-format off
 	can_msg_t msg;
 	msg.id = ALPHA_STAT_B_CANID;
 	msg.len = ALPHA_STAT_B_SIZE;
@@ -701,26 +658,21 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 	v_analog *= 1000;
 	v_digital *= 1000;
 
-	set_bit_range(&msg.data[0], 0, 8, v_res, AUX_ADC_BITS - 8);
+	bitstream_t alpha_status_b_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&alpha_status_b_message, bitstream_data, 8);	// Create 8-byte bitstream
 
-	set_bit_range(&msg.data[1], 3, 5, v_res, 0);
-	set_bit_range(&msg.data[1], 0, 3, chip, CHIP_ID_BTIS - 3);
+	bitstream_add(&alpha_status_b_message, v_res, 13);				// Vres (13 bits)
+	bitstream_add(&alpha_status_b_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_b_message, vref2, 13);				// Vref2 (13 bits)
+	bitstream_add(&alpha_status_b_message, v_analog, 13);			// Vanalog (13 bits)
+	bitstream_add(&alpha_status_b_message, v_digital, 13);			// Vdigital (13 bits)
+	bitstream_add(&alpha_status_b_message, flt_reg->otp1_med, 1);	// OTP1_MED (1 bit)
+	bitstream_add(&alpha_status_b_message, flt_reg->otp2_med, 1);	// OTP2_MED (1 bit)
+	bitstream_add(&alpha_status_b_message, 0, 6);					// Extra (6 bits)
 
-	set_bit_range(&msg.data[2], 7, 1, chip, 0);
-	set_bit_range(&msg.data[2], 0, 7, vref2, AUX_ADC_BITS - 7);
-
-	set_bit_range(&msg.data[3], 2, 6, vref2, 0);
-	set_bit_range(&msg.data[3], 0, 2, v_analog, VOLT_BITS - 2);
-
-	set_bit_range(&msg.data[4], 0, 8, v_analog, VOLT_BITS - 2 - 8);
-
-	set_bit_range(&msg.data[5], 5, 3, v_analog, 0);
-	set_bit_range(&msg.data[5], 0, 5, v_digital, VOLT_BITS - 5);
-
-	set_bit_range(&msg.data[6], 0, 8, v_digital, 0);
-
-	set_bit_range(&msg.data[7], 7, 1, flt_reg->otp1_med, 0);
-	set_bit_range(&msg.data[7], 6, 1, flt_reg->otp2_med, 0);
+	memcpy(msg.data, &bitstream_data, ALPHA_STAT_B_SIZE);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
