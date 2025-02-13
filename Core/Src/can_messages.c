@@ -671,7 +671,8 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 
 	set_bit_range(&msg.data[5], 0, 8, vmv, AUX_ADC_BITS - 8);
 
-	set_bit_range(&msg.data[6], 3, 5, vpv, AUX_ADC_BITS - 8 - 5);
+	set_bit_range(&msg.data[6], 3, 5, vmv, AUX_ADC_BITS - 8 - 5);
+
 	set_bit_range(&msg.data[6], 2, 1, flt_reg->va_ov, 0);
 	set_bit_range(&msg.data[6], 1, 1, flt_reg->va_uv, 0);
 	set_bit_range(&msg.data[6], 0, 1, flt_reg->vd_ov, 0);
