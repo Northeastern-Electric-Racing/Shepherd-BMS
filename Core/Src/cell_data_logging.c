@@ -1,34 +1,29 @@
 #include "cell_data_logging.h"
 #include "analyzer.h"
+#include "bmsConfig.h"
 #include "stm32f4xx_hal.h"
 #include <stdio.h>
 #include <string.h>
 
-// For timestamps
-extern TIM_HandleTypeDef htim2;
-
-// Ring buffer
-static ringbuf_t cell_log_ring_buff;
-
-// Storage buffer for cell data
-static CellDataEntry_t cell_data_storage[NUM_OF_READINGS] = { 0 };
-
-static uint32_t get_us_timestamp(void)
+bool cell_data_logger_init(BMSLogger *logger)
 {
-	return __HAL_TIM_GET_COUNTER(&htim2);
-}
+	if (logger == NULL) {
+		return true;
+	}
 
-void cell_data_logger_init(void)
-{
-	rb_init(&cell_log_ring_buff, cell_data_storage, NUM_OF_READINGS,
+	memset(logger, 0, sizeof(BMSLogger));
+
+	rb_init(&logger->ring_buff, logger->cell_data_storage, NUM_OF_READINGS,
 		sizeof(CellDataEntry_t));
+
+	return false;
 }
 
-void cell_data_log_measurement(acc_data_t *bms_data)
+bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
-	if (bms_data == NULL) {
+	if (logger == NULL || bms_data == NULL) {
 		printf("No BMS data to log!!\r\n");
-		return;
+		return true;
 	}
 
 	CellDataEntry_t new_entry;
@@ -45,32 +40,47 @@ void cell_data_log_measurement(acc_data_t *bms_data)
 
 			new_entry.cell_temperatures[chip_num][cell] =
 				bms_data->chip_data[chip_num].cell_temp[cell];
-
-			new_entry.timestamp[chip_num][cell] =
-				get_us_timestamp();
 		}
 	}
 
-	rb_insert(&cell_log_ring_buff, &new_entry);
+	rb_insert(&logger->ring_buff, &new_entry);
+
+	return false;
 }
 
-CellDataEntry_t *cell_data_log_get_last(void)
+CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 {
-	return (CellDataEntry_t *)rb_get_head(&cell_log_ring_buff);
+	if (logger == NULL) {
+		return NULL;
+	}
+
+	return rb_get_head(&logger->ring_buff);
 }
 
-void cell_data_log_get_last_n(size_t n, CellDataEntry_t *out_buffer)
+bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
+			      CellDataEntry_t *out_buffer)
 {
+	if (logger == NULL) {
+		return true;
+	}
+
 	if (n > NUM_OF_READINGS) {
 		n = NUM_OF_READINGS;
 	}
 
-	rb_get_last_n(&cell_log_ring_buff, out_buffer, n);
+	rb_get_last_n(&logger->ring_buff, out_buffer, n);
+	return false;
 }
 
-void print_latest_cell_data_log(void)
+void print_latest_cell_data_log(const BMSLogger *logger)
 {
-	CellDataEntry_t *latest_entry = cell_data_log_get_last();
+	if (logger == NULL) {
+		printf("Logger not initialized!!");
+		return;
+	}
+
+	const CellDataEntry_t *latest_entry =
+		(const CellDataEntry_t *)cell_data_log_get_last(logger);
 
 	if (latest_entry == NULL) {
 		printf("No data available!!\r\n");
@@ -80,7 +90,7 @@ void print_latest_cell_data_log(void)
 	for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
 		int cell_count = (chip_num % 2 == 0) ? NUM_CELLS_ALPHA :
 						       NUM_CELLS_BETA;
-		printf("Chip %d (%s):\n", chip_num,
+		printf("Chip %d (%s):\r\n", chip_num,
 		       (chip_num % 2 == 0) ? "Alpha" : "Beta");
 
 		for (int cell = 0; cell < cell_count; cell++) {
@@ -93,14 +103,22 @@ void print_latest_cell_data_log(void)
 	}
 }
 
-void print_last_n_cell_data_logs(size_t n)
+void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 {
+	if (logger == NULL) {
+		printf("Logger not initialized!!");
+		return;
+	}
+
 	if (n > NUM_OF_READINGS) {
 		n = NUM_OF_READINGS;
 	}
 
 	CellDataEntry_t log_entries[n];
-	rb_get_last_n(&cell_log_ring_buff, log_entries, n);
+	if (cell_data_log_get_last_n(logger, n, log_entries)) {
+		printf("Error retrieving log entries!\r\n");
+		return;
+	}
 
 	printf("Printing Last %zu Cell Data Logs:\r\n", n);
 

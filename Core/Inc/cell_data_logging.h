@@ -8,7 +8,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "bmsConfig.h"
+#include <stdbool.h>
 #include "datastructs.h"
 #include "ringbuffer.h"
 
@@ -30,38 +30,57 @@ typedef struct {
 } CellDataEntry_t;
 
 /**
-  * @brief Sets up the ring buffer for cell data logging.
-  */
-void cell_data_logger_init(void);
+ * @struct BMSLogger
+ * @brief Structure to manage logging system
+ */
+typedef struct {
+	ringbuf_t ring_buff;
+	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
+} BMSLogger;
 
 /**
-  * @brief Logs a new measurement and inserts it in the ring buffer.
-  * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
-  */
-void cell_data_log_measurement(acc_data_t *bms_data);
+ * @brief Initializes a BMSLogger instance.
+ * @param logger Pointer to the logger instance.
+ * @return false on success, true on failure.
+ */
+bool cell_data_logger_init(BMSLogger *logger);
 
 /**
-  * @brief Gets the most recent cell data log from the buffer.
-  * @return Pointer to the most recent CellDataEntry_t data.
-  */
-CellDataEntry_t *cell_data_log_get_last(void);
+ * @brief Logs a new measurement and inserts it in the ring buffer.
+ * @param logger Pointer to the logger instance.
+ * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
+ * @return false on success, true on failure.
+ */
+bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data);
 
 /**
-  * @brief Retrieves the last n cell data logs from the buffer.
-  * @param n Number of previous cell data logs to retrieve.
-  * @param out_buffer Pointer to the buffer where the readings will be stored.
-  */
-void cell_data_log_get_last_n(size_t n, CellDataEntry_t *out_buffer);
+ * @brief Gets the most recent cell data log from the buffer.
+ * @param logger Pointer to the logger instance.
+ * @return Pointer to the most recent data entry, or NULL if the logger is empty.
+ */
+CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger);
 
 /**
-  * @brief Serial prints the most recent data log.
-  */
-void print_latest_cell_data_log(void);
+ * @brief Retrieves the last n cell data logs from the buffer.
+ * @param logger Pointer to the logger instance.
+ * @param n Number of previous logs to retrieve.
+ * @param out_buffer Pointer to the buffer where the readings will be stored.
+ * @return false on success, true on failure.
+ */
+bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
+			      CellDataEntry_t *out_buffer);
 
 /**
-  * @brief Serial prints the last n cell data logs.
-  * @param n Number of previous cell data logs to retrieve to print.
-  */
-void print_last_n_cell_data_logs(size_t n);
+ * @brief Serial prints the most recent data log.
+ * @param logger Pointer to the logger instance.
+ */
+void print_latest_cell_data_log(const BMSLogger *logger);
+
+/**
+ * @brief Serial prints the last n cell data logs.
+ * @param logger Pointer to the logger instance.
+ * @param n Number of previous logs to print.
+ */
+void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n);
 
 #endif
