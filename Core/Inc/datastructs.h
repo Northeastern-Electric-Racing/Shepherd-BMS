@@ -142,6 +142,10 @@ typedef struct {
 
 	bool is_charger_connected;
 
+	/* Cell Data Logging Timestamps */
+	uint32_t voltage_timestamp;
+	uint32_t temperature_timestamp;
+
 	osMutexId_t mutex;
 } acc_data_t;
 
