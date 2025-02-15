@@ -24,7 +24,8 @@
  * contains data for all chips and their respective cells.
  */
 typedef struct {
-	uint32_t timestamp[NUM_CHIPS][NUM_CELLS_ALPHA];
+	uint32_t cell_voltage_timestamp;
+	uint32_t cell_temperature_timestamp;
 	float cell_voltages[NUM_CHIPS][NUM_CELLS_ALPHA];
 	float cell_temperatures[NUM_CHIPS][NUM_CELLS_ALPHA];
 } CellDataEntry_t;
@@ -40,6 +41,12 @@ typedef struct BMSLogger BMSLogger;
  * @return Pointer to the global `BMSLogger` instance.
  */
 BMSLogger *getLogger(void);
+
+/**
+ * @brief Retrieves the current timestamp in microseconds from TIM2;
+ * @return The current timestamp in microseconds.
+ */
+uint32_t get_us_timestamp(void);
 
 /**
  * @brief Initializes a BMSLogger instance.
