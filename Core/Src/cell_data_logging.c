@@ -8,11 +8,12 @@
 extern TIM_HandleTypeDef htim2;
 
 struct BMSLogger {
+	bool is_initialized;
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
 };
 
-static BMSLogger bms_logger;
+static BMSLogger bms_logger = { .is_initialized = false };
 
 BMSLogger *getLogger(void)
 {
@@ -31,10 +32,17 @@ bool cell_data_logger_init(BMSLogger *logger)
 		return true;
 	}
 
+	if (logger->is_initialized) {
+		printf("WARNING: Logger is already initialized!\r\n");
+		return true;
+	}
+
 	memset(logger, 0, sizeof(BMSLogger));
 
 	rb_init(&logger->ring_buff, logger->cell_data_storage, NUM_OF_READINGS,
 		sizeof(CellDataEntry_t));
+
+	logger->is_initialized = true;
 
 	return false;
 }
