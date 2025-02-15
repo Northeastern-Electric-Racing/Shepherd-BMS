@@ -5,6 +5,18 @@
 #include <stdio.h>
 #include <string.h>
 
+struct BMSLogger {
+	ringbuf_t ring_buff;
+	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
+};
+
+static BMSLogger bms_logger;
+
+BMSLogger *getLogger(void)
+{
+	return &bms_logger;
+}
+
 bool cell_data_logger_init(BMSLogger *logger)
 {
 	if (logger == NULL) {

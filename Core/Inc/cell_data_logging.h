@@ -33,10 +33,13 @@ typedef struct {
  * @struct BMSLogger
  * @brief Structure to manage logging system
  */
-typedef struct {
-	ringbuf_t ring_buff;
-	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
-} BMSLogger;
+typedef struct BMSLogger BMSLogger;
+
+/**
+ * @brief Retrieves the global instance of the BMSLogger.
+ * @return Pointer to the global `BMSLogger` instance.
+ */
+BMSLogger *getLogger(void);
 
 /**
  * @brief Initializes a BMSLogger instance.
