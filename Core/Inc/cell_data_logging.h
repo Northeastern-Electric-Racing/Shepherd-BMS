@@ -35,7 +35,13 @@ typedef struct {
  * @struct BMSLogger
  * @brief Structure to manage logging system
  */
-typedef struct BMSLogger BMSLogger;
+struct BMSLogger;
+
+/**
+ * @brief Retrieves the global instance of the BMSLogger.
+ * @return Pointer to the global `BMSLogger` instance.
+ */
+struct BMSLogger *get_logger(void);
 
 /**
  * @brief Retrieves the current timestamp in microseconds from TIM2.
@@ -48,7 +54,7 @@ uint32_t get_us_timestamp(void);
  * @param logger Pointer to the logger instance.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_logger_init(BMSLogger *logger);
+int cell_data_logger_init(struct BMSLogger *logger);
 
 /**
  * @brief Logs a new measurement and inserts it in the ring buffer.
@@ -56,14 +62,14 @@ int cell_data_logger_init(BMSLogger *logger);
  * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data);
+int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data);
 
 /**
  * @brief Gets the most recent cell data log from the buffer.
  * @param logger Pointer to the logger instance.
  * @return Pointer to the most recent data entry, or NULL if the logger is empty.
  */
-CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger);
+CellDataEntry_t *cell_data_log_get_last(const struct BMSLogger *logger);
 
 /**
  * @brief Retrieves the last n cell data logs from the buffer.
@@ -72,7 +78,7 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger);
  * @param out_buffer Pointer to the buffer where the readings will be stored.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
+int cell_data_log_get_last_n(const struct BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer);
 
 /**
@@ -81,6 +87,6 @@ int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
  * @param n Number of previous logs to print.
  * @return 0 on success, -1 on failure.
  */
-int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n);
+int print_last_n_cell_data_logs(const struct BMSLogger *logger, size_t n);
 
 #endif
