@@ -14,6 +14,30 @@ struct BMSLogger {
 	osMutexId_t mutex;
 };
 
+static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
+{
+	assert(entry != NULL);
+
+	printf("\r\n--- Log Entry %zu ---\r\n", entry_idx + 1);
+	printf("Voltage Measurement Timestamp: %lu µs\r\n",
+	       entry->cell_voltage_timestamp);
+	printf("Temperature Measurement Timestamp: %lu µs\r\n",
+	       entry->cell_temperature_timestamp);
+
+	for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
+		int cell_count = (chip_num % 2 == 0) ? NUM_CELLS_ALPHA :
+						       NUM_CELLS_BETA;
+		printf("\r\nChip %d (%s):\r\n", chip_num,
+		       (chip_num % 2 == 0) ? "Alpha" : "Beta");
+
+		for (int cell = 0; cell < cell_count; cell++) {
+			printf("  Cell %d: Voltage: %.3f V, Temperature: %.2f C\r\n",
+			       cell + 1, entry->cell_voltages[chip_num][cell],
+			       entry->cell_temperatures[chip_num][cell]);
+		}
+	}
+}
+
 uint32_t get_us_timestamp(void)
 {
 	return __HAL_TIM_GET_COUNTER(&htim2);
@@ -41,7 +65,6 @@ int cell_data_logger_init(BMSLogger *logger)
 int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
 	int status = -1;
-
 	assert(logger != NULL);
 	assert(bms_data != NULL);
 
@@ -83,7 +106,6 @@ exit:
 CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 {
 	CellDataEntry_t *last_entry = NULL;
-
 	assert(logger != NULL);
 
 	if (logger->ring_buff.curr_elements == 0) {
@@ -108,7 +130,6 @@ int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer)
 {
 	int status = -1;
-
 	assert(logger != NULL);
 
 	if (n > logger->ring_buff.curr_elements) {
@@ -134,7 +155,6 @@ exit:
 int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 {
 	int status = -1;
-
 	assert(logger != NULL);
 
 	CellDataEntry_t log_entries[n];
@@ -144,31 +164,9 @@ int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 		goto exit;
 	}
 
-	printf("\r\nPrinting Last %u Cell Data Logs:\r\n", n);
-
+	printf("\r\nPrinting Last %zu Cell Data Logs:\r\n", n);
 	for (size_t entry_idx = 0; entry_idx < n; entry_idx++) {
-		printf("\r\n--- Log Entry %u ---\r\n", entry_idx + 1);
-		printf("Voltage Measurement Timestamp: %lu µs\r\n",
-		       log_entries[entry_idx].cell_voltage_timestamp);
-		printf("Temperature Measurement Timestamp: %lu µs\r\n",
-		       log_entries[entry_idx].cell_temperature_timestamp);
-
-		for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
-			int cell_count = (chip_num % 2 == 0) ? NUM_CELLS_ALPHA :
-							       NUM_CELLS_BETA;
-			printf("\r\nChip %d (%s):\r\n", chip_num,
-			       (chip_num % 2 == 0) ? "Alpha" : "Beta");
-
-			for (int cell = 0; cell < cell_count; cell++) {
-				printf("  Cell %d: Voltage: %.3f V, Temperature: %.2f C\r\n",
-				       cell + 1,
-				       log_entries[entry_idx]
-					       .cell_voltages[chip_num][cell],
-				       log_entries[entry_idx]
-					       .cell_temperatures[chip_num]
-								 [cell]);
-			}
-		}
+		print_cell_data(&log_entries[entry_idx], entry_idx);
 	}
 
 	status = 0;
