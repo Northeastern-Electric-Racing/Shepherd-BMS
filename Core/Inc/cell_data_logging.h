@@ -51,7 +51,7 @@ uint32_t get_us_timestamp(void);
  * @param logger Pointer to the logger instance.
  * @return false on success, true on failure.
  */
-bool cell_data_logger_init(BMSLogger *logger);
+int cell_data_logger_init(BMSLogger *logger);
 
 /**
  * @brief Logs a new measurement and inserts it in the ring buffer.
@@ -59,7 +59,7 @@ bool cell_data_logger_init(BMSLogger *logger);
  * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
  * @return false on success, true on failure.
  */
-bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data);
+int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data);
 
 /**
  * @brief Gets the most recent cell data log from the buffer.
@@ -75,8 +75,8 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger);
  * @param out_buffer Pointer to the buffer where the readings will be stored.
  * @return false on success, true on failure.
  */
-bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
-			      CellDataEntry_t *out_buffer);
+int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
+			     CellDataEntry_t *out_buffer);
 
 /**
  * @brief Serial prints the most recent data log.

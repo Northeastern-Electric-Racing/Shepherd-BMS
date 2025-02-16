@@ -8,7 +8,6 @@
 extern TIM_HandleTypeDef htim2;
 
 struct BMSLogger {
-	bool is_initialized;
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
 	osMutexId_t mutex;
@@ -19,25 +18,20 @@ uint32_t get_us_timestamp(void)
 	return __HAL_TIM_GET_COUNTER(&htim2);
 }
 
-static bool get_logger_status(const BMSLogger *logger)
+static int get_logger_status(const BMSLogger *logger)
 {
 	if (logger == NULL) {
 		printf("ERROR: Logger is NULL, cannot initialize!\r\n");
-		return false;
+		return -1;
 	} else {
-		return true;
+		return 0;
 	}
 }
 
-bool cell_data_logger_init(BMSLogger *logger)
+int cell_data_logger_init(BMSLogger *logger)
 {
 	if (!get_logger_status(logger))
-		return true;
-
-	if (logger->is_initialized) {
-		printf("WARNING: Logger is already initialized!\r\n");
-		return true;
-	}
+		return -1;
 
 	memset(logger, 0, sizeof(BMSLogger));
 
@@ -50,24 +44,22 @@ bool cell_data_logger_init(BMSLogger *logger)
 		return true;
 	}
 
-	logger->is_initialized = true;
-
-	return false;
+	return 0;
 }
 
-bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
+int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
 	if (!get_logger_status(logger))
-		return true;
+		return -1;
 
 	if (bms_data == NULL) {
 		printf("ERROR: BMS data is NULL, cannot log data!\r\n");
-		return true;
+		return -1;
 	}
 
 	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
-		return true;
+		return -1;
 	}
 
 	CellDataEntry_t new_entry;
@@ -94,7 +86,7 @@ bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 
 	osMutexRelease(logger->mutex);
 
-	return false;
+	return 0;
 }
 
 CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
@@ -119,32 +111,32 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 	return last_entry;
 }
 
-bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
-			      CellDataEntry_t *out_buffer)
+int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
+			     CellDataEntry_t *out_buffer)
 {
 	if (!get_logger_status(logger))
-		return true;
+		return -1;
 
 	if (n > NUM_OF_READINGS) {
 		printf("ERROR: Requested logs exceed limit!\r\n");
-		return true;
+		return -1;
 	}
 
 	if (n > logger->ring_buff.curr_elements) {
 		printf("ERROR: Not enough logs available!\r\n");
-		return true;
+		return -1;
 	}
 
 	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
-		return true;
+		return -1;
 	}
 
 	rb_get_last_n(&logger->ring_buff, out_buffer, n);
 
 	osMutexRelease(logger->mutex);
 
-	return false;
+	return 0;
 }
 
 void print_latest_cell_data_log(const BMSLogger *logger)
