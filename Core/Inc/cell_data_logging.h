@@ -11,9 +11,17 @@
 #include <stdbool.h>
 #include "datastructs.h"
 #include "ringbuffer.h"
+#include "cmsis_os.h"
 
 // Number of stored cell data readings in ring buffer.
 #define NUM_OF_READINGS 10
+
+// Logger mutex wait time in milliseconds
+#define LOGGER_MUTEX_WAIT_TIME 10
+
+// Convert the wait time from milliseconds to RTOS ticks
+#define LOGGER_MUTEX_WAIT_TICKS \
+	(LOGGER_MUTEX_WAIT_TIME * osKernelGetTickFreq() / 1000)
 
 /**
  * @struct CellDataEntry_t
@@ -40,7 +48,7 @@ typedef struct BMSLogger BMSLogger;
  * @brief Retrieves the global instance of the BMSLogger.
  * @return Pointer to the global `BMSLogger` instance.
  */
-BMSLogger *getLogger(void);
+BMSLogger *get_logger(void);
 
 /**
  * @brief Retrieves the current timestamp in microseconds from TIM2;

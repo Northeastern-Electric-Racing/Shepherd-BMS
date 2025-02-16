@@ -11,11 +11,12 @@ struct BMSLogger {
 	bool is_initialized;
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
+	osMutexId_t mutex;
 };
 
 static BMSLogger bms_logger = { .is_initialized = false };
 
-BMSLogger *getLogger(void)
+BMSLogger *get_logger(void)
 {
 	return &bms_logger;
 }
@@ -25,12 +26,20 @@ uint32_t get_us_timestamp(void)
 	return __HAL_TIM_GET_COUNTER(&htim2);
 }
 
-bool cell_data_logger_init(BMSLogger *logger)
+static bool get_logger_status(const BMSLogger *logger)
 {
 	if (logger == NULL) {
 		printf("ERROR: Logger is NULL, cannot initialize!\r\n");
+		return false;
+	} else {
 		return true;
 	}
+}
+
+bool cell_data_logger_init(BMSLogger *logger)
+{
+	if (!get_logger_status(logger))
+		return true;
 
 	if (logger->is_initialized) {
 		printf("WARNING: Logger is already initialized!\r\n");
@@ -42,6 +51,12 @@ bool cell_data_logger_init(BMSLogger *logger)
 	rb_init(&logger->ring_buff, logger->cell_data_storage, NUM_OF_READINGS,
 		sizeof(CellDataEntry_t));
 
+	logger->mutex = osMutexNew(NULL);
+	if (logger->mutex == NULL) {
+		printf("ERROR: Data Logger Mutex initialization failed!\r\n");
+		return true;
+	}
+
 	logger->is_initialized = true;
 
 	return false;
@@ -49,13 +64,16 @@ bool cell_data_logger_init(BMSLogger *logger)
 
 bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
-	if (logger == NULL) {
-		printf("ERROR: Logger is NULL, cannot log data!\r\n");
+	if (!get_logger_status(logger))
 		return true;
-	}
 
 	if (bms_data == NULL) {
 		printf("ERROR: BMS data is NULL, cannot log data!\r\n");
+		return true;
+	}
+
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return true;
 	}
 
@@ -81,30 +99,38 @@ bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 
 	rb_insert(&logger->ring_buff, &new_entry);
 
+	osMutexRelease(logger->mutex);
+
 	return false;
 }
 
 CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 {
-	if (logger == NULL) {
+	if (!get_logger_status(logger))
 		return NULL;
-	}
 
 	if (logger->ring_buff.curr_elements == 0) {
 		printf("ERROR: No logs available!\r\n");
 		return NULL;
 	}
 
-	return rb_get_head(&logger->ring_buff);
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+		printf("ERROR: Failed to aquire data logging mutex!\r\n");
+		return NULL;
+	}
+
+	CellDataEntry_t *last_entry = rb_get_head(&logger->ring_buff);
+
+	osMutexRelease(logger->mutex);
+
+	return last_entry;
 }
 
 bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			      CellDataEntry_t *out_buffer)
 {
-	if (logger == NULL) {
-		printf("ERROR: Logger is NULL, cannot retrieve logs!\r\n");
+	if (!get_logger_status(logger))
 		return true;
-	}
 
 	if (n > NUM_OF_READINGS) {
 		printf("ERROR: Requested logs exceed limit!\r\n");
@@ -116,24 +142,25 @@ bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 		return true;
 	}
 
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+		printf("ERROR: Failed to aquire data logging mutex!\r\n");
+		return true;
+	}
+
 	rb_get_last_n(&logger->ring_buff, out_buffer, n);
+
+	osMutexRelease(logger->mutex);
+
 	return false;
 }
 
 void print_latest_cell_data_log(const BMSLogger *logger)
 {
-	if (logger == NULL) {
-		printf("ERROR: Logger is NULL, cannot retrieve logs!\r\n");
+	if (!get_logger_status(logger))
 		return;
-	}
 
 	const CellDataEntry_t *latest_entry =
 		(const CellDataEntry_t *)cell_data_log_get_last(logger);
-
-	if (latest_entry == NULL) {
-		printf("No data available!!\r\n");
-		return;
-	}
 
 	printf("\nLatest Cell Data Log\r\n");
 	printf("Voltage Measurement Timestamp: %lu µs\r\n",
@@ -159,10 +186,8 @@ void print_latest_cell_data_log(const BMSLogger *logger)
 
 void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 {
-	if (logger == NULL) {
-		printf("ERROR: Logger is NULL, cannot retrieve logs!\r\n");
+	if (!get_logger_status(logger))
 		return;
-	}
 
 	if (n > NUM_OF_READINGS) {
 		printf("ERROR: Requested logs exceed limit!\r\n");
