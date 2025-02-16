@@ -24,13 +24,6 @@ typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
 uint8_t compute_init();
 
 /**
- * @brief sets safeguard bool to check whether charging is enabled or disabled
- *
- * @param is_enabled
- */
-void compute_enable_charging(bool enable_charging);
-
-/**
  * @brief Returns if charger interlock is engaged, indicating charger LV connector is plugged in
  *
  * @return true

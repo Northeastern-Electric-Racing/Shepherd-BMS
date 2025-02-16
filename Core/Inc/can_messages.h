@@ -12,7 +12,7 @@
  * @return Returns a fault if we are not able to communicate with charger
  */
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
-			  acc_data_t *bms_data);
+			  acc_data_t *bms_data, bool charging_enabled);
 
 /**
  * @brief Sends max discharge current to Motor Controller.

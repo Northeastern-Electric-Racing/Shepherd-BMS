@@ -5,10 +5,8 @@
 #include "can.h"
 #include "can_handler.h"
 
-extern is_charging_enabled;
-
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
-			  acc_data_t *bms_data)
+			  acc_data_t *bms_data, bool charging_enabled)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
@@ -23,7 +21,7 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 	charger_msg_data.charger_voltage = voltage_to_set * 10;
 	charger_msg_data.charger_current = current_to_set * 10;
 
-	if (is_charging_enabled) {
+	if (charging_enabled) {
 		charger_msg_data.charger_control = 0x00; // 0：Start charging.
 	} else {
 		charger_msg_data.charger_control =

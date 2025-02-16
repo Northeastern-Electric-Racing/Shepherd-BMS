@@ -25,6 +25,7 @@
 #include "segment.h"
 #include "serialPrintResult.h"
 #include "shep_tasks.h"
+#include "stateMachine.h"
 
 /* USER CODE END Includes */
 
@@ -35,8 +36,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-extern BMSState_t current_state;
 
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
@@ -177,10 +176,12 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("SoC: %d\n", acc_data->soc);
   printf("Is Balancing?: %d\n", segment_is_balancing(acc_data->chips));
   printf("State: ");
-  if (current_state == 0) printf("BOOT\n");
-  else if (current_state == 1) printf("READY\n");
-  else if (current_state == 2) printf("CHARGING\n");
-  else if (current_state == 3) printf("FAULTED: %lX\n", acc_data->fault_code);
+  
+  BMSState_t current_state = get_current_state();
+  if (current_state == BOOT_STATE) printf("BOOT\n");
+  else if (current_state == READY_STATE) printf("READY\n");
+  else if (current_state == CHARGING_STATE) printf("CHARGING\n");
+  else if (current_state == FAULTED_STATE) printf("FAULTED: %lX\n", acc_data->fault_code);
 
   printf("Voltage Noise Percent:\n");
   printf("Seg 1: %d\n", acc_data->segment_noise_percentage[0]);
@@ -1348,6 +1349,7 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   acc_data_t* bmsdata = (acc_data_t*) argument;
+  BMSState_t current_state = get_current_state();
 
   bool alt = true;
 

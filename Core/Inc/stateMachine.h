@@ -3,13 +3,17 @@
 
 #include "analyzer.h"
 
-/* global that can be read for debugging in main */
-extern BMSState_t current_state;
-
 /* global defined in segment.c that keeps an eye on the number of crc errors */
 extern uint16_t crc_error_check;
 
 #define NUM_FAULTS 8
+
+/**
+ * @brief Get the current BMS state.
+ * 
+ * @return BMSState_t Current state of the BMS.
+ */
+BMSState_t get_current_state();
 
 /**
  * @brief Returns if we want to balance cells during a particular frame

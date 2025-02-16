@@ -7,22 +7,13 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 extern UART_HandleTypeDef huart4;
 
-acc_data_t *prevAccData;
-uint32_t bms_fault = FAULTS_CLEAR;
-
 BMSState_t current_state = BOOT_STATE;
-uint32_t previousFault = 0;
+
+acc_data_t *prevAccData;
 
 nertimer_t charger_settle_countup = { .active = false };
 nertimer_t charger_max_volt_timer = { .active = false };
 nertimer_t charger_settle_countdown = { .active = false };
-
-nertimer_t can_msg_timer = { .active = false };
-
-extern TIM_HandleTypeDef htim1;
-extern TIM_HandleTypeDef htim8;
-
-bool entered_faulted = false;
 
 nertimer_t charger_message_timer;
 
@@ -66,6 +57,11 @@ const HandlerFunction_t handler_LUT[NUM_STATES] = { &handle_boot, &handle_ready,
 						    &handle_charging,
 						    &handle_faulted };
 
+BMSState_t get_current_state()
+{
+	return current_state;
+}
+
 void init_boot(acc_data_t *bmsdata)
 {
 	return;
@@ -73,9 +69,7 @@ void init_boot(acc_data_t *bmsdata)
 
 void handle_boot(acc_data_t *bmsdata)
 {
-	prevAccData = NULL;
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
 
@@ -89,7 +83,6 @@ void handle_boot(acc_data_t *bmsdata)
 void init_ready(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
 	return;
 }
 
@@ -120,11 +113,8 @@ void handle_charging(acc_data_t *bmsdata)
 
 	} else {
 		/* Check if we should charge */
-		if (sm_charging_check(bmsdata))
-			compute_enable_charging(true);
-		else {
-			compute_enable_charging(false);
-			send_charging_message(0, 0, bmsdata);
+		if (!sm_charging_check(bmsdata)) {
+			send_charging_message(0, 0, bmsdata, false);
 		}
 
 		/* Check if we should balance */
@@ -140,7 +130,7 @@ void handle_charging(acc_data_t *bmsdata)
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
-				5, bmsdata);
+				5, bmsdata, true);
 			start_timer(&charger_message_timer,
 				    CHARGE_MESSAGE_WAIT);
 		}
@@ -150,20 +140,12 @@ void handle_charging(acc_data_t *bmsdata)
 void init_faulted(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
-	entered_faulted = true;
+	send_charging_message(0, 0, bmsdata, true);
 	return;
 }
 
 void handle_faulted(acc_data_t *bmsdata)
 {
-	if (entered_faulted) {
-		previousFault = bmsdata->fault_code_crit;
-		entered_faulted = false;
-
-		// uint32_t fault_crit = 0, fault_noncrit = 0;
-		// previousFault = sm_fault_return(bmsdata, &fault_crit, &fault_noncrit);
-	}
 
 	if (bmsdata->fault_code_crit == FAULTS_CLEAR) {
 		compute_set_fault(1);
@@ -515,52 +497,4 @@ void sm_balance_cells(acc_data_t *bmsdata)
 #endif
 
 	segment_configure_balancing(bmsdata, balanceConfig);
-}
-
-void calculate_pwm(acc_data_t *bmsdata)
-{
-	// TODO: actually implement algorithm
-	// this should include:
-	// 1. set PWM based on temp of "nearby" cells
-	// 2. automate seleciton of htim rather than hardcode
-
-	if (bmsdata->max_temp.val > 50) {
-		compute_set_fan_speed(&htim1, FAN1, 100);
-		compute_set_fan_speed(&htim1, FAN2, 100);
-		compute_set_fan_speed(&htim8, FAN3, 100);
-		compute_set_fan_speed(&htim8, FAN4, 100);
-		compute_set_fan_speed(&htim8, FAN5, 100);
-		compute_set_fan_speed(&htim8, FAN6, 100);
-		return;
-	}
-
-	else if (bmsdata->max_temp.val > 40) {
-		compute_set_fan_speed(&htim1, FAN1, 50);
-		compute_set_fan_speed(&htim1, FAN2, 50);
-		compute_set_fan_speed(&htim8, FAN3, 50);
-		compute_set_fan_speed(&htim8, FAN4, 50);
-		compute_set_fan_speed(&htim8, FAN5, 50);
-		compute_set_fan_speed(&htim8, FAN6, 50);
-		return;
-	}
-
-	else if (bmsdata->max_temp.val > 30) {
-		compute_set_fan_speed(&htim1, FAN1, 25);
-		compute_set_fan_speed(&htim1, FAN2, 25);
-		compute_set_fan_speed(&htim8, FAN3, 25);
-		compute_set_fan_speed(&htim8, FAN4, 25);
-		compute_set_fan_speed(&htim8, FAN5, 25);
-		compute_set_fan_speed(&htim8, FAN6, 25);
-		return;
-	}
-
-	else {
-		compute_set_fan_speed(&htim1, FAN1, 0);
-		compute_set_fan_speed(&htim1, FAN2, 0);
-		compute_set_fan_speed(&htim8, FAN3, 0);
-		compute_set_fan_speed(&htim8, FAN4, 0);
-		compute_set_fan_speed(&htim8, FAN5, 0);
-		compute_set_fan_speed(&htim8, FAN6, 0);
-		return;
-	}
 }

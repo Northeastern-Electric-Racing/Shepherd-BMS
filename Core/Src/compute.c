@@ -11,7 +11,6 @@
 // #define CHARGING_ENABLED
 
 uint8_t fan_speed;
-bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
 uint32_t channel_1_buf[2];
 uint32_t raw_high_current_buf;
@@ -67,11 +66,6 @@ uint8_t compute_init(acc_data_t *bmsdata)
 					  sizeof(uint32_t)));
 
 	return 0;
-}
-
-void compute_enable_charging(bool enable_charging)
-{
-	is_charging_enabled = enable_charging;
 }
 
 bool compute_charger_connected()
