@@ -1,3 +1,8 @@
+/**
+ * @file cell_data_logging.c
+ * @brief Implementation of cell voltage and temperature data logging.
+ */
+
 #include "cell_data_logging.h"
 #include "analyzer.h"
 #include "bmsConfig.h"
@@ -6,14 +11,24 @@
 #include <string.h>
 #include <assert.h>
 
+// Used to get microsecond timestamps.
 extern TIM_HandleTypeDef htim2;
 
+/**
+ * @struct BMSLogger
+ * @brief Internal structure to manage logging system.
+ */
 struct BMSLogger {
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
 	osMutexId_t mutex;
 };
 
+/**
+ * @brief Prints a single cell data entry.
+ * @param entry Pointer to the cell data entry to print.
+ * @param entry_idx Index of the entry.
+ */
 static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
 {
 	assert(entry != NULL);
@@ -38,11 +53,20 @@ static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
 	}
 }
 
+/**
+ * @brief Retrieves the current timestamp in microseconds from TIM2.
+ * @return The current timestamp in microseconds.
+ */
 uint32_t get_us_timestamp(void)
 {
 	return __HAL_TIM_GET_COUNTER(&htim2);
 }
 
+/**
+ * @brief Initializes a BMSLogger instance.
+ * @param logger Pointer to the logger instance.
+ * @return 0 on success, -1 on failure.
+ */
 int cell_data_logger_init(BMSLogger *logger)
 {
 	assert(logger != NULL);
@@ -62,6 +86,12 @@ int cell_data_logger_init(BMSLogger *logger)
 	return 0;
 }
 
+/**
+ * @brief Logs a new measurement and inserts it in the ring buffer.
+ * @param logger Pointer to the logger instance.
+ * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
+ * @return 0 on success, -1 on failure.
+ */
 int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
 	int status = -1;
@@ -103,6 +133,11 @@ exit:
 	return status;
 }
 
+/**
+ * @brief Gets the most recent cell data log from the buffer.
+ * @param logger Pointer to the logger instance.
+ * @return Pointer to the most recent data entry, or NULL if the logger is empty.
+ */
 CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 {
 	CellDataEntry_t *last_entry = NULL;
@@ -126,6 +161,13 @@ exit:
 	return last_entry;
 }
 
+/**
+ * @brief Retrieves the last n cell data logs from the buffer.
+ * @param logger Pointer to the logger instance.
+ * @param n Number of previous logs to retrieve.
+ * @param out_buffer Pointer to the buffer where the readings will be stored.
+ * @return 0 on success, -1 on failure.
+ */
 int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer)
 {
@@ -152,6 +194,12 @@ exit:
 	return status;
 }
 
+/**
+ * @brief Serial prints the last n cell data logs.
+ * @param logger Pointer to the logger instance.
+ * @param n Number of previous logs to print.
+ * @return 0 on success, -1 on failure.
+ */
 int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 {
 	int status = -1;

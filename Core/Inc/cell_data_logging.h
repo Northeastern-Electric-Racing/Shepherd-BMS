@@ -38,7 +38,7 @@ typedef struct {
 typedef struct BMSLogger BMSLogger;
 
 /**
- * @brief Retrieves the current timestamp in microseconds from TIM2;
+ * @brief Retrieves the current timestamp in microseconds from TIM2.
  * @return The current timestamp in microseconds.
  */
 uint32_t get_us_timestamp(void);
@@ -46,7 +46,7 @@ uint32_t get_us_timestamp(void);
 /**
  * @brief Initializes a BMSLogger instance.
  * @param logger Pointer to the logger instance.
- * @return false on success, true on failure.
+ * @return 0 on success, -1 on failure.
  */
 int cell_data_logger_init(BMSLogger *logger);
 
@@ -54,7 +54,7 @@ int cell_data_logger_init(BMSLogger *logger);
  * @brief Logs a new measurement and inserts it in the ring buffer.
  * @param logger Pointer to the logger instance.
  * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
- * @return false on success, true on failure.
+ * @return 0 on success, -1 on failure.
  */
 int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data);
 
@@ -70,7 +70,7 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger);
  * @param logger Pointer to the logger instance.
  * @param n Number of previous logs to retrieve.
  * @param out_buffer Pointer to the buffer where the readings will be stored.
- * @return false on success, true on failure.
+ * @return 0 on success, -1 on failure.
  */
 int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer);
@@ -79,6 +79,7 @@ int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
  * @brief Serial prints the last n cell data logs.
  * @param logger Pointer to the logger instance.
  * @param n Number of previous logs to print.
+ * @return 0 on success, -1 on failure.
  */
 int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n);
 
