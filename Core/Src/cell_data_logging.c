@@ -14,13 +14,6 @@ struct BMSLogger {
 	osMutexId_t mutex;
 };
 
-static BMSLogger bms_logger = { .is_initialized = false };
-
-BMSLogger *get_logger(void)
-{
-	return &bms_logger;
-}
-
 uint32_t get_us_timestamp(void)
 {
 	return __HAL_TIM_GET_COUNTER(&htim2);

@@ -41,12 +41,6 @@ typedef struct {
 typedef struct BMSLogger BMSLogger;
 
 /**
- * @brief Retrieves the global instance of the BMSLogger.
- * @return Pointer to the global `BMSLogger` instance.
- */
-BMSLogger *get_logger(void);
-
-/**
  * @brief Retrieves the current timestamp in microseconds from TIM2;
  * @return The current timestamp in microseconds.
  */
