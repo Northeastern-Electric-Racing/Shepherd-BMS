@@ -4,6 +4,7 @@
 #include "stm32f4xx_hal.h"
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 
 extern TIM_HandleTypeDef htim2;
 
@@ -18,20 +19,9 @@ uint32_t get_us_timestamp(void)
 	return __HAL_TIM_GET_COUNTER(&htim2);
 }
 
-static int get_logger_status(const BMSLogger *logger)
-{
-	if (logger == NULL) {
-		printf("ERROR: Logger is NULL, cannot initialize!\r\n");
-		return -1;
-	} else {
-		return 0;
-	}
-}
-
 int cell_data_logger_init(BMSLogger *logger)
 {
-	if (!get_logger_status(logger))
-		return -1;
+	assert(logger != NULL);
 
 	memset(logger, 0, sizeof(BMSLogger));
 
@@ -49,13 +39,8 @@ int cell_data_logger_init(BMSLogger *logger)
 
 int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
-	if (!get_logger_status(logger))
-		return -1;
-
-	if (bms_data == NULL) {
-		printf("ERROR: BMS data is NULL, cannot log data!\r\n");
-		return -1;
-	}
+	assert(logger != NULL);
+	assert(bms_data != NULL);
 
 	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
@@ -91,8 +76,7 @@ int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 
 CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 {
-	if (!get_logger_status(logger))
-		return NULL;
+	assert(logger != NULL);
 
 	if (logger->ring_buff.curr_elements == 0) {
 		printf("ERROR: No logs available!\r\n");
@@ -114,8 +98,7 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer)
 {
-	if (!get_logger_status(logger))
-		return -1;
+	assert(logger != NULL);
 
 	if (n > NUM_OF_READINGS) {
 		printf("ERROR: Requested logs exceed limit!\r\n");
@@ -141,8 +124,7 @@ int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 
 void print_latest_cell_data_log(const BMSLogger *logger)
 {
-	if (!get_logger_status(logger))
-		return;
+	assert(logger != NULL);
 
 	const CellDataEntry_t *latest_entry =
 		(const CellDataEntry_t *)cell_data_log_get_last(logger);
@@ -171,8 +153,7 @@ void print_latest_cell_data_log(const BMSLogger *logger)
 
 void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 {
-	if (!get_logger_status(logger))
-		return;
+	assert(logger != NULL);
 
 	if (n > NUM_OF_READINGS) {
 		printf("ERROR: Requested logs exceed limit!\r\n");
