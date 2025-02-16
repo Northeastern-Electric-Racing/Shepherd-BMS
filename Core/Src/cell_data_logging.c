@@ -72,7 +72,7 @@ bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 		return true;
 	}
 
-	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return true;
 	}
@@ -114,7 +114,7 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 		return NULL;
 	}
 
-	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return NULL;
 	}
@@ -142,7 +142,7 @@ bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 		return true;
 	}
 
-	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return true;
 	}
@@ -205,10 +205,10 @@ void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 		return;
 	}
 
-	printf("\r\nPrinting Last %zu Cell Data Logs:\r\n", n);
+	printf("\r\nPrinting Last %u Cell Data Logs:\r\n", n);
 
 	for (size_t entry_idx = 0; entry_idx < n; entry_idx++) {
-		printf("\r\n--- Log Entry %zu ---\r\n", entry_idx + 1);
+		printf("\r\n--- Log Entry %u ---\r\n", entry_idx + 1);
 		printf("Voltage Measurement Timestamp: %lu µs\r\n",
 		       log_entries[entry_idx].cell_voltage_timestamp);
 		printf("Temperature Measurement Timestamp: %lu µs\r\n",
