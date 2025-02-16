@@ -29,9 +29,10 @@ int cell_data_logger_init(BMSLogger *logger)
 		sizeof(CellDataEntry_t));
 
 	logger->mutex = osMutexNew(NULL);
+
 	if (logger->mutex == NULL) {
 		printf("ERROR: Data Logger Mutex initialization failed!\r\n");
-		return true;
+		return -1;
 	}
 
 	return 0;
@@ -39,12 +40,14 @@ int cell_data_logger_init(BMSLogger *logger)
 
 int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 {
+	int status = -1;
+
 	assert(logger != NULL);
 	assert(bms_data != NULL);
 
 	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
-		return -1;
+		goto exit;
 	}
 
 	CellDataEntry_t new_entry;
@@ -69,106 +72,76 @@ int cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 
 	rb_insert(&logger->ring_buff, &new_entry);
 
+	status = 0;
+
 	osMutexRelease(logger->mutex);
 
-	return 0;
+exit:
+	return status;
 }
 
 CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 {
+	CellDataEntry_t *last_entry = NULL;
+
 	assert(logger != NULL);
 
 	if (logger->ring_buff.curr_elements == 0) {
 		printf("ERROR: No logs available!\r\n");
-		return NULL;
+		goto exit;
 	}
 
 	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
-		return NULL;
+		goto exit;
 	}
 
-	CellDataEntry_t *last_entry = rb_get_head(&logger->ring_buff);
+	last_entry = rb_get_head(&logger->ring_buff);
 
 	osMutexRelease(logger->mutex);
 
+exit:
 	return last_entry;
 }
 
 int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer)
 {
-	assert(logger != NULL);
+	int status = -1;
 
-	if (n > NUM_OF_READINGS) {
-		printf("ERROR: Requested logs exceed limit!\r\n");
-		return -1;
-	}
+	assert(logger != NULL);
 
 	if (n > logger->ring_buff.curr_elements) {
 		printf("ERROR: Not enough logs available!\r\n");
-		return -1;
+		goto exit;
 	}
 
 	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
-		return -1;
+		goto exit;
 	}
 
 	rb_get_last_n(&logger->ring_buff, out_buffer, n);
 
+	status = 0;
+
 	osMutexRelease(logger->mutex);
 
-	return 0;
+exit:
+	return status;
 }
 
-void print_latest_cell_data_log(const BMSLogger *logger)
+int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 {
+	int status = -1;
+
 	assert(logger != NULL);
-
-	const CellDataEntry_t *latest_entry =
-		(const CellDataEntry_t *)cell_data_log_get_last(logger);
-
-	printf("\nLatest Cell Data Log\r\n");
-	printf("Voltage Measurement Timestamp: %lu µs\r\n",
-	       latest_entry->cell_voltage_timestamp);
-	printf("Temperature Measurement Timestamp: %lu µs\r\n",
-	       latest_entry->cell_temperature_timestamp);
-
-	for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
-		int cell_count = (chip_num % 2 == 0) ? NUM_CELLS_ALPHA :
-						       NUM_CELLS_BETA;
-
-		printf("\nChip %d (%s):\r\n", chip_num,
-		       (chip_num % 2 == 0) ? "Alpha" : "Beta");
-
-		for (int cell = 0; cell < cell_count; cell++) {
-			printf("  Cell %d: Voltage: %.3f V, Temperature: %.2f C\r\n",
-			       cell + 1,
-			       latest_entry->cell_voltages[chip_num][cell],
-			       latest_entry->cell_temperatures[chip_num][cell]);
-		}
-	}
-}
-
-void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
-{
-	assert(logger != NULL);
-
-	if (n > NUM_OF_READINGS) {
-		printf("ERROR: Requested logs exceed limit!\r\n");
-		return;
-	}
-
-	if (n > logger->ring_buff.curr_elements) {
-		printf("ERROR: Not enough logs available!\r\n");
-		return;
-	}
 
 	CellDataEntry_t log_entries[n];
+
 	if (cell_data_log_get_last_n(logger, n, log_entries)) {
 		printf("Error retrieving log entries!\r\n");
-		return;
+		goto exit;
 	}
 
 	printf("\r\nPrinting Last %u Cell Data Logs:\r\n", n);
@@ -197,4 +170,9 @@ void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n)
 			}
 		}
 	}
+
+	status = 0;
+
+exit:
+	return status;
 }

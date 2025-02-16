@@ -79,16 +79,10 @@ int cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer);
 
 /**
- * @brief Serial prints the most recent data log.
- * @param logger Pointer to the logger instance.
- */
-void print_latest_cell_data_log(const BMSLogger *logger);
-
-/**
  * @brief Serial prints the last n cell data logs.
  * @param logger Pointer to the logger instance.
  * @param n Number of previous logs to print.
  */
-void print_last_n_cell_data_logs(const BMSLogger *logger, size_t n);
+int print_last_n_cell_data_logs(const BMSLogger *logger, size_t n);
 
 #endif
