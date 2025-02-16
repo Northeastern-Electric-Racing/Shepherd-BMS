@@ -1308,8 +1308,8 @@ struct __attribute__((__packed__)) git_version_data {
 		uint8_t git_major_version;
 		uint8_t git_minor_version;
 		uint8_t git_patch_version;
-    bool git_is_local_clean;
-		bool git_is_upstream_clean;
+    uint8_t git_is_local_clean;
+		uint8_t git_is_upstream_clean;
 	} git_version_data;
 
   struct __attribute__((__packed__)) git_hash_data {
