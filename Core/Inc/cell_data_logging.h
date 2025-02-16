@@ -16,9 +16,6 @@
 // Number of stored cell data readings in ring buffer.
 #define NUM_OF_READINGS 10
 
-// Logger mutex wait time in milliseconds
-#define LOGGER_MUTEX_WAIT_TIME 10
-
 /**
  * @struct CellDataEntry_t
  * @brief Structure to store logged cell voltage and temperature data.
