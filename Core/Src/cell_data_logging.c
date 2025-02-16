@@ -72,7 +72,7 @@ bool cell_data_log_measurement(BMSLogger *logger, acc_data_t *bms_data)
 		return true;
 	}
 
-	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return true;
 	}
@@ -114,7 +114,7 @@ CellDataEntry_t *cell_data_log_get_last(const BMSLogger *logger)
 		return NULL;
 	}
 
-	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return NULL;
 	}
@@ -142,7 +142,7 @@ bool cell_data_log_get_last_n(const BMSLogger *logger, size_t n,
 		return true;
 	}
 
-	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TICKS) != osOK) {
+	if (osMutexAcquire(logger->mutex, LOGGER_MUTEX_WAIT_TIME) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		return true;
 	}
