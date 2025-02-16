@@ -57,21 +57,21 @@ static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
 }
 
 /**
- * @brief Retrieves the global instance of the BMSLogger.
- * @return Pointer to the global `BMSLogger` instance.
- */
-struct BMSLogger *get_logger(void)
-{
-	return &bms_logger;
-}
-
-/**
  * @brief Retrieves the current timestamp in microseconds from TIM2.
  * @return The current timestamp in microseconds.
  */
 uint32_t get_us_timestamp(void)
 {
 	return __HAL_TIM_GET_COUNTER(&htim2);
+}
+
+/**
+ * @brief Retrieves the global instance of the BMSLogger.
+ * @return Pointer to the global `BMSLogger` instance.
+ */
+struct BMSLogger *get_logger(void)
+{
+	return &bms_logger;
 }
 
 /**
@@ -118,9 +118,6 @@ int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data)
 	CellDataEntry_t new_entry;
 
 	memset(&new_entry, 0, sizeof(CellDataEntry_t));
-
-	new_entry.cell_voltage_timestamp = bms_data->voltage_timestamp;
-	new_entry.cell_temperature_timestamp = bms_data->temperature_timestamp;
 
 	for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
 		int cell_count = get_num_cells(&bms_data->chip_data[chip_num]);

@@ -4,7 +4,6 @@
 #include "analyzer.h"
 #include "c_utils.h"
 #include "serialPrintResult.h"
-#include "cell_data_logging.h"
 
 #define T_READY 10 /* microseconds*/
 #define T_IDLE	4.3 /* milliseconds, minimum. typ is 5.5, max is 6.7 */
@@ -194,14 +193,8 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
 
-	// Timestamp when voltage measured
-	bmsdata->voltage_timestamp = get_us_timestamp();
-
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
-
-	// Timestamp when therms measured
-	bmsdata->temperature_timestamp = get_us_timestamp();
 }
 
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
