@@ -31,15 +31,12 @@
  * This structure is used to store the timestamp, cell voltages, 
  * and cell temperatures for each measurement cycle. Each entry 
  * contains data for all chips and their respective cells.
- * 
- * @note If used across multiple tasks, the user must handle the mutex. 
  */
 typedef struct {
 	uint32_t cell_voltage_timestamp;
 	uint32_t cell_temperature_timestamp;
 	float cell_voltages[NUM_CHIPS][NUM_CELLS_ALPHA];
 	float cell_temperatures[NUM_CHIPS][NUM_CELLS_ALPHA];
-	osMutexId_t mutex;
 } CellDataEntry_t;
 
 /**
