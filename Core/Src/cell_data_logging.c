@@ -47,7 +47,7 @@ static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
  * @brief Retrieves the current timestamp in microseconds from TIM2.
  * @return The current timestamp in microseconds.
  */
-uint32_t get_us_timestamp(void)
+static uint32_t get_us_timestamp(void)
 {
 	return __HAL_TIM_GET_COUNTER(&htim2);
 }
@@ -77,40 +77,60 @@ int cell_data_logger_init(struct BMSLogger *logger)
 }
 
 /**
- * @brief Logs a new measurement and inserts it in the ring buffer.
- * @param logger Pointer to the logger instance.
- * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
+ * @brief Assigns a timestamp to the voltage measurement field of a cell data entry.
+ * @param entry Pointer to the CellDataEntry_t structure to update.
+ */
+void cell_data_set_voltage_timestamp(CellDataEntry_t *entry)
+{
+	entry->cell_voltage_timestamp = get_us_timestamp();
+}
+
+/**
+  * @brief Assigns a timestamp to the temperature measurement field of a cell data entry.
+  * @param entry Pointer to the CellDataEntry_t structure to update.
+  */
+void cell_data_set_therm_timestamp(CellDataEntry_t *entry)
+{
+	entry->cell_temperature_timestamp = get_us_timestamp();
+}
+
+/**
+ * @brief Logs a new measurement and inserts it into the ring buffer.
+ * 
+ * @note The user is responsible for ensuring the timestamps are set before calling this function.
+ * 
+ * @param logger Pointer to the BMSLogger instance managing the ring buffer.
+ * @param bms_data Pointer to the BMS data structure containing cell voltages and temperatures.
+ * @param entry Pointer to a CellDataEntry_t structure that holds the measurement data.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data)
+int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data,
+			      CellDataEntry_t *entry)
 {
 	int status = -1;
 	assert(logger != NULL);
 	assert(bms_data != NULL);
+	assert(entry != NULL);
 
 	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
 		goto exit;
 	}
 
-	CellDataEntry_t new_entry;
-
-	memset(&new_entry, 0, sizeof(CellDataEntry_t));
-
 	for (int chip_num = 0; chip_num < NUM_CHIPS; chip_num++) {
 		int cell_count = get_num_cells(&bms_data->chip_data[chip_num]);
 
 		for (int cell = 0; cell < cell_count; cell++) {
-			new_entry.cell_voltages[chip_num][cell] =
+			entry->cell_voltages[chip_num][cell] =
 				bms_data->chip_data[chip_num]
 					.cell_voltages[cell];
 
-			new_entry.cell_temperatures[chip_num][cell] =
+			entry->cell_temperatures[chip_num][cell] =
 				bms_data->chip_data[chip_num].cell_temp[cell];
 		}
 	}
 
-	rb_insert(&logger->ring_buff, &new_entry);
+	rb_insert(&logger->ring_buff, entry);
 
 	status = 0;
 

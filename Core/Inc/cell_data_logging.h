@@ -1,6 +1,14 @@
 /**
  * @file cell_data_logging.h
  * @brief Functionality for logging and retrieving cell voltage and temperature data.
+ *
+ * This module provides an interface for logging cell voltage and temperature
+ * data using a ring buffer. Users must ensure proper synchronization when
+ * handling logging operations, as well as setting timestamps before logging.
+ *
+ * @warning The `BMSLogger` structure is *managed internally by the logging system. 
+ * Users should *only pass its address to logging functions and must not modify 
+ * its contents directly.
  */
 
 #ifndef CELL_DATA_LOGGING_H
@@ -23,29 +31,30 @@
  * This structure is used to store the timestamp, cell voltages, 
  * and cell temperatures for each measurement cycle. Each entry 
  * contains data for all chips and their respective cells.
+ * 
+ * @note If used across multiple tasks, the user must handle the mutex. 
  */
 typedef struct {
 	uint32_t cell_voltage_timestamp;
 	uint32_t cell_temperature_timestamp;
 	float cell_voltages[NUM_CHIPS][NUM_CELLS_ALPHA];
 	float cell_temperatures[NUM_CHIPS][NUM_CELLS_ALPHA];
+	osMutexId_t mutex;
 } CellDataEntry_t;
 
 /**
  * @struct BMSLogger
  * @brief Structure to manage logging system
+ * 
+ * @warning The `BMSLogger` structure is *managed internally by the logging system. 
+ * Users should *only pass its address to logging functions and must not modify 
+ * its contents directly.
  */
 struct BMSLogger {
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
 	osMutexId_t mutex;
 };
-
-/**
- * @brief Retrieves the current timestamp in microseconds from TIM2.
- * @return The current timestamp in microseconds.
- */
-uint32_t get_us_timestamp(void);
 
 /**
  * @brief Initializes a BMSLogger instance.
@@ -55,12 +64,29 @@ uint32_t get_us_timestamp(void);
 int cell_data_logger_init(struct BMSLogger *logger);
 
 /**
- * @brief Logs a new measurement and inserts it in the ring buffer.
- * @param logger Pointer to the logger instance.
- * @param bms_data Pointer to the BMS data containing chip cell voltages and temperatures.
+ * @brief Assigns a timestamp to the voltage measurement field of a cell data entry.
+ * @param entry Pointer to the CellDataEntry_t structure to update.
+ */
+void cell_data_set_voltage_timestamp(CellDataEntry_t *entry);
+
+/**
+  * @brief Assigns a timestamp to the temperature measurement field of a cell data entry.
+  * @param entry Pointer to the CellDataEntry_t structure to update.
+  */
+void cell_data_set_therm_timestamp(CellDataEntry_t *entry);
+
+/**
+ * @brief Logs a new measurement and inserts it into the ring buffer.
+ * 
+ * @note The user is responsible for ensuring the timestamps are set before calling this function.
+ * 
+ * @param logger Pointer to the BMSLogger instance managing the ring buffer.
+ * @param bms_data Pointer to the BMS data structure containing cell voltages and temperatures.
+ * @param entry Pointer to a CellDataEntry_t structure that holds the measurement data.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data);
+int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data,
+			      CellDataEntry_t *entry);
 
 /**
  * @brief Gets the most recent cell data log from the buffer.
