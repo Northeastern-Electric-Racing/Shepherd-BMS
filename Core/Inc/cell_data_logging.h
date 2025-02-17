@@ -35,19 +35,17 @@ typedef struct {
  * @struct BMSLogger
  * @brief Structure to manage logging system
  */
-struct BMSLogger;
+struct BMSLogger {
+	ringbuf_t ring_buff;
+	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
+	osMutexId_t mutex;
+};
 
 /**
  * @brief Retrieves the current timestamp in microseconds from TIM2.
  * @return The current timestamp in microseconds.
  */
 uint32_t get_us_timestamp(void);
-
-/**
- * @brief Retrieves the global instance of the BMSLogger.
- * @return Pointer to the global `BMSLogger` instance.
- */
-struct BMSLogger *get_logger(void);
 
 /**
  * @brief Initializes a BMSLogger instance.

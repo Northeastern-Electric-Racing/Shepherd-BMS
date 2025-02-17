@@ -15,19 +15,6 @@
 extern TIM_HandleTypeDef htim2;
 
 /**
- * @struct BMSLogger
- * @brief Internal structure to manage logging system.
- */
-struct BMSLogger {
-	ringbuf_t ring_buff;
-	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
-	osMutexId_t mutex;
-};
-
-/* Global instance of BMSLogger */
-static struct BMSLogger bms_logger;
-
-/**
  * @brief Prints a single cell data entry.
  * @param entry Pointer to the cell data entry to print.
  * @param entry_idx Index of the entry.
@@ -63,15 +50,6 @@ static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
 uint32_t get_us_timestamp(void)
 {
 	return __HAL_TIM_GET_COUNTER(&htim2);
-}
-
-/**
- * @brief Retrieves the global instance of the BMSLogger.
- * @return Pointer to the global `BMSLogger` instance.
- */
-struct BMSLogger *get_logger(void)
-{
-	return &bms_logger;
 }
 
 /**
