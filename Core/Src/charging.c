@@ -4,6 +4,9 @@
 #include "compute.h"
 #include "BMSConfig.h"
 
+/* Constants */
+static const uint8_t STD_FACTOR = 1;
+
 /* Private prototypes */
 static float calc_cell_voltage_std(acc_data_t *data);
 
@@ -27,6 +30,7 @@ float calc_cell_voltage_std(acc_data_t *data)
 	return std;
 }
 
+/* Send cell balancing config to the segment */
 void handle_balance_cells(acc_data_t *bmsdata)
 {
 	if (bmsdata->delt_voltage > MAX_DELTA_V ||
@@ -42,11 +46,15 @@ void handle_balance_cells(acc_data_t *bmsdata)
 	float avg = bmsdata->avg_voltage;
 	float std = calc_cell_voltage_std(bmsdata);
 
+	/* Set the threshold for balancing to (mu - sigma * STD_FACTOR) */
+	float thresh = avg - (STD_FACTOR * std);
+
+	/* Balance all cells above the threshold */
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
 			/* Check if cell voltage is above (average - standard deviation) */
 			if (bmsdata->chip_data[chip].cell_voltages[cell] >
-			    avg - std) {
+			    thresh) {
 				/* Balance cell */
 				balanceConfig[chip][cell] = true;
 			} else {
