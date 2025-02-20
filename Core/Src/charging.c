@@ -11,7 +11,7 @@ static const uint8_t STD_FACTOR = 1;
 static float calc_cell_voltage_std(acc_data_t *data);
 
 /* Find standard deviation from BMS data */
-float calc_cell_voltage_std(acc_data_t *data)
+static float calc_cell_voltage_std(acc_data_t *data)
 {
 	float avg = calc_cell_voltage_average(data);
 
