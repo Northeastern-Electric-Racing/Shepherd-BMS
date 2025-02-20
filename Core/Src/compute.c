@@ -110,8 +110,21 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 
 void compute_set_fault(int fault_state)
 {
-	HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin, !fault_state);
+	HAL_GPIO_WritePin(FAULT_OUTPUT_GPIO_Port, FAULT_OUTPUT_Pin, !fault_state);
 	// if (true) digitalWrite(CHARGE_SAFETY_RELAY, 1);
+}
+
+void compute_set_debug1_led(bool state) {
+	HAL_GPIO_WritePin(DEBUG_LED_1_GPIO_Port, DEBUG_LED_1_Pin, state);
+}
+void compute_set_debug2_led(bool state) {
+	HAL_GPIO_WritePin(DEBUG_LED_2_GPIO_Port, DEBUG_LED_2_Pin, state);
+}
+void compute_toggle_debug1_led() {
+	HAL_GPIO_TogglePin(DEBUG_LED_1_GPIO_Port, DEBUG_LED_1_Pin);
+}
+void compute_toggle_debug2_led() {
+	HAL_GPIO_TogglePin(DEBUG_LED_2_GPIO_Port, DEBUG_LED_2_Pin);
 }
 
 int16_t compute_get_pack_current()
