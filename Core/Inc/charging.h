@@ -10,6 +10,4 @@
  */
 void balance_cells(acc_data_t *bmsdata);
 
-// TODO: move balancing check, charging check, and fault return to this file
-
 #endif
