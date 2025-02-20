@@ -77,21 +77,63 @@ int cell_data_logger_init(struct BMSLogger *logger)
 }
 
 /**
- * @brief Assigns a timestamp to the voltage measurement field of a cell data entry.
- * @param entry Pointer to the CellDataEntry_t structure to update.
+ * @brief Assigns a voltage timestamp to the current log entry. 
+ * @param logger Pointer to the BMSLogger instance.
+ * @return 0 on success, -1 on failure.
  */
-void cell_data_set_voltage_timestamp(CellDataEntry_t *entry)
+int cell_data_logger_timestamp_voltage(struct BMSLogger *logger)
 {
-	entry->cell_voltage_timestamp = get_us_timestamp();
+	assert(logger != NULL);
+
+	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
+		printf("ERROR: Failed to aquire data logging mutex!\r\n");
+		return -1;
+	}
+
+	if (!logger->first_timestamp_set) {
+		size_t next_idx = (logger->ring_buff.head_idx + 1) %
+				  logger->ring_buff.size;
+
+		logger->latest_entry = &logger->cell_data_storage[next_idx];
+
+		logger->first_timestamp_set = true;
+	}
+
+	assert(logger->latest_entry != NULL);
+	logger->latest_entry->cell_voltage_timestamp = get_us_timestamp();
+
+	osMutexRelease(logger->mutex);
+	return 0;
 }
 
 /**
-  * @brief Assigns a timestamp to the temperature measurement field of a cell data entry.
-  * @param entry Pointer to the CellDataEntry_t structure to update.
-  */
-void cell_data_set_therm_timestamp(CellDataEntry_t *entry)
+ * @brief Assigns a temperature timestamp to the current log entry.
+ * @param logger Pointer to the BMSLogger instance.
+ * @return 0 on success, -1 on failure.
+ */
+int cell_data_logger_timestamp_therms(struct BMSLogger *logger)
 {
-	entry->cell_temperature_timestamp = get_us_timestamp();
+	assert(logger != NULL);
+
+	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
+		printf("ERROR: Failed to aquire data logging mutex!\r\n");
+		return -1;
+	}
+
+	if (!logger->first_timestamp_set) {
+		size_t next_idx = (logger->ring_buff.head_idx + 1) %
+				  logger->ring_buff.size;
+
+		logger->latest_entry = &logger->cell_data_storage[next_idx];
+
+		logger->first_timestamp_set = true;
+	}
+
+	assert(logger->latest_entry != NULL);
+	logger->latest_entry->cell_temperature_timestamp = get_us_timestamp();
+
+	osMutexRelease(logger->mutex);
+	return 0;
 }
 
 /**
@@ -101,19 +143,22 @@ void cell_data_set_therm_timestamp(CellDataEntry_t *entry)
  * 
  * @param logger Pointer to the BMSLogger instance managing the ring buffer.
  * @param bms_data Pointer to the BMS data structure containing cell voltages and temperatures.
- * @param entry Pointer to a CellDataEntry_t structure that holds the measurement data.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data,
-			      CellDataEntry_t *entry)
+int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data)
 {
 	int status = -1;
 	assert(logger != NULL);
 	assert(bms_data != NULL);
-	assert(entry != NULL);
 
 	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
 		printf("ERROR: Failed to aquire data logging mutex!\r\n");
+		goto exit;
+	}
+
+	if (logger->latest_entry == NULL) {
+		printf("ERROR: No timestamped entry available!\r\n");
+		osMutexRelease(logger->mutex);
 		goto exit;
 	}
 
@@ -121,20 +166,22 @@ int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data,
 		int cell_count = get_num_cells(&bms_data->chip_data[chip_num]);
 
 		for (int cell = 0; cell < cell_count; cell++) {
-			entry->cell_voltages[chip_num][cell] =
+			logger->latest_entry->cell_voltages[chip_num][cell] =
 				bms_data->chip_data[chip_num]
 					.cell_voltages[cell];
 
-			entry->cell_temperatures[chip_num][cell] =
+			logger->latest_entry->cell_temperatures[chip_num][cell] =
 				bms_data->chip_data[chip_num].cell_temp[cell];
 		}
 	}
 
-	rb_insert(&logger->ring_buff, entry);
+	rb_insert(&logger->ring_buff, logger->latest_entry);
+	logger->latest_entry = NULL;
+	logger->first_timestamp_set = false;
 
 	status = 0;
-
 	osMutexRelease(logger->mutex);
+	return status;
 
 exit:
 	return status;

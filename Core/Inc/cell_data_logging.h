@@ -50,6 +50,8 @@ typedef struct {
 struct BMSLogger {
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
+	CellDataEntry_t *latest_entry;
+	bool first_timestamp_set;
 	osMutexId_t mutex;
 };
 
@@ -61,16 +63,18 @@ struct BMSLogger {
 int cell_data_logger_init(struct BMSLogger *logger);
 
 /**
- * @brief Assigns a timestamp to the voltage measurement field of a cell data entry.
- * @param entry Pointer to the CellDataEntry_t structure to update.
+ * @brief Assigns a voltage timestamp to the current log entry. 
+ * @param logger Pointer to the BMSLogger instance.
+ * @return 0 on success, -1 on failure.
  */
-void cell_data_set_voltage_timestamp(CellDataEntry_t *entry);
+int cell_data_logger_timestamp_voltage(struct BMSLogger *logger);
 
 /**
-  * @brief Assigns a timestamp to the temperature measurement field of a cell data entry.
-  * @param entry Pointer to the CellDataEntry_t structure to update.
-  */
-void cell_data_set_therm_timestamp(CellDataEntry_t *entry);
+ * @brief Assigns a temperature timestamp to the current log entry.
+ * @param logger Pointer to the BMSLogger instance.
+ * @return 0 on success, -1 on failure.
+ */
+int cell_data_logger_timestamp_therms(struct BMSLogger *logger);
 
 /**
  * @brief Logs a new measurement and inserts it into the ring buffer.
@@ -79,11 +83,9 @@ void cell_data_set_therm_timestamp(CellDataEntry_t *entry);
  * 
  * @param logger Pointer to the BMSLogger instance managing the ring buffer.
  * @param bms_data Pointer to the BMS data structure containing cell voltages and temperatures.
- * @param entry Pointer to a CellDataEntry_t structure that holds the measurement data.
  * @return 0 on success, -1 on failure.
  */
-int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data,
-			      CellDataEntry_t *entry);
+int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data);
 
 /**
  * @brief Gets the most recent cell data log from the buffer.
