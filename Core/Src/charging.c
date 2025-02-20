@@ -16,9 +16,9 @@ float calc_cell_voltage_std(acc_data_t *data)
 	float mse = 0;
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
-			mse += pow(data->chip_data[chip].cell_voltages[cell] -
-					   avg,
-				   2);
+			float cell_voltage =
+				data->chip_data[chip].cell_voltages[cell];
+			mse += pow(cell_voltage - avg, 2);
 		}
 	}
 
