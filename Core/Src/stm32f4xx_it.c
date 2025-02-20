@@ -97,6 +97,18 @@ void HardFault_Handler(void)
   while (1)
   {
     /* USER CODE BEGIN W1_HardFault_IRQn 0 */
+    volatile uint32_t i = 0;
+    while (i < 120000) {
+      i += 1;
+    }
+    HAL_GPIO_WritePin(DEBUG_LED_1_GPIO_Port, DEBUG_LED_1_Pin, 0);
+    HAL_GPIO_WritePin(DEBUG_LED_2_GPIO_Port, DEBUG_LED_2_Pin, 0);
+    i = 0;
+    while (i < 120000) {
+      i += 1;
+    }
+    HAL_GPIO_WritePin(DEBUG_LED_1_GPIO_Port, DEBUG_LED_1_Pin, 1);
+    HAL_GPIO_WritePin(DEBUG_LED_2_GPIO_Port, DEBUG_LED_2_Pin, 1);
     /* USER CODE END W1_HardFault_IRQn 0 */
   }
 }
