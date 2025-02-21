@@ -81,6 +81,8 @@ TIM_HandleTypeDef htim8;
 UART_HandleTypeDef huart4;
 DMA_HandleTypeDef hdma_uart4_tx;
 
+PCD_HandleTypeDef hpcd_USB_OTG_FS;
+
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -102,6 +104,7 @@ static void MX_SPI1_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_UART4_Init(void);
+static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
@@ -114,6 +117,9 @@ void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 
+/* this is for the hardware watchdog ic. Currently not activated  in hw */
+//void watchdog_init(void);
+//void watchdog_pet(void);
 
 /* USER CODE END PFP */
 
@@ -335,6 +341,7 @@ int main(void)
   MX_SPI2_Init();
   MX_SPI3_Init();
   MX_UART4_Init();
+  MX_USB_OTG_FS_PCD_Init();
   MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
@@ -452,11 +459,18 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI
+                              |RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_NONE;
+  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLM = 15;
+  RCC_OscInitStruct.PLL.PLLN = 144;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 5;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -1130,6 +1144,41 @@ static void MX_UART4_Init(void)
 }
 
 /**
+  * @brief USB_OTG_FS Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USB_OTG_FS_PCD_Init(void)
+{
+
+  /* USER CODE BEGIN USB_OTG_FS_Init 0 */
+
+  /* USER CODE END USB_OTG_FS_Init 0 */
+
+  /* USER CODE BEGIN USB_OTG_FS_Init 1 */
+
+  /* USER CODE END USB_OTG_FS_Init 1 */
+  hpcd_USB_OTG_FS.Instance = USB_OTG_FS;
+  hpcd_USB_OTG_FS.Init.dev_endpoints = 4;
+  hpcd_USB_OTG_FS.Init.speed = PCD_SPEED_FULL;
+  hpcd_USB_OTG_FS.Init.dma_enable = DISABLE;
+  hpcd_USB_OTG_FS.Init.phy_itface = PCD_PHY_EMBEDDED;
+  hpcd_USB_OTG_FS.Init.Sof_enable = DISABLE;
+  hpcd_USB_OTG_FS.Init.low_power_enable = DISABLE;
+  hpcd_USB_OTG_FS.Init.lpm_enable = DISABLE;
+  hpcd_USB_OTG_FS.Init.vbus_sensing_enable = ENABLE;
+  hpcd_USB_OTG_FS.Init.use_dedicated_ep1 = DISABLE;
+  if (HAL_PCD_Init(&hpcd_USB_OTG_FS) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USB_OTG_FS_Init 2 */
+
+  /* USER CODE END USB_OTG_FS_Init 2 */
+
+}
+
+/**
   * Enable DMA controller clock
   */
 static void MX_DMA_Init(void)
@@ -1165,59 +1214,95 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOH_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, EXT_GPIO_1_Pin|EXT_GPIO_5_Pin|EXT_GPIO_4_Pin|SPI3_CS_Pin
-                          |SPI2_CS_Pin|DEBUG_LED_2_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, FPGA_Reset_Pin|Communication_GPIO_Pin|Communication_GPIOC0_Pin|SPI_2_CS_Pin
+                          |Debug_LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, FAULT_OUTPUT_Pin|SPI1_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin|SPI_1_CS_Pin|SPI_3_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DEBUG_LED_1_Pin|WATCHDOG_OUT_Pin|EXT_GPIO_0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, Debug_LEDB11_Pin|Watchdog_Out_Pin|External_GPIOB3_Pin|External_GPIOB4_Pin
+                          |External_GPIOB5_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : EXT_GPIO_1_Pin EXT_GPIO_5_Pin EXT_GPIO_4_Pin SPI3_CS_Pin
-                           SPI2_CS_Pin DEBUG_LED_2_Pin */
-  GPIO_InitStruct.Pin = EXT_GPIO_1_Pin|EXT_GPIO_5_Pin|EXT_GPIO_4_Pin|SPI3_CS_Pin
-                          |SPI2_CS_Pin|DEBUG_LED_2_Pin;
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(External_GPIO_GPIO_Port, External_GPIO_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : FPGA_Reset_Pin Communication_GPIO_Pin Communication_GPIOC0_Pin SPI_2_CS_Pin
+                           Debug_LED_Pin */
+  GPIO_InitStruct.Pin = FPGA_Reset_Pin|Communication_GPIO_Pin|Communication_GPIOC0_Pin|SPI_2_CS_Pin
+                          |Debug_LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : INTERLOCK_READ_Pin */
-  GPIO_InitStruct.Pin = INTERLOCK_READ_Pin;
+  /*Configure GPIO pin : PC15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_15;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : Interlock_Read_Pin */
+  GPIO_InitStruct.Pin = Interlock_Read_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(INTERLOCK_READ_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(Interlock_Read_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : FAULT_OUTPUT_Pin SPI1_CS_Pin */
-  GPIO_InitStruct.Pin = FAULT_OUTPUT_Pin|SPI1_CS_Pin;
+  /*Configure GPIO pins : Fault_Output_Pin SPI_1_CS_Pin SPI_3_CS_Pin */
+  GPIO_InitStruct.Pin = Fault_Output_Pin|SPI_1_CS_Pin|SPI_3_CS_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : I_SENSE_0_Pin */
-  GPIO_InitStruct.Pin = I_SENSE_0_Pin;
+  /*Configure GPIO pin : I_SenseB2_Pin */
+  GPIO_InitStruct.Pin = I_SenseB2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(I_SENSE_0_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(I_SenseB2_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : DEBUG_LED_1_Pin WATCHDOG_OUT_Pin EXT_GPIO_0_Pin */
-  GPIO_InitStruct.Pin = DEBUG_LED_1_Pin|WATCHDOG_OUT_Pin|EXT_GPIO_0_Pin;
+  /*Configure GPIO pins : Debug_LEDB11_Pin Watchdog_Out_Pin External_GPIOB3_Pin External_GPIOB4_Pin
+                           External_GPIOB5_Pin */
+  GPIO_InitStruct.Pin = Debug_LEDB11_Pin|Watchdog_Out_Pin|External_GPIOB3_Pin|External_GPIOB4_Pin
+                          |External_GPIOB5_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : External_GPIO_Pin */
+  GPIO_InitStruct.Pin = External_GPIO_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(External_GPIO_GPIO_Port, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
+
+void watchdog_init(void)
+{
+  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+  //HAL_Delay(1); // shouldn't be needed but here in case
+}
+
+void watchdog_pet(void)
+{
+
+  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
+  //HAL_Delay(1);
+  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
+
+}
 
 struct __attribute__((__packed__)) git_version_data {
 		uint8_t git_major_version;
@@ -1280,7 +1365,6 @@ void StartDefaultTask(void *argument)
     }
 
     alt = !alt;
-    compute_toggle_debug1_led();
 
     send_bms_status_message(bmsdata, current_state,
 					segment_is_balancing(bmsdata->chips));
