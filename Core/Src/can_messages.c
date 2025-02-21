@@ -477,7 +477,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	}
 	msg.len = CELL_MSG_SIZE;
 
-	/* Multiply data by scaling factor before converting to int */
+	/* Multiply data by scaling factor before converuting to int */
 	temperature *= 10;
 	voltage_a *= 1000;
 	voltage_b *= 1000;
@@ -515,7 +515,7 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 	voltage *= 1000;
 	segment_temperature *= 10;
 	die_temperature *= 100;
-	vpv *= 1000;
+	vpv *= 100;
 
 	bitstream_t beta_status_a_message;
 	uint8_t bitstream_data[8];
@@ -615,9 +615,11 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	msg.len = ALPHA_STAT_A_SIZE;
 
 	segment_temp *= 10;
+
 	die_temperature *= 100;
-	vpv *= 1000;
+	vpv *= 100;
 	vmv *= 1000;
+
 
 	bitstream_t alpha_status_a_message;
 	uint8_t bitstream_data[8];
@@ -638,7 +640,9 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	bitstream_add(&alpha_status_a_message, flt_reg->sleep, 1);		// SLEEP (1 bit)
 	bitstream_add(&alpha_status_a_message, flt_reg->thsd, 1);		// THSD (1 bit)
 	bitstream_add(&alpha_status_a_message, flt_reg->tmodchk, 1);	// TMODCHK (1 bit)
-	bitstream_add(&alpha_status_a_message, flt_reg->oscchk, 1);		// OSCCHK (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->oscchk, 1);	 	// OSCCHK (1 bit)
+	
+	memcpy(msg.data, &bitstream_data, ALPHA_STAT_A_SIZE);
 
 	queue_can_msg(msg);
 	// clang-format on
