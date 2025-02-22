@@ -50,8 +50,6 @@ typedef struct {
 struct BMSLogger {
 	ringbuf_t ring_buff;
 	CellDataEntry_t cell_data_storage[NUM_OF_READINGS];
-	CellDataEntry_t *latest_entry;
-	bool first_timestamp_set;
 	osMutexId_t mutex;
 };
 
@@ -63,7 +61,7 @@ struct BMSLogger {
 int cell_data_logger_init(struct BMSLogger *logger);
 
 /**
- * @brief Assigns a voltage timestamp to the current log entry. 
+ * @brief Assigns a voltage timestamp to the current log entry.
  * @param logger Pointer to the BMSLogger instance.
  * @return 0 on success, -1 on failure.
  */
@@ -79,20 +77,13 @@ int cell_data_logger_timestamp_therms(struct BMSLogger *logger);
 /**
  * @brief Logs a new measurement and inserts it into the ring buffer.
  * 
- * @note The user is responsible for ensuring the timestamps are set before calling this function.
+ * @note The user must ensure timestamps are set before calling this function.
  * 
  * @param logger Pointer to the BMSLogger instance managing the ring buffer.
  * @param bms_data Pointer to the BMS data structure containing cell voltages and temperatures.
  * @return 0 on success, -1 on failure.
  */
 int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data);
-
-/**
- * @brief Gets the most recent cell data log from the buffer.
- * @param logger Pointer to the logger instance.
- * @return Pointer to the most recent data entry, or NULL if the logger is empty.
- */
-CellDataEntry_t *cell_data_log_get_last(const struct BMSLogger *logger);
 
 /**
  * @brief Retrieves the last n cell data logs from the buffer.
