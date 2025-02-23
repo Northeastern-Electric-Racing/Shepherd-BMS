@@ -23,6 +23,41 @@ static unsigned short reverse_short(unsigned short val)
 	return reverse_bits(val) >> 4;
 }
 
+/// @brief A helper which sends appropriate error to stdout and CAN if a bistream overflows
+/// @param bitstream_res The bitstream to check for overflow
+/// @param can_id The CAN ID this bistream data is intended for
+/// @return 0 if success
+static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
+					    uint32_t can_id)
+{
+	if (!bitstream_res->overflow) {
+		return 0;
+	}
+
+	//printf("CAN MESSAGE %ld overflowed!\n", can_id);
+
+	static uint16_t overflow_cnt = 0;
+	overflow_cnt++;
+	struct __attribute__((__packed__)) {
+		uint32_t can_id;
+		uint16_t overflow_cnt;
+	} overflow_data;
+
+	endian_swap(&can_id, sizeof(can_id));
+	overflow_data.can_id = can_id;
+	overflow_data.overflow_cnt = overflow_cnt;
+
+	can_msg_t overflow_msg;
+	overflow_msg.id = OVERFLOW_CANID;
+	overflow_msg.len = OVERFLOW_SIZE;
+
+	memcpy(&overflow_msg.data, &overflow_data, sizeof(overflow_data));
+
+	queue_can_msg(overflow_msg);
+
+	return 0;
+}
+
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 			  acc_data_t *bms_data)
 {
@@ -498,6 +533,8 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 
 	memcpy(msg.data, &bitstream_data, CELL_MSG_SIZE);
 
+	handle_bitstream_overflow(&cell_data_message, msg.id);
+
 	queue_can_msg(msg);
 	// clang-format on
 }
@@ -538,6 +575,8 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 
 	memcpy(msg.data, &bitstream_data, BETA_STAT_A_SIZE);
 
+	handle_bitstream_overflow(&beta_status_a_message, msg.id);
+
 	queue_can_msg(msg);
 }
 
@@ -568,6 +607,8 @@ void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 	bitstream_add(&beta_status_b_message, 0, 1); 					// Extra (1 bit)
 
 	memcpy(msg.data, &bitstream_data, BETA_STAT_B_SIZE);
+
+	handle_bitstream_overflow(&beta_status_b_message, msg.id);
 
 	queue_can_msg(msg);
 	// clang-format on
@@ -600,6 +641,8 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 	bitstream_add(&beta_status_c_message, 0, 7);					// Extra (7 bits)
 
 	memcpy(msg.data, &bitstream_data, BETA_STAT_C_SIZE);
+
+	handle_bitstream_overflow(&beta_status_c_message, msg.id);
 
 	queue_can_msg(msg);
 	// clang-format on
@@ -644,6 +687,8 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	
 	memcpy(msg.data, &bitstream_data, ALPHA_STAT_A_SIZE);
 
+	handle_bitstream_overflow(&alpha_status_a_message, msg.id);
+
 	queue_can_msg(msg);
 	// clang-format on
 }
@@ -675,6 +720,8 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 	bitstream_add(&alpha_status_b_message, 0, 6);					// Extra (6 bits)
 
 	memcpy(msg.data, &bitstream_data, ALPHA_STAT_B_SIZE);
+
+	handle_bitstream_overflow(&alpha_status_b_message, msg.id);
 
 	queue_can_msg(msg);
 	// clang-format on
