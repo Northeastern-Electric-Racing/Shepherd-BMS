@@ -13,15 +13,13 @@ static float calc_cell_voltage_std(acc_data_t *data);
 /* Find standard deviation from BMS data */
 static float calc_cell_voltage_std(acc_data_t *data)
 {
-	float avg = calc_cell_voltage_average(data);
-
 	/* Calculate mean squared error */
 	float mse = 0;
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
 			float cell_voltage =
 				data->chip_data[chip].cell_voltages[cell];
-			mse += pow(cell_voltage - avg, 2);
+			mse += pow(cell_voltage - data->avg_voltage, 2);
 		}
 	}
 
