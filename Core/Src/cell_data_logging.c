@@ -30,7 +30,7 @@ static inline uint32_t get_us_timestamp(void)
  */
 static CellDataEntry_t *get_writable_log_entry(struct BMSLogger *logger)
 {
-	assert(logger != NULL);
+	assert(logger);
 
 	size_t next_idx = logger->ring_buff.head_idx;
 
@@ -46,7 +46,7 @@ static CellDataEntry_t *get_writable_log_entry(struct BMSLogger *logger)
  */
 static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
 {
-	assert(entry != NULL);
+	assert(entry);
 
 	printf("\r\n--- Log Entry %u ---\r\n", entry_idx + 1);
 	printf("Voltage Measurement Timestamp: %lu µs\r\n",
@@ -75,7 +75,7 @@ static void print_cell_data(const CellDataEntry_t *entry, size_t entry_idx)
  */
 int cell_data_logger_init(struct BMSLogger *logger)
 {
-	assert(logger != NULL);
+	assert(logger);
 
 	memset(logger, 0, sizeof(struct BMSLogger));
 
@@ -99,7 +99,7 @@ int cell_data_logger_init(struct BMSLogger *logger)
  */
 int cell_data_logger_timestamp_voltage(struct BMSLogger *logger)
 {
-	assert(logger != NULL);
+	assert(logger);
 
 	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
 		printf("ERROR: Failed to acquire data logging mutex!\r\n");
@@ -125,7 +125,7 @@ int cell_data_logger_timestamp_voltage(struct BMSLogger *logger)
  */
 int cell_data_logger_timestamp_therms(struct BMSLogger *logger)
 {
-	assert(logger != NULL);
+	assert(logger);
 
 	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
 		printf("ERROR: Failed to acquire data logging mutex!\r\n");
@@ -156,8 +156,8 @@ int cell_data_logger_timestamp_therms(struct BMSLogger *logger)
 int cell_data_log_measurement(struct BMSLogger *logger, acc_data_t *bms_data)
 {
 	int status = -1;
-	assert(logger != NULL);
-	assert(bms_data != NULL);
+	assert(logger);
+	assert(bms_data);
 
 	if (osMutexAcquire(logger->mutex, osWaitForever) != osOK) {
 		printf("ERROR: Failed to acquire data logging mutex!\r\n");
@@ -205,7 +205,7 @@ int cell_data_log_get_last_n(const struct BMSLogger *logger, size_t n,
 			     CellDataEntry_t *out_buffer)
 {
 	int status = -1;
-	assert(logger != NULL);
+	assert(logger);
 
 	if (n > logger->ring_buff.curr_elements) {
 		printf("ERROR: Not enough logs available!\r\n");
@@ -236,7 +236,7 @@ exit:
 int print_last_n_cell_data_logs(const struct BMSLogger *logger, size_t n)
 {
 	int status = -1;
-	assert(logger != NULL);
+	assert(logger);
 
 	CellDataEntry_t log_entries[n];
 
