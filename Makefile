@@ -79,6 +79,7 @@ Drivers/Embedded-Base/general/src/m24c32.c \
 Drivers/Embedded-Base/general/src/sht30.c \
 Drivers/Embedded-Base/middleware/src/timer.c \
 Drivers/Embedded-Base/middleware/src/ringbuffer.c \
+Drivers/Embedded-Base/middleware/src/bitstream.c \
 Drivers/Embedded-Base/middleware/src/c_utils.c \
 Drivers/adbms/lib/src/adBms6830GenericType.c \
 Drivers/adbms/lib/src/adBms6830ParseCreate.c \
