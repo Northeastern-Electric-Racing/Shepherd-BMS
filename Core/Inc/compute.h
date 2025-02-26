@@ -48,29 +48,6 @@ bool compute_charger_connected();
 //static void compute_mc_callback(const CAN_message_t& msg);
 
 /**
- * @brief Set Debug LED 1 (atomic)
- * 
- * @param state 1=ON
- */
-void compute_set_debug1_led(bool state);
-/**
- * @brief Set Debug LED 2 (atomic)
- * 
- * @param state 1=ON
- */
-void compute_set_debug2_led(bool state);
-/**
- * @brief Toggle Debug LED 1 (atomic)
- * 
- */
-void compute_toggle_debug1_led();
-/**
- * @brief Toggle Debug LED 2 (atomic)
- * 
- */
-void compute_toggle_debug2_led();
-
-/**
  * @brief Sets the desired fan speed
  * 
  * @param new_fan_speed 
