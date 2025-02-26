@@ -278,7 +278,7 @@ void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 	// TODO only poll correct GPIOs
 	adbms_wake_isospi();
 	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
-	adBmsPollAdc(PLAUX2);
+	adBmsPollAdc(PLAUX1);
 
 	read_adbms_data(chips, RDAUXA, Aux, A);
 	read_adbms_data(chips, RDAUXB, Aux, B);

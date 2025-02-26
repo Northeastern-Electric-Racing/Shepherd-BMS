@@ -4,8 +4,59 @@
 
 #include "can.h"
 #include "can_handler.h"
+#include "bitstream.h"
+
+#define BYTE_TO_BITS 8
+#define THERM_BITS   10
+#define VOLT_BITS    13
+#define AUX_ADC_BITS 13
+#define CHIP_ID_BTIS 4
+#define CELL_ID_BITS 4
+#define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
 
 extern is_charging_enabled;
+
+static unsigned short reverse_short(unsigned short val);
+
+static unsigned short reverse_short(unsigned short val)
+{
+	return reverse_bits(val) >> 4;
+}
+
+/// @brief A helper which sends appropriate error to stdout and CAN if a bistream overflows
+/// @param bitstream_res The bitstream to check for overflow
+/// @param can_id The CAN ID this bistream data is intended for
+/// @return 0 if success
+static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
+					    uint32_t can_id)
+{
+	if (!bitstream_res->overflow) {
+		return 0;
+	}
+
+	//printf("CAN MESSAGE %ld overflowed!\n", can_id);
+
+	static uint16_t overflow_cnt = 0;
+	overflow_cnt++;
+	struct __attribute__((__packed__)) {
+		uint32_t can_id;
+		uint16_t overflow_cnt;
+	} overflow_data;
+
+	endian_swap(&can_id, sizeof(can_id));
+	overflow_data.can_id = can_id;
+	overflow_data.overflow_cnt = overflow_cnt;
+
+	can_msg_t overflow_msg;
+	overflow_msg.id = OVERFLOW_CANID;
+	overflow_msg.len = OVERFLOW_SIZE;
+
+	memcpy(&overflow_msg.data, &overflow_data, sizeof(overflow_data));
+
+	queue_can_msg(overflow_msg);
+
+	return 0;
+}
 
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 			  acc_data_t *bms_data)
@@ -447,35 +498,12 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	queue_can_msg(msg);
 }
 
-void send_cell_data_message(bool alpha, uint16_t temperature,
-			    uint16_t voltage_a, uint16_t voltage_b,
-			    uint8_t chip_ID, uint8_t cell_a, uint8_t cell_b,
-			    bool discharging_a, bool discharging_b)
+void send_cell_data_message(bool alpha, float temperature, float voltage_a,
+			    float voltage_b, uint8_t chip_ID, uint8_t cell_a,
+			    uint8_t cell_b, bool discharging_a,
+			    bool discharging_b)
 {
-	endian_swap(&temperature, sizeof(temperature));
-	endian_swap(&voltage_a, sizeof(voltage_a));
-	endian_swap(&voltage_b, sizeof(voltage_b));
-
-	struct __attribute__((__packed__)) {
-		uint16_t temperature : 10;
-		uint16_t voltage_a : 13;
-		uint16_t voltage_b : 13;
-		uint8_t chip_ID : 4;
-		uint8_t cell_a : 4;
-		uint8_t cell_b : 4;
-		uint8_t discharging_a : 1;
-		uint8_t discharging_b : 1;
-	} cell_data_msg_data;
-
-	cell_data_msg_data.temperature = temperature;
-	cell_data_msg_data.voltage_a = voltage_a;
-	cell_data_msg_data.voltage_b = voltage_b;
-	cell_data_msg_data.chip_ID = chip_ID;
-	cell_data_msg_data.cell_a = cell_a;
-	cell_data_msg_data.cell_b = cell_b;
-	cell_data_msg_data.discharging_a = discharging_a;
-	cell_data_msg_data.discharging_b = discharging_b;
-
+	// clang-format off
 	can_msg_t msg;
 	if (alpha) {
 		msg.id = ALPHA_CELL_CANID;
@@ -484,216 +512,217 @@ void send_cell_data_message(bool alpha, uint16_t temperature,
 	}
 	msg.len = CELL_MSG_SIZE;
 
-	memcpy(msg.data, &cell_data_msg_data, CELL_MSG_SIZE);
+	/* Multiply data by scaling factor before converuting to int */
+	temperature *= 10;
+	voltage_a *= 1000;
+	voltage_b *= 1000;
+
+	bitstream_t cell_data_message;
+	uint8_t bitstream_data[7];
+	bitstream_init(&cell_data_message, bitstream_data, 7); // Create 7-byte bitstream
+
+	bitstream_add(&cell_data_message, temperature, 10); 			// Cell temperature (10 bits)
+	bitstream_add(&cell_data_message, voltage_a, 13);   			// Voltage A (13 bits)
+	bitstream_add(&cell_data_message, voltage_b, 13);   			// Voltage B (13 bits)
+	bitstream_add(&cell_data_message, reverse_short(chip_ID), 4);   // Chip ID (4 bits)
+	bitstream_add(&cell_data_message, reverse_short(cell_a), 4);    // Cell A (4 bits)
+	bitstream_add(&cell_data_message, reverse_short(cell_b), 4);    // Cell B (4 bits)
+	bitstream_add(&cell_data_message, discharging_a, 1); 			// Discharging A (1 bit)
+	bitstream_add(&cell_data_message, discharging_b, 1); 			// Discharging B (1 bit)
+	bitstream_add(&cell_data_message, 0, 6);             			// Extra (6 bits)
+
+	memcpy(msg.data, &bitstream_data, CELL_MSG_SIZE);
+
+	handle_bitstream_overflow(&cell_data_message, msg.id);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
-void send_beta_status_a_message(uint16_t cell_temperature, uint16_t voltage,
+void send_beta_status_a_message(float cell_temperature, float voltage,
 				bool discharging, uint8_t chip,
-				uint16_t segment_temperature,
-				uint16_t die_temperature, uint16_t vpv)
+				float segment_temperature,
+				float die_temperature, float vpv)
 {
-	endian_swap(&cell_temperature, sizeof(cell_temperature));
-	endian_swap(&voltage, sizeof(voltage));
-	endian_swap(&segment_temperature, sizeof(segment_temperature));
-	endian_swap(&die_temperature, sizeof(die_temperature));
-	endian_swap(&vpv, sizeof(vpv));
-
-	struct __attribute__((__packed__)) {
-		uint16_t cell_temperature : 10;
-		uint16_t voltage : 13;
-		uint8_t discharging : 1;
-		uint8_t chip : 4;
-		uint16_t segment_temperature : 10;
-		uint16_t die_temperature : 13;
-		uint16_t vpv : 13;
-	} beta_status_a_data;
-
-	beta_status_a_data.cell_temperature = cell_temperature;
-	beta_status_a_data.voltage = voltage;
-	beta_status_a_data.discharging = discharging;
-	beta_status_a_data.chip = chip;
-	beta_status_a_data.segment_temperature = segment_temperature;
-	beta_status_a_data.die_temperature = die_temperature;
-	beta_status_a_data.vpv = vpv;
-
 	can_msg_t msg;
 	msg.id = BETA_STAT_A_CANID;
 	msg.len = BETA_STAT_A_SIZE;
 
-	memcpy(msg.data, &beta_status_a_data, BETA_STAT_A_SIZE);
+	cell_temperature *= 10;
+	voltage *= 1000;
+	segment_temperature *= 10;
+	die_temperature *= 100;
+	vpv *= 100;
+
+	bitstream_t beta_status_a_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&beta_status_a_message, bitstream_data,
+		       8); // Create 8-byte bitstream
+
+	bitstream_add(&beta_status_a_message, cell_temperature,
+		      10); // Cell temperature (10 bits)
+	bitstream_add(&beta_status_a_message, voltage, 13); // Voltage (13 bits)
+	bitstream_add(&beta_status_a_message, discharging,
+		      1); // Discharging (1 bit)
+	bitstream_add(&beta_status_a_message, reverse_short(chip),
+		      4); // Chip ID (4 bits)
+	bitstream_add(&beta_status_a_message, segment_temperature,
+		      10); // Segment temperature (10 bits)
+	bitstream_add(&beta_status_a_message, die_temperature,
+		      13); // Die temperature (13 bits)
+	bitstream_add(&beta_status_a_message, vpv, 12); // Vpv (12 bits)
+	bitstream_add(&beta_status_a_message, 0, 1); // Extra (1 bit)
+
+	memcpy(msg.data, &bitstream_data, BETA_STAT_A_SIZE);
+
+	handle_bitstream_overflow(&beta_status_a_message, msg.id);
 
 	queue_can_msg(msg);
 }
 
-void send_beta_status_b_message(uint16_t vref2, uint16_t v_analog,
-				uint16_t v_digital, uint8_t chip,
-				uint16_t v_res, uint16_t vmv)
+void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
+				uint8_t chip, float v_res, float vmv)
 {
-	endian_swap(&vref2, sizeof(vref2));
-	endian_swap(&v_analog, sizeof(v_analog));
-	endian_swap(&v_digital, sizeof(v_digital));
-	endian_swap(&v_res, sizeof(v_res));
-	endian_swap(&vmv, sizeof(vmv));
-
-	struct __attribute__((__packed__)) {
-		uint16_t vref2 : 13;
-		uint16_t v_analog : 10;
-		uint16_t v_digital : 10;
-		uint8_t chip : 4;
-		uint16_t v_res : 13;
-		uint16_t vmv : 13;
-	} beta_status_b_data;
-
-	beta_status_b_data.vref2 = vref2;
-	beta_status_b_data.v_analog = v_analog;
-	beta_status_b_data.v_digital = v_digital;
-	beta_status_b_data.chip = chip;
-	beta_status_b_data.v_res = v_res;
-	beta_status_b_data.vmv = vmv;
-
+	// clang-format off
 	can_msg_t msg;
 	msg.id = BETA_STAT_B_CANID;
 	msg.len = BETA_STAT_B_SIZE;
 
-	memcpy(msg.data, &beta_status_b_data, BETA_STAT_B_SIZE);
+	vref2 *= 1000;
+	v_analog *= 100;
+	v_digital *= 100;
+	v_res *= 1000;
+	vmv *= 1000;
+
+	bitstream_t beta_status_b_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&beta_status_b_message, bitstream_data, 8); // Create 8-byte bitstream
+
+	bitstream_add(&beta_status_b_message, vref2, 13); 				// Vref2 (13 bits)
+	bitstream_add(&beta_status_b_message, v_analog, 10); 			// Vanalog (10 bits)
+	bitstream_add(&beta_status_b_message, v_digital, 10); 			// Vdigital (10 bits)
+	bitstream_add(&beta_status_b_message, reverse_short(chip), 4); 	// Chip ID (4 bits)
+	bitstream_add(&beta_status_b_message, v_res, 13); 				// Vres (13 bits)
+	bitstream_add(&beta_status_b_message, vmv, 13); 				// Vmv (13 bits)
+	bitstream_add(&beta_status_b_message, 0, 1); 					// Extra (1 bit)
+
+	memcpy(msg.data, &bitstream_data, BETA_STAT_B_SIZE);
+
+	handle_bitstream_overflow(&beta_status_b_message, msg.id);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
 void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 {
-	struct __attribute__((__packed__)) {
-		uint8_t chip : 4;
-		uint8_t va_ov : 1;
-		uint8_t va_uv : 1;
-		uint8_t vd_ov : 1;
-		uint8_t vd_uv : 1;
-		uint8_t vde : 1;
-		uint8_t vdel : 1;
-		uint8_t spiflt : 1;
-		uint8_t sleep : 1;
-		uint8_t thsd : 1;
-		uint8_t tmodchk : 1;
-		uint8_t oscchk : 1;
-		uint8_t otp1_med : 1;
-		uint8_t otp2_med : 1;
-	} beta_status_b_data;
-
-	beta_status_b_data.chip = chip;
-
-	beta_status_b_data.va_ov = flt_reg->va_ov;
-	beta_status_b_data.va_uv = flt_reg->va_uv;
-	beta_status_b_data.vd_ov = flt_reg->vd_ov;
-	beta_status_b_data.vd_uv = flt_reg->vd_uv;
-	beta_status_b_data.vde = flt_reg->vde;
-	beta_status_b_data.vdel = flt_reg->vdel;
-	beta_status_b_data.spiflt = flt_reg->spiflt;
-	beta_status_b_data.sleep = flt_reg->sleep;
-	beta_status_b_data.thsd = flt_reg->thsd;
-	beta_status_b_data.tmodchk = flt_reg->tmodchk;
-	beta_status_b_data.oscchk = flt_reg->oscchk;
-	beta_status_b_data.otp1_med = flt_reg->otp1_med;
-	beta_status_b_data.otp1_med = flt_reg->otp1_med;
-
+	// clang-format off
 	can_msg_t msg;
 	msg.id = BETA_STAT_C_CANID;
 	msg.len = BETA_STAT_C_SIZE;
 
-	memcpy(msg.data, &beta_status_b_data, BETA_STAT_C_SIZE);
+	bitstream_t beta_status_c_message;
+	uint8_t bitstream_data[3];
+	bitstream_init(&beta_status_c_message, bitstream_data, 3); // Create 3-byte bitstream
+
+	bitstream_add(&beta_status_c_message, reverse_short(chip), 1);	// Chip ID (4 bits)
+	bitstream_add(&beta_status_c_message, flt_reg->va_ov, 1);		// VA_OV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->va_uv, 1);		// VA_UV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vd_ov, 1);		// VD_OV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vde, 1);			// VDE (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vdel, 2);		// VDEL (2 bits)
+	bitstream_add(&beta_status_c_message, flt_reg->spiflt, 1);		// SPIFLT (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->sleep, 1);		// SLEEP (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->thsd, 1);		// THSD (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->tmodchk, 1);		// TMODCHK (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->oscchk, 1);		// OSCCHK (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->otp1_med, 1);	// OTP1_MED (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->otp2_med, 1);	// OTP2_MED (1 bit)
+	bitstream_add(&beta_status_c_message, 0, 7);					// Extra (7 bits)
+
+	memcpy(msg.data, &bitstream_data, BETA_STAT_C_SIZE);
+
+	handle_bitstream_overflow(&beta_status_c_message, msg.id);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
-void send_alpha_status_a_message(uint16_t segment_temp, uint8_t chip,
-				 uint16_t die_temperature, uint16_t vpv,
-				 uint16_t vmv, stc_ *flt_reg)
+void send_alpha_status_a_message(float segment_temp, uint8_t chip,
+				 float die_temperature, float vpv, float vmv,
+				 stc_ *flt_reg)
 {
-	endian_swap(&segment_temp, sizeof(segment_temp));
-	endian_swap(&die_temperature, sizeof(die_temperature));
-	endian_swap(&vpv, sizeof(vpv));
-	endian_swap(&vmv, sizeof(vmv));
-
-	struct __attribute__((__packed__)) {
-		uint16_t segment_temp : 10;
-		uint8_t chip : 4;
-		uint16_t die_temperature : 13;
-		uint16_t vpv : 13;
-		uint16_t vmv : 13;
-		uint8_t va_ov : 1;
-		uint8_t va_uv : 1;
-		uint8_t vd_ov : 1;
-		uint8_t vd_uv : 1;
-		uint8_t vde : 1;
-		uint8_t vdel : 1;
-		uint8_t spiflt : 1;
-		uint8_t sleep : 1;
-		uint8_t thsd : 1;
-		uint8_t tmodchk : 1;
-		uint8_t oscchk : 1;
-	} alpha_status_a_data;
-
-	alpha_status_a_data.va_ov = flt_reg->va_ov;
-	alpha_status_a_data.va_uv = flt_reg->va_uv;
-	alpha_status_a_data.vd_ov = flt_reg->vd_ov;
-	alpha_status_a_data.vd_uv = flt_reg->vd_uv;
-	alpha_status_a_data.vde = flt_reg->vde;
-	alpha_status_a_data.vdel = flt_reg->vdel;
-	alpha_status_a_data.spiflt = flt_reg->spiflt;
-	alpha_status_a_data.sleep = flt_reg->sleep;
-	alpha_status_a_data.thsd = flt_reg->thsd;
-	alpha_status_a_data.tmodchk = flt_reg->tmodchk;
-	alpha_status_a_data.oscchk = flt_reg->oscchk;
-
-	alpha_status_a_data.segment_temp = segment_temp;
-	alpha_status_a_data.chip = chip;
-	alpha_status_a_data.die_temperature = die_temperature;
-	alpha_status_a_data.vpv = vpv;
-	alpha_status_a_data.vmv = vmv;
-
+	// clang-format off
 	can_msg_t msg;
 	msg.id = ALPHA_STAT_A_CANID;
 	msg.len = ALPHA_STAT_A_SIZE;
 
-	memcpy(msg.data, &alpha_status_a_data, ALPHA_STAT_A_SIZE);
+	segment_temp *= 10;
+
+	die_temperature *= 100;
+	vpv *= 100;
+	vmv *= 1000;
+
+
+	bitstream_t alpha_status_a_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&alpha_status_a_message, bitstream_data, 8);	// Create 8-byte bitstream
+
+	bitstream_add(&alpha_status_a_message, segment_temp, 10);		// Segment Temp (10 bits)
+	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
+	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)
+	bitstream_add(&alpha_status_a_message, vmv, 13);					// Vmv (8 bits)			// Vpv (5 bits)
+	bitstream_add(&alpha_status_a_message, flt_reg->va_ov, 1);		// VA_OV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->va_uv, 1);		// VA_UV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vd_ov, 1);		// VD_OV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vd_uv, 1);		// VD_UV (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vde, 1);		// VDE (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->vdel, 1);		// VDEL (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->spiflt, 1);		// SPIFLT (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->sleep, 1);		// SLEEP (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->thsd, 1);		// THSD (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->tmodchk, 1);	// TMODCHK (1 bit)
+	bitstream_add(&alpha_status_a_message, flt_reg->oscchk, 1);	 	// OSCCHK (1 bit)
+	
+	memcpy(msg.data, &bitstream_data, ALPHA_STAT_A_SIZE);
+
+	handle_bitstream_overflow(&alpha_status_a_message, msg.id);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
 
-void send_alpha_status_b_message(uint16_t v_res, uint8_t chip, uint16_t vref2,
-				 uint16_t v_analog, uint16_t v_digital,
-				 stc_ *flt_reg)
+void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
+				 float v_analog, float v_digital, stc_ *flt_reg)
 {
-	endian_swap(&v_res, sizeof(v_res));
-	endian_swap(&vref2, sizeof(vref2));
-	endian_swap(&v_analog, sizeof(v_analog));
-	endian_swap(&v_digital, sizeof(v_digital));
-
-	struct __attribute__((__packed__)) {
-		uint16_t v_res : 13;
-		uint8_t chip : 4;
-		uint16_t vref2 : 13;
-		uint16_t v_analog : 13;
-		uint16_t v_digital : 13;
-		uint8_t otp1_med : 1;
-		uint8_t otp2_med : 1;
-	} alpha_status_b_data;
-
-	alpha_status_b_data.otp1_med = flt_reg->otp1_med;
-	alpha_status_b_data.otp2_med = flt_reg->otp2_med;
-
-	alpha_status_b_data.v_res = v_res;
-	alpha_status_b_data.chip = chip;
-	alpha_status_b_data.vref2 = vref2;
-	alpha_status_b_data.v_analog = v_analog;
-	alpha_status_b_data.v_digital = v_digital;
-
+	// clang-format off
 	can_msg_t msg;
 	msg.id = ALPHA_STAT_B_CANID;
 	msg.len = ALPHA_STAT_B_SIZE;
 
-	memcpy(msg.data, &alpha_status_b_data, ALPHA_STAT_B_SIZE);
+	v_res *= 1000;
+	vref2 *= 1000;
+	v_analog *= 1000;
+	v_digital *= 1000;
+
+	bitstream_t alpha_status_b_message;
+	uint8_t bitstream_data[8];
+	bitstream_init(&alpha_status_b_message, bitstream_data, 8);	// Create 8-byte bitstream
+
+	bitstream_add(&alpha_status_b_message, v_res, 13);				// Vres (13 bits)
+	bitstream_add(&alpha_status_b_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_b_message, vref2, 13);				// Vref2 (13 bits)
+	bitstream_add(&alpha_status_b_message, v_analog, 13);			// Vanalog (13 bits)
+	bitstream_add(&alpha_status_b_message, v_digital, 13);			// Vdigital (13 bits)
+	bitstream_add(&alpha_status_b_message, flt_reg->otp1_med, 1);	// OTP1_MED (1 bit)
+	bitstream_add(&alpha_status_b_message, flt_reg->otp2_med, 1);	// OTP2_MED (1 bit)
+	bitstream_add(&alpha_status_b_message, 0, 6);					// Extra (6 bits)
+
+	memcpy(msg.data, &bitstream_data, ALPHA_STAT_B_SIZE);
+
+	handle_bitstream_overflow(&alpha_status_b_message, msg.id);
 
 	queue_can_msg(msg);
+	// clang-format on
 }
