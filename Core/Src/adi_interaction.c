@@ -31,10 +31,10 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 					     chips[chip].cccrc.sid_pec);
 
 		if (pec_error_count > 0) {
-			printf("PEC Error: Chip %u, Count: %u\n", chip,
+			printf("PEC Error: Chip %u, Count: %u\n", chip + 1,
 			       pec_error_count);
 
-			send_pec_error_message(chip, pec_error_count);
+			send_pec_error_message(chip + 1, pec_error_count);
 		}
 
 		memset(&(chips[chip].cccrc), 0, sizeof(chips[chip].cccrc));
