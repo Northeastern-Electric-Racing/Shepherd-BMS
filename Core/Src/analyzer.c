@@ -295,6 +295,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 
 	float total_volt = 0;
 	float total_ocv = 0;
+	float total_seg_volt = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
@@ -340,6 +341,18 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			total_volt += bmsdata->chip_data[c].cell_voltages[cell];
 			total_ocv +=
 				bmsdata->chip_data[c].open_cell_voltage[cell];
+
+			total_seg_volt +=
+				bmsdata->chip_data[c].cell_voltages[cell];
+
+			/* only for NERO */
+			if (c % 2 == 0) {
+				bmsdata->segment_average_volts[c / 2] =
+					total_seg_volt /
+					((float)(NUM_CELLS_ALPHA +
+						 NUM_CELLS_BETA));
+				total_seg_volt = 0;
+			}
 		}
 	}
 

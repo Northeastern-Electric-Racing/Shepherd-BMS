@@ -285,6 +285,39 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 
 	queue_can_msg(msg);
 }
+void send_segment_volt_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		int8_t segment1_average_volt;
+		int8_t segment2_average_volt;
+		int8_t segment3_average_volt;
+		int8_t segment4_average_volt;
+		int8_t segment5_average_volt;
+		int8_t segment6_average_volt;
+
+	} segment_volt_msg_data;
+
+	segment_volt_msg_data.segment1_average_volt =
+		bmsdata->segment_average_volts[0];
+	segment_volt_msg_data.segment2_average_volt =
+		bmsdata->segment_average_volts[1];
+	segment_volt_msg_data.segment3_average_volt =
+		bmsdata->segment_average_volts[2];
+	segment_volt_msg_data.segment4_average_volt =
+		bmsdata->segment_average_volts[3];
+	segment_volt_msg_data.segment5_average_volt =
+		bmsdata->segment_average_volts[4];
+	segment_volt_msg_data.segment6_average_volt =
+		bmsdata->segment_average_volts[5];
+
+	can_msg_t msg;
+	msg.id = SEGMENT_VOLT_CANID;
+	msg.len = SEGMENT_VOLT_SIZE;
+
+	memcpy(msg.data, &segment_volt_msg_data, sizeof(segment_volt_msg_data));
+
+	queue_can_msg(msg);
+}
 
 void send_current_message(acc_data_t *bmsdata)
 {
