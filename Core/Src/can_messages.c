@@ -715,9 +715,9 @@ void send_pec_error_message(uint8_t chip_num, uint16_t pec_count)
 	endian_swap(&pec_data.pec_error_count,
 		    sizeof(pec_data.pec_error_count));
 
-	can_msg_t msg;
-	msg.id = PEC_ERROR_CANID;
-	msg.len = PEC_ERROR_SIZE;
+	can_msg_t msg = { .id = PEC_ERROR_CANID,
+			  .len = PEC_ERROR_SIZE,
+			  .data = { 0 } };
 
 	memcpy(&msg.data, &pec_data, sizeof(pec_data));
 
