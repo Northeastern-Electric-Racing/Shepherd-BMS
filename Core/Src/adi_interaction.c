@@ -2,6 +2,42 @@
 #include "adBms6830CmdList.h"
 #include "adBms6830GenericType.h"
 #include "mcuWrapper.h"
+#include "can_messages.h"
+
+/**
+ * @brief Count and reset PEC errors for all chips, then send a CAN message if needed.
+ *
+ * This function iterates through all chips, accumulates the PEC (Packet Error Code) 
+ * error count, resets the PEC error counter and Command counter, then sends a CAN message if any errors exist.
+ *
+ * @param chips Array of chips containing PEC error data.
+ */
+static void count_pec_errors(cell_asic chips[NUM_CHIPS])
+{
+	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
+		uint16_t pec_error_count =
+			(uint16_t)(chips[chip].cccrc.cfgr_pec +
+				   chips[chip].cccrc.cell_pec +
+				   chips[chip].cccrc.acell_pec +
+				   chips[chip].cccrc.scell_pec +
+				   chips[chip].cccrc.fcell_pec +
+				   chips[chip].cccrc.aux_pec +
+				   chips[chip].cccrc.raux_pec +
+				   chips[chip].cccrc.stat_pec +
+				   chips[chip].cccrc.comm_pec +
+				   chips[chip].cccrc.pwm_pec +
+				   chips[chip].cccrc.sid_pec);
+
+		if (pec_error_count > 0) {
+			printf("PEC Error: Chip %u, Count: %u\n", chip + 1,
+			       pec_error_count);
+
+			send_pec_error_message(chip + 1, pec_error_count);
+		}
+
+		memset(&(chips[chip].cccrc), 0, sizeof(chips[chip].cccrc));
+	}
+}
 
 /**
  * @brief Set a bit in a uint16
@@ -193,38 +229,7 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 		adBmsReadData(NUM_CHIPS, &chips[chip], command, type, group);
 	}
 
-	// Count PEC errors
-	uint32_t pec_error_count = 0;
-	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		// Yes, they did separate every PEC as if that mattered.
-		pec_error_count +=
-			chips[chip].cccrc.cfgr_pec + chips[chip].cccrc.sid_pec +
-			chips[chip].cccrc.cell_pec +
-			chips[chip].cccrc.acell_pec +
-			chips[chip].cccrc.scell_pec +
-			chips[chip].cccrc.fcell_pec +
-			chips[chip].cccrc.aux_pec + chips[chip].cccrc.raux_pec +
-			chips[chip].cccrc.stat_pec +
-			chips[chip].cccrc.comm_pec + chips[chip].cccrc.pwm_pec;
-
-		if (pec_error_count > 0) {
-			printf("PEC COUNT: %ld | Chip: %d | CMD: %d\n",
-			       pec_error_count, chip, type);
-		}
-
-		chips[chip].cccrc.cfgr_pec = 0;
-		chips[chip].cccrc.sid_pec = 0;
-		chips[chip].cccrc.cell_pec = 0;
-		chips[chip].cccrc.acell_pec = 0;
-		chips[chip].cccrc.scell_pec = 0;
-		chips[chip].cccrc.fcell_pec = 0;
-		chips[chip].cccrc.aux_pec = 0;
-		chips[chip].cccrc.raux_pec = 0;
-		chips[chip].cccrc.stat_pec = 0;
-		chips[chip].cccrc.comm_pec = 0;
-		chips[chip].cccrc.pwm_pec = 0;
-	}
-	pec_error_count = 0;
+	count_pec_errors(chips);
 }
 
 // --- BEGIN WRITE COMMANDS ---

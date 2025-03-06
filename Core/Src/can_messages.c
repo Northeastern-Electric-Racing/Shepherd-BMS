@@ -693,4 +693,33 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 	handle_bitstream_overflow(&alpha_status_b_message, msg.id);
 
 	queue_can_msg(msg);
+	// clang-format on
+}
+
+/**
+ * @brief Sends a CAN message containing the PEC error count for a specific chip.
+ *
+ * @param chip_num The index of the chip that reported PEC errors.
+ * @param pec_count The total number of PEC errors detected for the specified chip.
+ */
+void send_pec_error_message(uint8_t chip_num, uint16_t pec_count)
+{
+	struct __attribute__((__packed__)) {
+		uint16_t pec_error_count;
+		uint8_t chip_number;
+	} pec_data;
+
+	pec_data.chip_number = chip_num;
+	pec_data.pec_error_count = pec_count;
+
+	endian_swap(&pec_data.pec_error_count,
+		    sizeof(pec_data.pec_error_count));
+
+	can_msg_t msg;
+	msg.id = PEC_ERROR_CANID;
+	msg.len = PEC_ERROR_SIZE;
+
+	memcpy(&msg.data, &pec_data, sizeof(pec_data));
+
+	queue_can_msg(msg);
 }
