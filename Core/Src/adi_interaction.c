@@ -16,17 +16,17 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 {
 	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
 		uint16_t pec_error_count =
-					     (uint16_t)(chips[chip].cccrc.cfgr_pec +
-					     chips[chip].cccrc.cell_pec +
-					     chips[chip].cccrc.acell_pec +
-					     chips[chip].cccrc.scell_pec +
-					     chips[chip].cccrc.fcell_pec +
-					     chips[chip].cccrc.aux_pec +
-					     chips[chip].cccrc.raux_pec +
-					     chips[chip].cccrc.stat_pec +
-					     chips[chip].cccrc.comm_pec +
-					     chips[chip].cccrc.pwm_pec +
-					     chips[chip].cccrc.sid_pec);
+			(uint16_t)(chips[chip].cccrc.cfgr_pec +
+				   chips[chip].cccrc.cell_pec +
+				   chips[chip].cccrc.acell_pec +
+				   chips[chip].cccrc.scell_pec +
+				   chips[chip].cccrc.fcell_pec +
+				   chips[chip].cccrc.aux_pec +
+				   chips[chip].cccrc.raux_pec +
+				   chips[chip].cccrc.stat_pec +
+				   chips[chip].cccrc.comm_pec +
+				   chips[chip].cccrc.pwm_pec +
+				   chips[chip].cccrc.sid_pec);
 
 		if (pec_error_count > 0) {
 			printf("PEC Error: Chip %u, Count: %u\n", chip + 1,
