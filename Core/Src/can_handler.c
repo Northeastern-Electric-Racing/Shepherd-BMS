@@ -141,12 +141,17 @@ void can_receive_callback(CAN_HandleTypeDef *hcan)
 		// TODO add non crtical fault capability - could create one for failed can receieve
 		return;
 	}
+
 	new_msg.len = rx_header.DLC;
 
-	if (hcan == can1->hcan) {
-		new_msg.id = rx_header.StdId;
-	} else {
+	if (rx_header.StdId == 0) {
+		// If the message has an extended CAN ID, save the message accordingly.
 		new_msg.id = rx_header.ExtId;
+		new_msg.id_is_extended = true;
+	} else {
+		// If the message has a standard CAN ID, save the message accordingly.
+		new_msg.id = rx_header.StdId;
+		new_msg.id_is_extended = false;
 	}
 
 	queue_and_set_flag(can_inbound_queue, &new_msg, can_receive_thread,
