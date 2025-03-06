@@ -215,4 +215,12 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 				 float v_analog, float v_digital,
 				 stc_ *flt_reg);
 
+/**
+ * @brief Sends a CAN message containing the PEC error count for a specific chip.
+ *
+ * @param chip_num The index of the chip that reported PEC errors.
+ * @param pec_count The total number of PEC errors detected for the specified chip.
+ */
+void send_pec_error_message(uint8_t chip_num, uint16_t pec_count);
+
 #endif

@@ -42,6 +42,8 @@
 
 #define OVERFLOW_CANID	   0x6F1
 #define OVERFLOW_SIZE	   6
+#define PEC_ERROR_CANID	   0x6F2
+#define PEC_ERROR_SIZE	   3
 #define ALPHA_CELL_CANID   0x6FA
 #define BETA_CELL_CANID	   0x6FB
 #define CELL_MSG_SIZE	   7
