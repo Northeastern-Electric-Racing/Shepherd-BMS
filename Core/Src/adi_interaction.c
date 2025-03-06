@@ -8,17 +8,15 @@
  * @brief Count and reset PEC errors for all chips, then send a CAN message if needed.
  *
  * This function iterates through all chips, accumulates the PEC (Packet Error Code) 
- * error count, resets the PEC error counters, and sends a CAN message if any errors exist.
+ * error count, resets the PEC error counter and Command counter, then sends a CAN message if any errors exist.
  *
  * @param chips Array of chips containing PEC error data.
  */
 static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 {
-	uint16_t pec_error_count = 0U;
-
 	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
-		pec_error_count = (uint16_t)(chips[chip].cccrc.cmd_cntr +
-					     chips[chip].cccrc.cfgr_pec +
+		uint16_t pec_error_count =
+					     (uint16_t)(chips[chip].cccrc.cfgr_pec +
 					     chips[chip].cccrc.cell_pec +
 					     chips[chip].cccrc.acell_pec +
 					     chips[chip].cccrc.scell_pec +
