@@ -196,6 +196,7 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
 }
+
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
 {
 	// poll stuff like vref, etc.

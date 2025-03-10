@@ -40,6 +40,10 @@
 #define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
 
+#define OVERFLOW_CANID	   0x6F1
+#define OVERFLOW_SIZE	   6
+#define PEC_ERROR_CANID	   0x6F2
+#define PEC_ERROR_SIZE	   3
 #define ALPHA_CELL_CANID   0x6FA
 #define BETA_CELL_CANID	   0x6FB
 #define CELL_MSG_SIZE	   7
@@ -77,7 +81,7 @@ typedef enum {
 } rate_lim_t;
 
 #define DEBUG_SIZE	  8
-#define FAULT_TIMER_CANID 0x6FF
+#define FAULT_TIMER_CANID 0x6F9
 #define FAULT_TIMER_SIZE  4
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
