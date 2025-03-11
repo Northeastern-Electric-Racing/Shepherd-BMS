@@ -33,12 +33,21 @@ struct node_t *rl_bms_msgs = NULL;
 can_t *can1;
 can_t *can2;
 
-static uint32_t can1_id_list[] = {
+static uint32_t can1_id_list_standard[] = {
 	//CANID_X,
 	0x002
 };
 
-static uint32_t can2_id_list[] = {
+static uint32_t can1_id_list_extended[] = {
+	//CANID_X,
+	0x18FF50E5
+};
+
+static uint32_t can2_id_list_standard[] = {
+	//CANID_X,
+};
+
+static uint32_t can2_id_list_extended[] = {
 	//CANID_X,
 	0x18FF50E5
 };
@@ -108,19 +117,13 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
 	assert(can2);
 
 	can1->hcan = hcan1;
-
-	uint32_t can1_id_list_size_four[4] = { can1_id_list[0], can1_id_list[0],
-					       can1_id_list[0],
-					       can1_id_list[0] };
-	assert(!can_add_filter(can1, can1_id_list_size_four));
+	assert(!can_add_filter_standard(can1, can1_id_list_standard, 1));
+	assert(!can_add_filter_extended(can1, can1_id_list_extended, 1));
 	assert(!can_init(can1));
 
 	can2->hcan = hcan2;
-
-	uint32_t can2_id_list_size_four[4] = { can2_id_list[0], can2_id_list[0],
-					       can2_id_list[0],
-					       can2_id_list[0] };
-	assert(!can_add_filter(can2, can2_id_list_size_four));
+	assert(!can_add_filter_standard(can2, can2_id_list_standard, 0));
+	assert(!can_add_filter_extended(can2, can2_id_list_extended, 1));
 	assert(!can_init(can2));
 
 	can_outbound_queue =
