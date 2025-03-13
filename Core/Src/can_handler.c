@@ -35,16 +35,17 @@ can_t *can2;
 
 static uint32_t can1_id_list_standard[] = {
 	//CANID_X,
-	0x002
+	0x002, 0x6F9
 };
 
 static uint32_t can1_id_list_extended[] = {
 	//CANID_X,
-	0x18FF50E5
+	0x18FF50E5,
 };
 
 static uint32_t can2_id_list_standard[] = {
 	//CANID_X,
+	0x6F9
 };
 
 static uint32_t can2_id_list_extended[] = {
@@ -117,14 +118,14 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
 	assert(can2);
 
 	can1->hcan = hcan1;
-	assert(!can_add_filter_standard(can1, can1_id_list_standard, 1));
-	assert(!can_add_filter_extended(can1, can1_id_list_extended, 1));
 	assert(!can_init(can1));
+	assert(!can_add_filter_standard(can1, can1_id_list_standard));
+	assert(!can_add_filter_extended(can1, can1_id_list_extended));
 
 	can2->hcan = hcan2;
-	assert(!can_add_filter_standard(can2, can2_id_list_standard, 0));
-	assert(!can_add_filter_extended(can2, can2_id_list_extended, 1));
 	assert(!can_init(can2));
+	assert(!can_add_filter_standard(can2, can2_id_list_standard));
+	assert(!can_add_filter_extended(can2, can2_id_list_extended));
 
 	can_outbound_queue =
 		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
@@ -248,7 +249,8 @@ void vCanReceive(void *pv_params)
 				  osWaitForever);
 		while (osOK ==
 		       osMessageQueueGet(can_inbound_queue, &msg, 0U, 0U)) {
-			printf("RECIEVED MESSAGE: %lu", msg.id);
+			printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nRECIEVED MESSAGE: %X\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+			       msg.id);
 			switch (msg.id) {
 			default:
 				break;
