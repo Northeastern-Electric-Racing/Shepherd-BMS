@@ -146,41 +146,41 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 	read_status_register_c(chips);
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		if (chips[chip].statc.va_ov) {
-			printf("A OV FLT\n");
+			//printf("A OV FLT\n");
 		}
 		if (chips[chip].statc.va_uv) {
-			printf("A UV FLT\n");
+			//printf("A UV FLT\n");
 		}
 		if (chips[chip].statc.vd_ov) {
-			printf("D OV FLT\n");
+			//printf("D OV FLT\n");
 		}
 		if (chips[chip].statc.vd_uv) {
-			printf("D OV FLT\n");
+			//printf("D OV FLT\n");
 		}
 		if (chips[chip].statc.vde) {
-			printf("VDE FLT\n");
+			//printf("VDE FLT\n");
 		}
 		if (chips[chip].statc.vdel) {
-			printf("VDEL FLT\n");
+			//printf("VDEL FLT\n");
 		}
 		if (chips[chip].statc.spiflt) {
-			printf("SPI SLV FLT\n");
+			//printf("SPI SLV FLT\n");
 		}
 		if (chips[chip].statc.sleep) {
-			printf("SLEEP OCCURED\n");
+			//printf("SLEEP OCCURED\n");
 		}
 		if (chips[chip].statc.thsd) {
-			printf("THERMAL FLT\n");
+			//printf("THERMAL FLT\n");
 		}
 		if (chips[chip].statc.tmodchk) {
-			printf("TMODE FLT\n");
+			//printf("TMODE FLT\n");
 		}
 
 		if (chips[chip].statc.otp1_med) {
-			printf("CMED? FLT\n");
+			//printf("CMED? FLT\n");
 		}
 		if (chips[chip].statc.otp2_med) {
-			printf("SMED? FLT\n");
+			//printf("SMED? FLT\n");
 		}
 	}
 	// clear them.  they will still be in memory for usage until this function or read_status_registers is called

@@ -341,14 +341,14 @@ bool sm_fault_eval(fault_eval_t *item)
 
 	if (is_timer_active(&item->timer)) {
 		if (!fault_present) {
-			printf("\t\t\t*******Fault cleared: %s\r\n", item->id);
+			//printf("\t\t\t*******Fault cleared: %s\r\n", item->id);
 			cancel_timer(&item->timer);
 			send_fault_timer_message(0, item->code, item->data_1);
 			return 0;
 		}
 
 		if (is_timer_expired(&item->timer) && fault_present) {
-			printf("\t\t\t*******Faulted: %s\r\n", item->id);
+			//printf("\t\t\t*******Faulted: %s\r\n", item->id);
 			send_fault_timer_message(2, item->code, item->data_1);
 			return item->code;
 		}
@@ -359,7 +359,7 @@ bool sm_fault_eval(fault_eval_t *item)
 	}
 
 	else if (!is_timer_active(&item->timer) && fault_present) {
-		printf("\t\t\t*******Starting fault timer: %s\r\n", item->id);
+		//printf("\t\t\t*******Starting fault timer: %s\r\n", item->id);
 		start_timer(&item->timer, item->timeout);
 		send_fault_timer_message(1, item->code, item->data_1);
 
