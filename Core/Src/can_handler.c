@@ -35,12 +35,10 @@ can_t *can2;
 
 static uint32_t can1_id_list_standard[] = {
 	//CANID_X,
-	0x002
 };
 
 static uint32_t can1_id_list_extended[] = {
 	//CANID_X,
-	0x18FF50E5, 0x5A1
 };
 
 static uint32_t can2_id_list_standard[] = {
@@ -49,7 +47,7 @@ static uint32_t can2_id_list_standard[] = {
 
 static uint32_t can2_id_list_extended[] = {
 	//CANID_X,
-	0x18FF50E5, 0x5A1
+	0x18FF50E5,
 };
 
 osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
@@ -118,13 +116,13 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
 
 	can1->hcan = hcan1;
 	assert(!can_init(can1));
-	assert(!can_add_filter_standard(can1, can1_id_list_standard, 1));
-	assert(!can_add_filter_extended(can1, can1_id_list_extended, 2));
+	assert(!can_add_filter_standard(can1, can1_id_list_standard));
+	assert(!can_add_filter_extended(can1, can1_id_list_extended));
 
 	can2->hcan = hcan2;
 	assert(!can_init(can2));
-	assert(!can_add_filter_standard(can2, can2_id_list_standard, 0));
-	assert(!can_add_filter_extended(can2, can2_id_list_extended, 2));
+	assert(!can_add_filter_standard(can2, can2_id_list_standard));
+	assert(!can_add_filter_extended(can2, can2_id_list_extended));
 
 	can_outbound_queue =
 		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
