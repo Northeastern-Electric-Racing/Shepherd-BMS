@@ -33,22 +33,22 @@ struct node_t *rl_bms_msgs = NULL;
 can_t *can1;
 can_t *can2;
 
-static uint32_t can1_id_list_standard[] = {
+static uint16_t can1_id_list_standard[4] = {
 	//CANID_X,
 	0x002, 0x6F9
 };
 
-static uint32_t can1_id_list_extended[] = {
+static uint32_t can1_id_list_extended[2] = {
 	//CANID_X,
 	0x18FF50E5,
 };
 
-static uint32_t can2_id_list_standard[] = {
+static uint16_t can2_id_list_standard[4] = {
 	//CANID_X,
 	0x6F9
 };
 
-static uint32_t can2_id_list_extended[] = {
+static uint32_t can2_id_list_extended[2] = {
 	//CANID_X,
 	0x18FF50E5
 };
