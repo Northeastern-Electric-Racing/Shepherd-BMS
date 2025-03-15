@@ -41,9 +41,9 @@ extern BMSState_t current_state;
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
 // #define DEBUG_STATS
-#define DEBUG_VOLTAGES
+//#define DEBUG_VOLTAGES
 // #define DEBUG_RAW_VOLTAGES
-#define DEBUG_RAW_VOLTAGES_FORMATTED
+//#define DEBUG_RAW_VOLTAGES_FORMATTED
 // #define DEBUG_OCV
 // #define DEUBG_THERMS
 // #define DEBUG_OTHER

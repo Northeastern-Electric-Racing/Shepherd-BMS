@@ -155,23 +155,30 @@ void calc_cell_temps(acc_data_t *bmsdata)
 					    .raux.ra_codes[THERM_MAP[cell]];
 
 			bmsdata->chip_data[chip].cell_temp[cell] =
-				calc_cell_temp(x);
+				calc_cell_temp(getVoltage(x));
 		}
 
-		// Calculate onboard therm temps
+		// Calculate onboard therm temps and chip temp
 
 		if (!bmsdata->chip_data[chip].alpha) {
 			// Take average of both onboard therms
 			bmsdata->chip_data[chip].on_board_temp =
-				(calc_cell_temp((bmsdata->chips[chip]
-							 .raux.ra_codes[6])) +
-				 calc_cell_temp(bmsdata->chips[chip]
-							.raux.ra_codes[7])) /
+				(calc_cell_temp(getVoltage(
+					 bmsdata->chips[chip].raux.ra_codes[6])) +
+				 calc_cell_temp(getVoltage(
+					 bmsdata->chips[chip]
+						 .raux.ra_codes[7]))) /
 				2;
 		} else {
-			bmsdata->chip_data[chip].on_board_temp = calc_cell_temp(
-				bmsdata->chips[chip].raux.ra_codes[7]);
+			bmsdata->chip_data[chip].on_board_temp =
+				calc_cell_temp(getVoltage(
+					bmsdata->chips[chip].raux.ra_codes[7]));
 		}
+
+		/* set the die temp */
+		bmsdata->chip_data[chip].die_temp =
+			(getVoltage(bmsdata->chips[chip].stata.itmp) / 0.0075) -
+			273;
 	}
 
 	/*
@@ -220,6 +227,8 @@ void calc_pack_temps(acc_data_t *bmsdata)
 	bmsdata->min_temp.cellNum = 0;
 	bmsdata->min_temp.chipIndex = 0;
 
+	bmsdata->max_chiptemp.val = 0;
+
 	float total_temp = 0;
 	float total_seg_temp = 0;
 
@@ -253,6 +262,14 @@ void calc_pack_temps(acc_data_t *bmsdata)
 				total_seg_temp /
 				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
 			total_seg_temp = 0;
+		}
+
+		if (bmsdata->max_chiptemp.val <
+		    bmsdata->chip_data[c].die_temp) {
+			bmsdata->max_chiptemp = (crit_chipval_t){
+				.chipNum = c,
+				.val = bmsdata->chip_data[c].die_temp
+			};
 		}
 	}
 

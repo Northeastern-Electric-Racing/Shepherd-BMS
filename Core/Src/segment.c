@@ -242,9 +242,10 @@ void segment_configure_balancing(
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&bmsdata->chips[chip], cell + 1,
+			set_cell_discharge(&bmsdata->chips[chip], cell,
 					   discharge_config[chip][cell]);
-			set_mute_state(&bmsdata->chips[chip], false);
+			if (discharge_config[chip][cell] > 0)
+				set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
 	write_config_regs(bmsdata->chips);

@@ -9,7 +9,7 @@ extern BMSState_t current_state;
 /* global defined in segment.c that keeps an eye on the number of crc errors */
 extern uint16_t crc_error_check;
 
-#define NUM_FAULTS 8
+#define NUM_FAULTS 9
 
 /**
  * @brief Returns if we want to balance cells during a particular frame
