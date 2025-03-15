@@ -4,7 +4,6 @@
 #include "mcuWrapper.h"
 #include "can_messages.h"
 
-
 /**
  * @brief Count and reset PEC errors for all chips, then send a CAN message if needed.
  *
@@ -40,7 +39,6 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 		// printf("8 %d\n", chips[chip].cccrc.comm_pec);
 		// printf("9 %d\n", chips[chip].cccrc.pwm_pec);
 		// printf("10 %d\n\n\n", chips[chip].cccrc.sid_pec);
-
 
 		if (pec_error_count > 0) {
 			printf("PEC Error: Chip %u, Count: %u\n", chip,
@@ -216,8 +214,8 @@ void adbms_wake_core()
  * @param type Register type to write to.
  * @param group Group of registers to write to.
  */
-void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2],
-		      TYPE type, GRP group)
+void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
+		      GRP group)
 {
 	adbms_wake_isospi();
 
@@ -232,8 +230,8 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2],
  * @param type Register type to write to.
  * @param group Group of registers to write to.
  */
-void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2],
-		     TYPE type, GRP group)
+void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
+		     GRP group)
 {
 	adbms_wake_isospi();
 
