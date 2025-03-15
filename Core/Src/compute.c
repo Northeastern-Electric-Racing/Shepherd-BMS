@@ -116,89 +116,19 @@ void compute_set_fault(int fault_state)
 
 int16_t compute_get_pack_current()
 {
-	// static const float GAIN = 5.00; // mV/A
-	// static const float OFFSET = 0.0; // mV
-	// static const uint8_t num_samples = 10;
-	// static int16_t current_accumulator = 0.0; // A
-
-	// /* starting equation : Vout = Vref + Voffset  + (Gain * Ip) */
-	// float ref_voltage = read_ref_voltage();
-	// float vout = read_vout();
-
-	// ref_voltage *= 1000;// convert to mV
-	// vout *= 1000;
-
-	// int16_t current = (vout - ref_voltage - OFFSET) / (GAIN); // convert to V
-
-	// /* Low Pass Filter of Current*/
-	// current = ((current_accumulator * (num_samples - 1)) + current) /
-	// num_samples; current_accumulator = current;
-
-	// return current;
-
-	static const float CURRENT_LOWCHANNEL_MAX = 75.0; // Amps
-	static const float CURRENT_LOWCHANNEL_MIN = -75.0; // Amps
-	// static const float CURRENT_SUPPLY_VOLTAGE = 5.038;
 	static const float CURRENT_ADC_RESOLUTION = 5.0 / MAX_ADC_RESOLUTION;
+	static const float SENSOR_V_REF = 2.5;
 
-	static const float CURRENT_LOWCHANNEL_OFFSET =
-		2.500; // Calibrated with current = 0A
-	static const float CURRENT_HIGHCHANNEL_OFFSET =
-		2.500; // Calibrated with current = 0A
-	/*
-	static const float HIGHCHANNEL_GAIN =
-		1 / 0.0041; // Calibrated with  current = 5A, 10A, 20A
-	static const float LOWCHANNEL_GAIN = 1 / 0.0267;
-	*/
+	// Get ADC reading
+	uint32_t adcValue;
+	memcpy(&adcValue, &channel_1_buf[0],
+	       sizeof(channel_1_buf[0])); // From the rank of ADC_CHANNEL_15
 
-	uint32_t raw_high_current;
-	uint32_t raw_low_current;
-	uint32_t ref_5V;
+	// Convert ADC reading to volts and amps
+	float volts = ((float)adcValue * CURRENT_ADC_RESOLUTION) - SENSOR_V_REF;
+	float amps = volts / 0.0125; // Sensativity of 0.0125 Volts per Amp
 
-	memcpy(&raw_high_current, &raw_high_current_buf,
-	       sizeof(raw_high_current_buf));
-
-	memcpy(&raw_low_current, &channel_1_buf[0],
-	       sizeof(channel_1_buf[0])); //From the rank of ADC_CHANNEL_15
-
-	memcpy(&ref_5V, &channel_1_buf[1],
-	       sizeof(channel_1_buf[1])); //From the rank of ADC_CHANNEL_9
-
-	int16_t ref_voltage_raw =
-		(int16_t)(1000.0f * ((float)ref_5V * CURRENT_ADC_RESOLUTION));
-
-	int16_t high_current_voltage_raw =
-		(int16_t)(1000.0f *
-			  ((float)raw_high_current * CURRENT_ADC_RESOLUTION));
-
-	high_current_voltage_raw =
-		(int16_t)(5000.0f * high_current_voltage_raw /
-			  (float)ref_voltage_raw);
-
-	int16_t high_current = (high_current_voltage_raw -
-				(1000 * CURRENT_HIGHCHANNEL_OFFSET)) *
-			       (1 / 4.0f); //* (HIGHCHANNEL_GAIN/100.0f))/1000;
-
-	int16_t low_current_voltage_raw =
-		(int16_t)(1000.0f *
-			  ((float)raw_low_current * CURRENT_ADC_RESOLUTION));
-	low_current_voltage_raw = (int16_t)(5000.0f * low_current_voltage_raw /
-					    (float)ref_voltage_raw);
-
-	int16_t low_current = (float)(low_current_voltage_raw -
-				      (1000 * CURRENT_LOWCHANNEL_OFFSET)) *
-			      (1 / 26.7); //* (LOWCHANNEL_GAIN/100.0f))/1000;
-
-	// If the current is scoped within the range of the low channel, use the low
-	// channel
-
-	if ((low_current < CURRENT_LOWCHANNEL_MAX - 5.0 && low_current >= 0) ||
-	    (low_current > CURRENT_LOWCHANNEL_MIN + 5.0 && low_current < 0)) {
-		// printf("\rLow Current: %d\n", -low_current);
-		return -low_current;
-	}
-
-	return -high_current;
+	return amps;
 }
 
 void change_adc1_channel(uint8_t channel)
