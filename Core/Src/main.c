@@ -1322,8 +1322,6 @@ struct __attribute__((__packed__)) git_version_data {
  */
 void send_git_version_message() {
   //const struct git_hash_data git_hash_data2 = {GIT_SHORTHASH , GIT_AUTHORHASH};
-  printf("LOCAL %d", GIT_IS_LOCAL_CLEAN);
-  printf("UP %d", GIT_IS_UPSTREAM_CLEAN);
   const struct git_version_data git_version_data2 = {GIT_MAJOR_VERSION , GIT_MINOR_VERSION, GIT_PATCH_VERSION, GIT_IS_LOCAL_CLEAN, GIT_IS_UPSTREAM_CLEAN };
   
   can_msg_t msg1 = { .id = 0x69A, .len = sizeof(git_version_data2)};

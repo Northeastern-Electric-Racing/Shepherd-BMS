@@ -144,6 +144,15 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].statc.cs_flt > 0) {
+			printf("C VS S MISMATCH on cells ");
+			for (int i = 0; i < 16; i++) {
+				if (NER_GET_BIT(chips[chip].statc.cs_flt, i)) {
+					printf("%d, ", i);
+				}
+			}
+			printf("\n");
+		}
 		if (chips[chip].statc.va_ov) {
 			printf("A OV FLT c%d\n", chip);
 		}
