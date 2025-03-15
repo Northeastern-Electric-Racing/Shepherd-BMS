@@ -28,11 +28,23 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 				   chips[chip].cccrc.pwm_pec +
 				   chips[chip].cccrc.sid_pec);
 
+		// printf("1 %d\n", chips[chip].cccrc.cfgr_pec);
+		// printf("b %d\n", chips[chip].cccrc.cell_pec);
+		// printf("2 %d\n", chips[chip].cccrc.acell_pec);
+		// printf("3 %d\n", chips[chip].cccrc.scell_pec);
+		// printf("4 %d\n", chips[chip].cccrc.fcell_pec);
+		// printf("5 %d\n", chips[chip].cccrc.aux_pec);
+		// printf("6 %d\n", chips[chip].cccrc.raux_pec);
+		// printf("7 %d\n", chips[chip].cccrc.stat_pec);
+		// printf("8 %d\n", chips[chip].cccrc.comm_pec);
+		// printf("9 %d\n", chips[chip].cccrc.pwm_pec);
+		// printf("10 %d\n\n\n", chips[chip].cccrc.sid_pec);
+
 		if (pec_error_count > 0) {
-			printf("PEC Error: Chip %u, Count: %u\n", chip + 1,
+			printf("PEC Error: Chip %u, Count: %u\n", chip,
 			       pec_error_count);
 
-			send_pec_error_message(chip + 1, pec_error_count);
+			send_pec_error_message(chip, pec_error_count);
 		}
 
 		memset(&(chips[chip].cccrc), 0, sizeof(chips[chip].cccrc));
@@ -207,9 +219,7 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 {
 	adbms_wake_isospi();
 
-	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		adBmsWriteData(NUM_CHIPS, &chips[chip], command, type, group);
-	}
+	adBmsWriteData(NUM_CHIPS, &chips[0], command, type, group);
 }
 
 /**
@@ -225,9 +235,7 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 {
 	adbms_wake_isospi();
 
-	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		adBmsReadData(NUM_CHIPS, &chips[chip], command, type, group);
-	}
+	adBmsReadData(NUM_CHIPS, &chips[0], command, type, group);
 
 	count_pec_errors(chips);
 }
