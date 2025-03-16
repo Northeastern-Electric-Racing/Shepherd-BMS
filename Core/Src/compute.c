@@ -13,27 +13,18 @@
 uint8_t fan_speed;
 bool is_charging_enabled;
 enum { CHARGE_ENABLED, CHARGE_DISABLED };
-uint32_t channel_1_buf[2];
-uint32_t raw_high_current_buf;
+uint32_t channel_1_buf;
 
 extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
 extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
 
 const uint32_t fan_channels[6] = { TIM_CHANNEL_3, TIM_CHANNEL_1, TIM_CHANNEL_4,
 				   TIM_CHANNEL_3, TIM_CHANNEL_2, TIM_CHANNEL_1 };
-
-uint32_t adc_values[2] = { 0 };
-
-/* private function defintions */
-float read_ref_voltage();
-float read_vout();
-void change_adc1_channel(uint8_t channel);
 
 uint8_t compute_init(acc_data_t *bmsdata)
 {
@@ -60,11 +51,6 @@ uint8_t compute_init(acc_data_t *bmsdata)
 	//DMA for first ADC channel -- raw_low_current and ref_5V
 	assert(!HAL_ADC_Start_DMA(&hadc1, channel_1_buf,
 				  sizeof(channel_1_buf) / sizeof(uint32_t)));
-
-	//DMA for second ADC channel -- raw_high_current
-	assert(!HAL_ADC_Start_DMA(&hadc2, &raw_high_current_buf,
-				  sizeof(raw_high_current_buf) /
-					  sizeof(uint32_t)));
 
 	return 0;
 }
@@ -124,8 +110,8 @@ float compute_get_pack_current()
 
 	// Get ADC reading
 	uint32_t adcValue;
-	memcpy(&adcValue, &channel_1_buf[0],
-	       sizeof(channel_1_buf[0])); // From the rank of ADC_CHANNEL_15
+	memcpy(&adcValue, &channel_1_buf,
+	       sizeof(channel_1_buf)); // From the rank of ADC_CHANNEL_15
 
 	// Convert ADC reading to volts and amps
 	float volts =
@@ -134,20 +120,4 @@ float compute_get_pack_current()
 	float amps = volts / 0.0125; // Sensativity of 0.0125 Volts per Amp
 
 	return amps;
-}
-
-void change_adc1_channel(uint8_t channel)
-{
-	ADC_ChannelConfTypeDef sConfig = { 0 };
-
-	if (channel == REF_CHANNEL)
-		sConfig.Channel = ADC_CHANNEL_9;
-	else if (channel == VOUT_CHANNEL)
-		sConfig.Channel = ADC_CHANNEL_15;
-
-	sConfig.Rank = 1;
-	sConfig.SamplingTime = ADC_SAMPLETIME_3CYCLES;
-	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
-		Error_Handler();
-	}
 }
