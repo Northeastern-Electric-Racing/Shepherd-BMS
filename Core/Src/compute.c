@@ -116,6 +116,8 @@ void compute_set_fault(int fault_state)
 
 float compute_get_pack_current()
 {
+	// For LA37S050S05KM Current Sensor
+
 	static const float CURRENT_ADC_RESOLUTION = 3.3 / MAX_ADC_RESOLUTION;
 	static const float SENSOR_V_REF = 2.5; // From LA37S050S05KM Data Sheet
 	static const float VOLTAGE_DIVIDER = (3.0 / 5.0); // 2k and 3k resistors
