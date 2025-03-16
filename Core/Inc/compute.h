@@ -72,4 +72,16 @@ int16_t compute_get_pack_current();
  */
 void compute_set_fault(int fault_state);
 
+/**
+ * @brief blinks debug LED.
+ */
+void toggle_adc_bms_default_led();
+
+/**
+ * @brief turns LED on or off, for adc polling.A
+ * 
+ * @param mode
+ */
+void set_adc_bms_poll_led(int mode);
+
 #endif // COMPUTE_H

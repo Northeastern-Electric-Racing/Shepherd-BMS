@@ -216,3 +216,13 @@ void change_adc1_channel(uint8_t channel)
 		Error_Handler();
 	}
 }
+
+void toggle_adc_bms_default_led() 
+{
+	HAL_GPIO_TogglePin(D, Debug_LED_Pin);
+}
+
+void set_adc_bms_poll_led(int mode) 
+{
+	HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, mode);
+}

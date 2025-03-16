@@ -141,6 +141,14 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 	}
 }
 
+uint32_t adBmsPollAdc_indicator(uint8_t poll_type) 
+{
+	set_adc_bms_poll_led(1);
+	uint32_t result = adBmsPollAdc(poll_type);
+	set_adc_bms_poll_led(0);
+	return result;
+}
+
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
