@@ -127,6 +127,8 @@ void vDebugMode(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
+	uint16_t time_per_chip = 1000 / NUM_CHIPS;
+
 	while (69 < 420) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
@@ -155,7 +157,8 @@ void vDebugMode(void *pv_params)
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 (cell + 1)) &
 						1);
-				osDelay(20 / NUM_CHIPS);
+				// split half the time amongst the cells (over 2)
+				osDelay(time_per_chip / 2 / num_cells / 2);
 			}
 
 			// Send chip status messages
@@ -179,6 +182,8 @@ void vDebugMode(void *pv_params)
 						       bmsdata->chips[chip]
 							       .aux
 							       .a_codes[11]));
+				// wait for 1/4 the chip time
+				osDelay(time_per_chip / 4);
 				send_beta_status_b_message(
 					getVoltage(bmsdata->chips[chip]
 							   .stata.vref2),
@@ -211,6 +216,8 @@ void vDebugMode(void *pv_params)
 						 bmsdata->chips[chip]
 							 .aux.a_codes[10])),
 					&bmsdata->chips[chip].statc);
+				// wait for 1/4 the chip time
+				osDelay(time_per_chip / 4);
 				send_alpha_status_b_message(
 					getVoltage(
 						bmsdata->chips[chip].statb.vr4k),
@@ -223,6 +230,8 @@ void vDebugMode(void *pv_params)
 						bmsdata->chips[chip].statb.vd),
 					&bmsdata->chips[chip].statc);
 			}
+			// wait for 1/4 the chip time
+			osDelay(time_per_chip / 4);
 		}
 	}
 }

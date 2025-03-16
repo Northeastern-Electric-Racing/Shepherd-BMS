@@ -493,6 +493,7 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	queue_can_msg(msg);
 }
 
+// verified by Jack on 3/17/2025 for beta and alpha chip 0
 void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 			    float voltage_b, uint8_t chip_ID, uint8_t cell_a,
 			    uint8_t cell_b, bool discharging_a,
@@ -506,6 +507,19 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 		msg.id = BETA_CELL_CANID;
 	}
 
+	// patch bc 0 to 4
+	chip_ID /= 2;
+	
+
+	// if (alpha) {
+	// 	printf("ALPHA: c%d\n", chip_ID);
+	// } else {
+	// 	printf("BETA: c%d\n", chip_ID);
+	// }
+	// printf("TEMP %d: %f\n", cell_a, temperature);
+	// printf("VOLT %d: %f  b%d\n", cell_a, voltage_a, discharging_a);
+	// printf("VOLT %d: %f  b%d\n", cell_b, voltage_b, discharging_b);
+
 	/* Multiply data by scaling factor before converuting to int */
 	temperature *= 10;
 	voltage_a *= 1000;
@@ -518,9 +532,9 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	bitstream_add(&cell_data_message, temperature, 10); 			// Cell temperature (10 bits)
 	bitstream_add(&cell_data_message, voltage_a, 13);   			// Voltage A (13 bits)
 	bitstream_add(&cell_data_message, voltage_b, 13);   			// Voltage B (13 bits)
-	bitstream_add(&cell_data_message, reverse_short(chip_ID), 4);   // Chip ID (4 bits)
-	bitstream_add(&cell_data_message, reverse_short(cell_a), 4);    // Cell A (4 bits)
-	bitstream_add(&cell_data_message, reverse_short(cell_b), 4);    // Cell B (4 bits)
+	bitstream_add(&cell_data_message, chip_ID, 4);   // Chip ID (4 bits)
+	bitstream_add(&cell_data_message, cell_a, 4);    // Cell A (4 bits)
+	bitstream_add(&cell_data_message, cell_b, 4);    // Cell B (4 bits)
 	bitstream_add(&cell_data_message, discharging_a, 1); 			// Discharging A (1 bit)
 	bitstream_add(&cell_data_message, discharging_b, 1); 			// Discharging B (1 bit)
 	bitstream_add(&cell_data_message, 0, 6);             			// Extra (6 bits)
@@ -532,12 +546,22 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	queue_can_msg(msg);
 }
 
+// TODO confirm cell 10 vs 11?. Jack verified VPV wil chip 0 on 3/17/2025
 void send_beta_status_a_message(float cell_temperature, float voltage,
 				bool discharging, uint8_t chip,
 				float segment_temperature,
 				float die_temperature, float vpv)
 {
 	can_msg_t msg = { .id = BETA_STAT_A_CANID, .len = BETA_STAT_A_SIZE, .data = { 0 } };
+
+	// patch bc 0 to 4
+	chip /= 2;
+
+	// printf("BETA Chip: %d\n", chip);
+	// printf("VOLT 10: %f, b%d\n", voltage, discharging);
+	// printf("SegTemp: %f\n", segment_temperature);
+	// printf("DieTemp: %f\n", die_temperature);
+	// printf("VPV: %f\n", vpv);
 
 	cell_temperature *= 10;
 	voltage *= 1000;
@@ -547,15 +571,21 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 
 	bitstream_t beta_status_a_message;
 	uint8_t bitstream_data[8];
-	bitstream_init(&beta_status_a_message, bitstream_data, 8); 		// Create 8-byte bitstream
-	bitstream_add(&beta_status_a_message, cell_temperature, 10); 	// Cell temperature (10 bits)
-	bitstream_add(&beta_status_a_message, voltage, 13); 			// Voltage (13 bits)
-	bitstream_add(&beta_status_a_message, discharging, 1); 			// Discharging (1 bit)
-	bitstream_add(&beta_status_a_message, reverse_short(chip), 4); 	// Chip ID (4 bits)
-	bitstream_add(&beta_status_a_message, segment_temperature, 10); // Segment temperature (10 bits)
-	bitstream_add(&beta_status_a_message, die_temperature, 13); 	// Die temperature (13 bits)
-	bitstream_add(&beta_status_a_message, vpv, 12);					// Vpv (12 bits)
-	bitstream_add(&beta_status_a_message, 0, 1); 					// Extra (1 bit)
+	bitstream_init(&beta_status_a_message, bitstream_data,
+		       8); // Create 8-byte bitstream
+
+	bitstream_add(&beta_status_a_message, cell_temperature,
+		      10); // Cell temperature (10 bits)
+	bitstream_add(&beta_status_a_message, voltage, 13); // Voltage (13 bits)
+	bitstream_add(&beta_status_a_message, discharging,
+		      1); // Discharging (1 bit)
+	bitstream_add(&beta_status_a_message, chip,
+		      4); // Chip ID (4 bits)
+	bitstream_add(&beta_status_a_message, segment_temperature,
+		      10); // Segment temperature (10 bits)
+	bitstream_add(&beta_status_a_message, die_temperature,
+		      13); // Die temperature (13 bits)
+	bitstream_add(&beta_status_a_message, vpv, 13); // Vpv (12 bits)
 
 	memcpy(msg.data, &bitstream_data, BETA_STAT_A_SIZE);
 
@@ -564,10 +594,21 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 	queue_can_msg(msg);
 }
 
+// verified by Jack on chip 0, 3/12/2025.
 void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 				uint8_t chip, float v_res, float vmv)
 {
 	can_msg_t msg = { .id = BETA_STAT_B_CANID, .len = BETA_STAT_B_SIZE, .data = { 0 } };
+
+	// patch bc 0 to 4
+	chip /= 2;
+
+	// printf("BETA Chip: %d\n", chip);
+	// printf("Vref2 %f\n", vref2);
+	// printf("v_analog %f\n", v_analog);
+	// printf("v_digital %f\n", v_digital);
+	// printf("v_res %f\n", v_res);
+	// printf("vmv %f\n", vmv);
 
 	vref2 *= 1000;
 	v_analog *= 100;
@@ -582,7 +623,7 @@ void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 	bitstream_add(&beta_status_b_message, vref2, 13); 				// Vref2 (13 bits)
 	bitstream_add(&beta_status_b_message, v_analog, 10); 			// Vanalog (10 bits)
 	bitstream_add(&beta_status_b_message, v_digital, 10); 			// Vdigital (10 bits)
-	bitstream_add(&beta_status_b_message, reverse_short(chip), 4); 	// Chip ID (4 bits)
+	bitstream_add(&beta_status_b_message, chip, 4); 	// Chip ID (4 bits)
 	bitstream_add(&beta_status_b_message, v_res, 13); 				// Vres (13 bits)
 	bitstream_add(&beta_status_b_message, vmv, 13); 				// Vmv (13 bits)
 	bitstream_add(&beta_status_b_message, 0, 1); 					// Extra (1 bit)
@@ -594,18 +635,23 @@ void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 	queue_can_msg(msg);
 }
 
+// verified by Jack on chip 0 3/12/2025.  For some reason OTP1_MED triggering without print?
 void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 {
 	can_msg_t msg = { .id = BETA_STAT_C_CANID, .len = BETA_STAT_C_SIZE, .data = { 0 } };
+
+	// patch bc 0 to 4
+	chip /= 2;
 
 	bitstream_t beta_status_c_message;
 	uint8_t bitstream_data[3];
 	bitstream_init(&beta_status_c_message, bitstream_data, 3); // Create 3-byte bitstream
 
-	bitstream_add(&beta_status_c_message, reverse_short(chip), 1);	// Chip ID (4 bits)
+	bitstream_add(&beta_status_c_message, chip, 4);	// Chip ID (4 bits)
 	bitstream_add(&beta_status_c_message, flt_reg->va_ov, 1);		// VA_OV (1 bit)
 	bitstream_add(&beta_status_c_message, flt_reg->va_uv, 1);		// VA_UV (1 bit)
 	bitstream_add(&beta_status_c_message, flt_reg->vd_ov, 1);		// VD_OV (1 bit)
+	bitstream_add(&beta_status_c_message, flt_reg->vd_uv, 1);		// VD_OV (1 bit)
 	bitstream_add(&beta_status_c_message, flt_reg->vde, 1);			// VDE (1 bit)
 	bitstream_add(&beta_status_c_message, flt_reg->vdel, 2);		// VDEL (2 bits)
 	bitstream_add(&beta_status_c_message, flt_reg->spiflt, 1);		// SPIFLT (1 bit)
@@ -624,11 +670,18 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 	queue_can_msg(msg);
 }
 
+// verified 3/17/2025 for chip 0 by Jack, EXCLUDING VMV (see TODO)
 void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 				 float die_temperature, float vpv, float vmv,
 				 stc_ *flt_reg)
 {
 	can_msg_t msg = { .id = ALPHA_STAT_A_CANID, .len = ALPHA_STAT_A_SIZE, .data = { 0 } };
+
+
+	// printf("SegTemp %f\n", segment_temp);
+	// printf("DieTemp %f\n", die_temperature);
+	// printf("VPV %f\n", vpv);
+	// printf("VMV %f\n", vmv);
 
 	segment_temp *= 10;
 
@@ -645,7 +698,8 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
 	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)
-	bitstream_add(&alpha_status_a_message, vmv, 13);				// Vmv (8 bits)			// Vpv (5 bits)
+	// TODO : VMV could be negative, how is that gonna work?
+	bitstream_add(&alpha_status_a_message, vmv, 13);					// Vmv (8 bits)			// Vpv (5 bits)
 	bitstream_add(&alpha_status_a_message, flt_reg->va_ov, 1);		// VA_OV (1 bit)
 	bitstream_add(&alpha_status_a_message, flt_reg->va_uv, 1);		// VA_UV (1 bit)
 	bitstream_add(&alpha_status_a_message, flt_reg->vd_ov, 1);		// VD_OV (1 bit)
@@ -665,10 +719,16 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	queue_can_msg(msg);
 }
 
+// verified 3/17/2025 for chip 0 by Jack. mostly faults too
 void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 				 float v_analog, float v_digital, stc_ *flt_reg)
 {
 	can_msg_t msg = { .id = ALPHA_STAT_B_CANID, .len = ALPHA_STAT_B_SIZE, .data = { 0 } };
+
+	// printf("Vres %f\n", v_res);
+	// printf("Vref2 %f\n", vref2);
+	// printf("Vanalog %f\n", v_analog);
+	// printf("Vdigital %f\n", v_digital);
 
 	v_res *= 1000;
 	vref2 *= 1000;
@@ -705,8 +765,8 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 void send_pec_error_message(uint8_t chip_num, uint16_t pec_count)
 {
 	struct __attribute__((__packed__)) {
-		uint16_t pec_error_count;
 		uint8_t chip_number;
+		uint16_t pec_error_count;
 	} pec_data;
 
 	pec_data.chip_number = chip_num;
