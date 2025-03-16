@@ -117,8 +117,8 @@ void compute_set_fault(int fault_state)
 float compute_get_pack_current()
 {
 	static const float CURRENT_ADC_RESOLUTION =
-		(5.0 / MAX_ADC_RESOLUTION) * (3.0 / 5.0);
-	static const float SENSOR_V_REF = 2.5 * (3.0 / 5.0);
+		(5.0 / MAX_ADC_RESOLUTION) * (5.0 / 3.0);
+	static const float SENSOR_V_REF = 2.5;
 
 	// Get ADC reading
 	uint32_t adcValue;
