@@ -35,17 +35,15 @@ can_t *can2;
 
 static uint16_t can1_id_list_standard[4] = {
 	//CANID_X,
-	0x002, 0x6F9
+	0x002
 };
 
 static uint32_t can1_id_list_extended[2] = {
 	//CANID_X,
-	0x18FF50E5,
 };
 
 static uint16_t can2_id_list_standard[4] = {
 	//CANID_X,
-	0x6F9
 };
 
 static uint32_t can2_id_list_extended[2] = {
@@ -249,8 +247,6 @@ void vCanReceive(void *pv_params)
 				  osWaitForever);
 		while (osOK ==
 		       osMessageQueueGet(can_inbound_queue, &msg, 0U, 0U)) {
-			printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nRECIEVED MESSAGE: %X\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
-			       msg.id);
 			switch (msg.id) {
 			default:
 				break;
