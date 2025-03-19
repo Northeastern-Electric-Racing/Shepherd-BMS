@@ -117,7 +117,7 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 
 	// Take single shot measurement
 	// adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
-	// adBmsPollAdc(PLCADC);
+	// adBmsPollAdc_indicator(PLCADC);
 	// read_adbms_data(bmsdata->chips, RDCVALL, Rdcvall, ALL_GRP);
 
 	// Result of C-ADC and S-ADC comparison is stored in status register group C
@@ -143,9 +143,9 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 
 uint32_t adBmsPollAdc_indicator(uint8_t poll_type)
 {
-	set_adc_bms_poll_led(1);
+	set_poll_led(1);
 	uint32_t result = adBmsPollAdc(poll_type);
-	set_adc_bms_poll_led(0);
+	set_poll_led(0);
 	return result;
 }
 

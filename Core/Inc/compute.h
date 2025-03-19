@@ -75,13 +75,13 @@ void compute_set_fault(int fault_state);
 /**
  * @brief blinks debug LED.
  */
-void toggle_adc_bms_default_led();
+void toggle_debug_led();
 
 /**
  * @brief turns LED on or off, for adc polling.A
  * 
  * @param mode
  */
-void set_adc_bms_poll_led(int mode);
+void set_poll_led(int mode);
 
 #endif // COMPUTE_H
