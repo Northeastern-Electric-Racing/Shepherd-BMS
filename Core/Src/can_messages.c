@@ -63,9 +63,9 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
-			// 10*desired voltage
+		// 10*desired voltage
 		uint16_t charger_current; // Note the charge current sent over should be
-			// 10*desired current
+		// 10*desired current
 		uint8_t charger_control;
 		uint8_t reserved_1;
 		uint16_t reserved_23;
@@ -359,7 +359,6 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 		int8_t segment3_average_temp;
 		int8_t segment4_average_temp;
 		int8_t segment5_average_temp;
-		int8_t segment6_average_temp;
 
 	} segment_temp_msg_data;
 
@@ -373,8 +372,6 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 		bmsdata->segment_average_temps[3];
 	segment_temp_msg_data.segment5_average_temp =
 		bmsdata->segment_average_temps[4];
-	segment_temp_msg_data.segment6_average_temp =
-		bmsdata->segment_average_temps[5];
 
 	can_msg_t msg;
 	msg.id = SEGMENT_TEMP_CANID;
