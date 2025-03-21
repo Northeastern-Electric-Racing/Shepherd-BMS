@@ -28,7 +28,6 @@
 #define CELL_DATA_SIZE	    8
 #define CELL_VOLTAGE_CANID  0x87
 #define CELL_VOLTAGE_SIZE   8
-#define CURRENT_CANID	    0x86
 #define CURRENT_SIZE	    6
 #define CELL_TEMP_CANID	    0x84
 #define CELL_TEMP_SIZE	    8
