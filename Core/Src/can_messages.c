@@ -161,7 +161,8 @@ void send_acc_status_message(acc_data_t *bmsdata)
 
 	acc_status_msg_data.packVolt = bmsdata->pack_voltage;
 	acc_status_msg_data.pack_current =
-		(uint16_t)(bmsdata->pack_current); // convert with 2s complement
+		(int16_t)(bmsdata->pack_current *
+			  10); // converted to signed int and scaled by 10
 	acc_status_msg_data.pack_ah = 0;
 	acc_status_msg_data.pack_soc = bmsdata->soc;
 	acc_status_msg_data.pack_health = 0;
