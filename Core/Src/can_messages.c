@@ -286,36 +286,6 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
-void send_current_message(acc_data_t *bmsdata)
-{
-	struct __attribute__((__packed__)) {
-		uint16_t dcl;
-		int16_t ccl;
-		uint16_t pack_curr;
-	} current_status_msg_data;
-
-	current_status_msg_data.dcl = bmsdata->discharge_limit;
-	current_status_msg_data.ccl = -1 * bmsdata->charge_limit;
-	current_status_msg_data.pack_curr = bmsdata->pack_current;
-
-	/* convert to big endian */
-	endian_swap(&current_status_msg_data.dcl,
-		    sizeof(current_status_msg_data.dcl));
-	endian_swap(&current_status_msg_data.ccl,
-		    sizeof(current_status_msg_data.ccl));
-	endian_swap(&current_status_msg_data.pack_curr,
-		    sizeof(current_status_msg_data.pack_curr));
-
-	can_msg_t msg;
-	msg.id = CURRENT_CANID;
-	msg.len = CURRENT_SIZE;
-
-	memcpy(msg.data, &current_status_msg_data,
-	       sizeof(current_status_msg_data));
-
-	queue_can_msg(msg);
-}
-
 void send_cell_temp_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {
