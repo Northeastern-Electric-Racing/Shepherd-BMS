@@ -31,7 +31,6 @@ nertimer_t variance_timer;
 // int8_t calc_therm_standard_dev(int16_t avg_temp);
 void init_chip(cell_asic *chip);
 void write_config_regs(cell_asic chip[NUM_CHIPS]);
-void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 
 /**
  * @brief Initialize a chip with our default values.
