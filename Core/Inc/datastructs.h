@@ -34,6 +34,8 @@ typedef struct {
 
 	/* For temperatures of on-board therms. */
 	int8_t on_board_temp;
+
+	float die_temp;
 } chipdata_t;
 
 /**
@@ -64,6 +66,7 @@ enum {
 	BATTERY_THERMISTOR				    = 0x8000,
 	CHARGER_CAN_FAULT				    = 0x10000,
 	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
+	DIE_TEMP_MAXIMUM_FAULT       	    = 0x40000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
 };
@@ -79,6 +82,15 @@ typedef struct {
 	uint8_t chipIndex;
 	uint8_t cellNum;
 } crit_cellval_t;
+
+/**
+ * @brief Stores critical values for the pack (across all chips), and where that critical value can be found
+ *
+ */
+typedef struct {
+	float val;
+	uint8_t chipNum;
+} crit_chipval_t;
 
 /**
  * @brief Represents one "frame" of BMS data
@@ -122,6 +134,8 @@ typedef struct {
 	crit_cellval_t max_temp;
 	crit_cellval_t min_temp;
 	float avg_temp;
+
+	crit_chipval_t max_chiptemp;
 
 	/* Max and min cell resistances */
 	crit_cellval_t max_res;
