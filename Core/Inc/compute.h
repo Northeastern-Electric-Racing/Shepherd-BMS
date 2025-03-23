@@ -61,9 +61,9 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 /**
  * @brief Returns the pack current sensor reading
  *
- * @return int16_t
+ * @return float
  */
-int16_t compute_get_pack_current();
+float compute_get_pack_current();
 
 /**
  * @brief updates fault relay

@@ -154,7 +154,7 @@ void send_acc_status_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t packVolt;
-		uint16_t pack_current;
+		int16_t pack_current;
 		uint16_t pack_ah;
 		uint8_t pack_soc;
 		uint8_t pack_health;
@@ -162,7 +162,8 @@ void send_acc_status_message(acc_data_t *bmsdata)
 
 	acc_status_msg_data.packVolt = bmsdata->pack_voltage;
 	acc_status_msg_data.pack_current =
-		(uint16_t)(bmsdata->pack_current); // convert with 2s complement
+		(int16_t)(bmsdata->pack_current *
+			  10); // converted to signed int and scaled by 10
 	acc_status_msg_data.pack_ah = 0;
 	acc_status_msg_data.pack_soc = bmsdata->soc;
 	acc_status_msg_data.pack_health = 0;
@@ -283,36 +284,6 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 			  .data = { 0 } };
 
 	memcpy(msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
-
-	queue_can_msg(msg);
-}
-
-void send_current_message(acc_data_t *bmsdata)
-{
-	struct __attribute__((__packed__)) {
-		uint16_t dcl;
-		int16_t ccl;
-		uint16_t pack_curr;
-	} current_status_msg_data;
-
-	current_status_msg_data.dcl = bmsdata->discharge_limit;
-	current_status_msg_data.ccl = -1 * bmsdata->charge_limit;
-	current_status_msg_data.pack_curr = bmsdata->pack_current;
-
-	/* convert to big endian */
-	endian_swap(&current_status_msg_data.dcl,
-		    sizeof(current_status_msg_data.dcl));
-	endian_swap(&current_status_msg_data.ccl,
-		    sizeof(current_status_msg_data.ccl));
-	endian_swap(&current_status_msg_data.pack_curr,
-		    sizeof(current_status_msg_data.pack_curr));
-
-	can_msg_t msg = { .id = CURRENT_CANID,
-			  .len = CURRENT_SIZE,
-			  .data = { 0 } };
-
-	memcpy(msg.data, &current_status_msg_data,
-	       sizeof(current_status_msg_data));
 
 	queue_can_msg(msg);
 }

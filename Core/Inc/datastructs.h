@@ -109,7 +109,7 @@ typedef struct {
 
 	int fault_status; // FIXME: this field is unused
 
-	float pack_current; /* this value is multiplied by 10 to account for decimal precision */
+	float pack_current;
 	float pack_voltage;
 	float pack_ocv;
 	float pack_res;

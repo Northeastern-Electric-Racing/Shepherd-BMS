@@ -469,7 +469,6 @@ void calc_dcl(acc_data_t *bmsdata)
 	}
 
 	send_mc_discharge_message(bmsdata);
-	send_current_message(bmsdata);
 }
 
 //TODO: Fix for new cells and BMS
@@ -519,7 +518,6 @@ void calcCCL(acc_data_t *bmsdata)
 	}
 
 	send_mc_charge_message(bmsdata);
-	send_current_message(bmsdata);
 }
 
 //TODO: Change for P45B electrical characteristics.

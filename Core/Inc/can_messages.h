@@ -83,15 +83,6 @@ void send_shutdown_ctrl_message(uint8_t mpe_state);
 void send_cell_voltage_message(acc_data_t *bmsdata);
 
 /**
- * @brief sends out the calculated values of currents
- *
- * @param discharge
- * @param charge
- * @param current
- */
-void send_current_message(acc_data_t *bmsdata);
-
-/**
  * @brief sends cell temperature message
  *
  * @return Returns a fault if we are not able to send
