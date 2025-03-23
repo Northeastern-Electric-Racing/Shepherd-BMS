@@ -519,7 +519,7 @@ void calcCCL(acc_data_t *bmsdata)
 	} else {
 		bmsdata->charge_limit = currentLimit;
 	}
-  
+
 	send_mc_charge_message(bmsdata->charge_limit);
 }
 
