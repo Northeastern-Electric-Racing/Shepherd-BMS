@@ -287,35 +287,28 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 }
 void send_segment_volt_message(acc_data_t *bmsdata)
 {
-	struct __attribute__((__packed__)) {
-		int8_t segment1_average_volt;
-		int8_t segment2_average_volt;
-		int8_t segment3_average_volt;
-		int8_t segment4_average_volt;
-		int8_t segment5_average_volt;
-		int8_t segment6_average_volt;
+	bitstream_t segment_volt_msg_data;
+	uint8_t bitstream_data[9];
+	bitstream_init(&segment_volt_msg_data, bitstream_data, 9);
 
-	} segment_volt_msg_data;
-
-	segment_volt_msg_data.segment1_average_volt =
-		bmsdata->segment_average_volts[0];
-	segment_volt_msg_data.segment2_average_volt =
-		bmsdata->segment_average_volts[1];
-	segment_volt_msg_data.segment3_average_volt =
-		bmsdata->segment_average_volts[2];
-	segment_volt_msg_data.segment4_average_volt =
-		bmsdata->segment_average_volts[3];
-	segment_volt_msg_data.segment5_average_volt =
-		bmsdata->segment_average_volts[4];
-	segment_volt_msg_data.segment6_average_volt =
-		bmsdata->segment_average_volts[5];
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
+		      13);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
+		      13);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
+		      13);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
+		      13);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
+		      13);
 
 	can_msg_t msg;
 	msg.id = SEGMENT_VOLT_CANID;
 	msg.len = SEGMENT_VOLT_SIZE;
 
-	memcpy(msg.data, &segment_volt_msg_data, sizeof(segment_volt_msg_data));
+	memcpy(msg.data, &segment_volt_msg_data, 9);
 
+	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
 	queue_can_msg(msg);
 }
 

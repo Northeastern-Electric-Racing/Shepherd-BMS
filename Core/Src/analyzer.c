@@ -345,7 +345,6 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			total_seg_volt +=
 				bmsdata->chip_data[c].cell_voltages[cell];
 
-			/* only for NERO */
 			if (c % 2 == 0) {
 				bmsdata->segment_average_volts[c / 2] =
 					total_seg_volt /
@@ -371,6 +370,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 
 	send_acc_status_message(bmsdata);
 	send_cell_voltage_message(bmsdata);
+	send_segment_volt_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)
