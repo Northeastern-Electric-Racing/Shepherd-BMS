@@ -18,14 +18,14 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set);
  *
  * @param bmsdata data structure containing the discharge limit
  */
-void send_mc_discharge_message(float discharge_limit)
+void send_mc_discharge_message(float discharge_limit);
 
-	/**
+/**
  * @brief sends max charge/discharge current to Motor Controller
  *
  * @param charge_limit
  */
-	void send_mc_charge_message(float charge_limit);
+void send_mc_charge_message(float charge_limit);
 
 /**
  * @brief sends acc status message
