@@ -41,9 +41,9 @@ void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 void init_chip(cell_asic *chip)
 {
 	set_REFON(chip, PWR_UP);
-	// WARNING, THE ENUM IS WRONG, CHECK TABLE 102
+
 	set_volt_adc_comp_thresh(chip, CVT_135mV);
-	chip->tx_cfga.flag_d = 0;
+	clear_diagnostic_flags(chip);
 
 	// Short soak on ADAX
 	set_soak_on(chip, SOAKON_SET);
@@ -75,7 +75,6 @@ void init_chip(cell_asic *chip)
 	// Not an endpoint in the daisy chain
 	set_comm_break(chip, false);
 
-	// IIR filter disabled
 	set_iir_corner_freq(chip, IIR_FPA16);
 
 	// Init config B
@@ -91,7 +90,7 @@ void init_chip(cell_asic *chip)
 	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
 
 	// Disable discharge for all cells
-	chip->tx_cfgb.dcc = 0;
+	clear_cell_discharge(chip);
 }
 
 /**

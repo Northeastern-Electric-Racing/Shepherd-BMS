@@ -8,6 +8,9 @@
 
 /**
  * @brief Set the status of the REFON bit.
+ * WARNING, THE ENUM IS WRONG, CHECK TABLE 102
+ * 
+ * Config A
  * 
  * @param chip Pointer to the chip to modify.
  * @param state New state of the REFON bit.
@@ -17,24 +20,56 @@ void set_REFON(cell_asic *chip, REFON state);
 /**
  * @brief Set the C-ADC vs. S-ADC comparison voltage threshold 
  * 
+ * Config A
+ * 
  * @param chip Pointer to the chip to modify.
  * @param threshold Threshold to set.
  */
 void set_volt_adc_comp_thresh(cell_asic *chip, CTH threshold);
 
-void set_diagnostic_flags(cell_asic *chip, FLAG_D config);
+/**
+ * @brief Set the diagnostic flags 
+ * 
+ * Config A
+ * 
+ * @param chip Pointer to the chip to modify.
+ * @param config the type of diagnostic flag to set
+ * @param state the state of the diagnostic flag choosen
+ */
+void set_diagnostic_flags(cell_asic *chip, FLAG_D config, CFGA_FLAG state);
+/**
+ * @brief Clear all diagnostic flags
+ * 
+ * Config A
+ * 
+ * @param chip Pointer to the chip to modify.
+ */
+void clear_diagnostic_flags(cell_asic *chip);
 
 /**
  * @brief Set the discharge state of a cell.
  * 
+ * Config B
+ * 
  * @param chip Pointer to chip with cell to modify.
- * @param cell ID of cell to modify. Cell indexes start are from 1-16 (NOT ZERO INDEXED).
- * @param discharge Cell discharge state. true to discharge, false to disable discharge.
+ * @param cell ID of cell to modify.
+ * @param discharge Cell discharge state.
  */
-void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
+void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge);
+/**
+ * @brief Clear the discharge state of the cell (turn off dcc)
+ * 
+ * Config B
+ * 
+ * @param chip Pointer to chip with cell to modify.
+ */
+void clear_cell_discharge(cell_asic *chip);
+
 
 /**
  * @brief Set the state of the SOAKON bit to either enable or disable soak times.
+ * 
+ * Config A
  * 
  * @param chip Pointer to chip to configure
  * @param state Enable or disable SOAKON
@@ -44,6 +79,8 @@ void set_soak_on(cell_asic *chip, SOAKON state);
 /**
  * @brief Set the soak time range.
  * 
+ * Config A
+ * 
  * @param chip Pointer to chip to configure
  * @param range The range of time over which to soak for aux and aux2
  */
@@ -51,6 +88,8 @@ void set_aux_soak_range(cell_asic *chip, OWRNG range);
 
 /**
  * @brief Set the open wire soak time. See data sheet for formula.
+ * 
+ * Config A
  * 
  * @param chip Pointer to chip configuration
  * @param time The amount of time to soak for. Higher OWA is a higher soak time.
@@ -60,14 +99,18 @@ void set_open_wire_soak_time(cell_asic *chip, OWA time);
 /**
  * @brief Set the pull of a GPIO pin on an ADBMS8630.
  * 
+ * Config A
+ * 
  * @param chip ADBMS6830 chip
- * @param gpio Number of the GPIO pin to change (1-10)
- * @param input True is no pull down, False is pull down.
+ * @param gpio GPIO pin to change
+ * @param input Whether to set the pulldown
  */
-void set_gpio_pull(cell_asic *chip, uint8_t gpio, bool input);
+void set_gpio_pull(cell_asic *chip, GPO gpio, CFGA_GPO input);
 
 /**
  * @brief Set the corner frequency of the IIR filter.
+ * 
+ * Config A
  * 
  * @param chip Pointer to chip config
  * @param freq Corner frequency (see IIR_FPA enum for frequencies)
@@ -77,13 +120,17 @@ void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq);
 /**
  * @brief Configure a chip as a break in the isoSPI daisy chain.
  * 
+ * Config A
+ * 
  * @param chip Pointer to chip config
- * @param is_break True if chip is break, false if chip is not break
+ * @param is_break whether to break the comms at that chip
  */
-void set_comm_break(cell_asic *chip, bool is_break);
+void set_comm_break(cell_asic *chip, COMM_BK is_break);
 
 /**
  * @brief Enable/disable discharging through the mute discharge bit.
+ * 
+ * Config A
  * 
  * @param chip Pointer to chip config
  * @param disable_discharge True to disable discharge, false to enable discharge.
@@ -93,34 +140,42 @@ void set_mute_state(cell_asic *chip, bool disable_discharge);
 /**
  * @brief Set whether or not this chip is taking a snapshot. The chip will not begin reading new values unless the snapshot bit is cleared.
  * 
+ * Config A
+ * 
  * @param chip Pointer to chip config
- * @param take_snapshot True to take a snapshot, false to end the snapshot
+ * @param take_snapshot whether to take a snapshot
  */
-void set_snapshot(cell_asic *chip, bool take_snapshot);
+void set_snapshot(cell_asic *chip, SNAPSHOT take_snapshot);
 
 /**
  * @brief Enable/disable the discharge timer monitor.
  * 
+ * Config B
+ * 
  * @param chip Pointer to chip config
- * @param enabled True if discharge timer monitor is enabled, false if otherwise
+ * @param enabled whether to enable the discharge monitor
  */
-void set_discharge_timer_monitor(cell_asic *chip, bool enabled);
+void set_discharge_timer_monitor(cell_asic *chip, DTMEN enabled);
 
 /**
  * @brief Configure the discharge timer range, which affects the resolution.
  * 
+ * Config B
+ * 
  * @param chip Pointer to chip config
- * @param large True for large range, False for small range
+ * @param large range to set
  */
-void set_discharge_timer_range(cell_asic *chip, bool large);
+void set_discharge_timer_range(cell_asic *chip, DTRNG large);
 
 /**
  * @brief Set the discharge monitor timeout, which is dependent on the discharge timer range.
  * 
+ * Config B
+ * 
  * @param chip Pointer to chip config
- * @param timeout Base for timeout multiplicaiton. Must be below six bits.
+ * @param timeout Timeout to set, dependent on `set_discharge_timer_range`
  */
-void set_discharge_timeout(cell_asic *chip, uint8_t timeout);
+void set_discharge_timeout(cell_asic *chip, DCTO timeout);
 
 // --- END SET HELPERS ---
 

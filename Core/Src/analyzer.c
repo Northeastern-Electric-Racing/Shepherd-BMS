@@ -176,6 +176,7 @@ void calc_cell_temps(acc_data_t *bmsdata)
 		}
 
 		/* set the die temp */
+		// conversion rate from datasheet, Table 105.  also in driver src
 		bmsdata->chip_data[chip].die_temp =
 			(getVoltage(bmsdata->chips[chip].stata.itmp) / 0.0075) -
 			273;
