@@ -31,7 +31,6 @@ nertimer_t variance_timer;
 // int8_t calc_therm_standard_dev(int16_t avg_temp);
 void init_chip(cell_asic *chip);
 void write_config_regs(cell_asic chip[NUM_CHIPS]);
-void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 
 /**
  * @brief Initialize a chip with our default values.
@@ -41,9 +40,9 @@ void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 void init_chip(cell_asic *chip)
 {
 	set_REFON(chip, PWR_UP);
-	// WARNING, THE ENUM IS WRONG, CHECK TABLE 102
+
 	set_volt_adc_comp_thresh(chip, CVT_135mV);
-	chip->tx_cfga.flag_d = 0;
+	clear_diagnostic_flags(chip);
 
 	// Short soak on ADAX
 	set_soak_on(chip, SOAKON_SET);
@@ -75,7 +74,6 @@ void init_chip(cell_asic *chip)
 	// Not an endpoint in the daisy chain
 	set_comm_break(chip, false);
 
-	// IIR filter disabled
 	set_iir_corner_freq(chip, IIR_FPA16);
 
 	// Init config B
@@ -91,7 +89,7 @@ void init_chip(cell_asic *chip)
 	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
 
 	// Disable discharge for all cells
-	chip->tx_cfgb.dcc = 0;
+	clear_cell_discharge(chip);
 }
 
 /**
@@ -144,6 +142,15 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].statc.cs_flt > 0) {
+			printf("C VS S MISMATCH on cells ");
+			for (int i = 0; i < 16; i++) {
+				if (NER_GET_BIT(chips[chip].statc.cs_flt, i)) {
+					printf("%d, ", i);
+				}
+			}
+			printf("\n");
+		}
 		if (chips[chip].statc.va_ov) {
 			printf("A OV FLT c%d\n", chip);
 		}
@@ -242,9 +249,10 @@ void segment_configure_balancing(
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&bmsdata->chips[chip], cell + 1,
+			set_cell_discharge(&bmsdata->chips[chip], cell,
 					   discharge_config[chip][cell]);
-			set_mute_state(&bmsdata->chips[chip], false);
+			if (discharge_config[chip][cell] > 0)
+				set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
 	write_config_regs(bmsdata->chips);
