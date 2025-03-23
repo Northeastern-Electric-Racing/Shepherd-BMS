@@ -79,7 +79,7 @@ void vAnalyzer(void *pv_params)
 		calc_cont_ccl(bmsdata);
 		// temporary
 		bmsdata->charge_limit = bmsdata->cont_CCL;
-		send_mc_charge_message(bmsdata);
+		send_mc_charge_message(bmsdata->charge_limit);
 		// temporary end
 
 		// calc_state_of_charge(bmsdata);
@@ -98,7 +98,8 @@ void vCurrentMonitor(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		bmsdata->pack_current = compute_get_pack_current();
-		send_acc_status_message(bmsdata);
+		send_acc_status_message(bmsdata->pack_voltage,
+					bmsdata->pack_current, bmsdata->soc);
 		osDelay(1000 / SAMPLE_RATE);
 	}
 }

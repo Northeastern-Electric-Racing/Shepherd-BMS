@@ -11,55 +11,53 @@
  *
  * @return Returns a fault if we are not able to communicate with charger
  */
-int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
-			  acc_data_t *bms_data);
+int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set);
 
 /**
  * @brief Sends max discharge current to Motor Controller.
  *
  * @param bmsdata data structure containing the discharge limit
  */
-void send_mc_discharge_message(acc_data_t *bmsdata);
+void send_mc_discharge_message(float discharge_limit)
 
-/**
+	/**
  * @brief sends max charge/discharge current to Motor Controller
  *
- * @param bmsdata
+ * @param charge_limit
  */
-void send_mc_charge_message(acc_data_t *bmsdata);
+	void send_mc_charge_message(float charge_limit);
 
 /**
  * @brief sends acc status message
  *
- * @param voltage
- * @param current
- * @param ah
+ * @param pack_voltage
+ * @param pack_current
  * @param soc
- * @param health
  *
  * @return Returns a fault if we are not able to send
  */
-void send_acc_status_message(acc_data_t *bmsdata);
+void send_acc_status_message(float pack_voltage, float pack_current, float soc);
 
 /**
  * @brief sends fault status message
  *
- * @param bms_state
+ * @param fault_code_crit
+ * @param fault_code_noncrit
  *
  */
-void send_fault_status_message(acc_data_t *bmsdata);
+void send_fault_status_message(uint32_t fault_code_crit,
+			       uint32_t fault_code_noncrit);
 
 /**
  * @brief sends BMS status message
  *
+ * @param avg_temp
  * @param bms_state
- * @param fault_status
- * @param tempAvg
- * @param tempInternal
+ * @param balance
  *
  * @return Returns a fault if we are not able to send
  */
-void send_bms_status_message(acc_data_t *bmsdata, int bms_state, bool balance);
+void send_bms_status_message(float avg_temp, int bms_state, bool balance);
 
 /**
  * @brief sends shutdown control message
@@ -74,20 +72,26 @@ void send_shutdown_ctrl_message(uint8_t mpe_state);
 /**
  * @brief sends cell data message
  *
- * @param high_voltage
- * @param low_voltage
+ * @param max_voltage
+ * @param min_voltage
  * @param avg_voltage
  *
  * @return Returns a fault if we are not able to send
  */
-void send_cell_voltage_message(acc_data_t *bmsdata);
+void send_cell_voltage_message(crit_cellval_t max_voltage,
+			       crit_cellval_t min_voltage, float avg_voltage);
 
 /**
  * @brief sends cell temperature message
  *
+ * @param max_temp
+ * @param min_temp
+ * @param avg_temp
+ * 
  * @return Returns a fault if we are not able to send
  */
-void send_cell_temp_message(acc_data_t *bmsdata);
+void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
+			    float avg_temp);
 
 /**
  * @brief sends the average segment temperatures
@@ -96,7 +100,7 @@ void send_cell_temp_message(acc_data_t *bmsdata);
  *
  * @return Returns a fault if we are not able to send
  */
-void send_segment_temp_message(acc_data_t *bmsdata);
+void send_segment_temp_message(float *segment_average_temps);
 
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
 
@@ -118,9 +122,9 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
  * @brief Send CAN message containing voltage noise data.
  * @note Unused
  * 
- * @param bmsdata 
+ * @param segment_noise_percentage 
  */
-void send_voltage_noise_message(acc_data_t *bmsdata);
+void send_voltage_noise_message(float *segment_noise_percentage);
 
 /**
  * @brief Send a message containing cell data.
