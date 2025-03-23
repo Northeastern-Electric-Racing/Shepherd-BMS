@@ -65,7 +65,6 @@ void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge);
  */
 void clear_cell_discharge(cell_asic *chip);
 
-
 /**
  * @brief Set the state of the SOAKON bit to either enable or disable soak times.
  * 
