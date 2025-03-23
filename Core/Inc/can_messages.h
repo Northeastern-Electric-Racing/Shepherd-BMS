@@ -93,15 +93,6 @@ void send_cell_voltage_message(crit_cellval_t max_voltage,
 void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
 			    float avg_temp);
 
-/**
- * @brief sends the average segment temperatures
- *
- *
- *
- * @return Returns a fault if we are not able to send
- */
-void send_segment_temp_message(float *segment_average_temps);
-
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
 
 void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
@@ -117,14 +108,6 @@ void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
  */
 void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 			uint32_t debug3);
-
-/**
- * @brief Send CAN message containing voltage noise data.
- * @note Unused
- * 
- * @param segment_noise_percentage 
- */
-void send_voltage_noise_message(float *segment_noise_percentage);
 
 /**
  * @brief Send a message containing cell data.
