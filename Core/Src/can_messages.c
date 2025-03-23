@@ -153,7 +153,7 @@ void send_acc_status_message(acc_data_t *bmsdata)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t packVolt;
-		uint16_t pack_current;
+		int16_t pack_current;
 		uint16_t pack_ah;
 		uint8_t pack_soc;
 		uint8_t pack_health;
