@@ -324,33 +324,6 @@ void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
 	queue_can_msg(msg);
 }
 
-void send_segment_temp_message(float *segment_average_temps)
-{
-	struct __attribute__((__packed__)) {
-		int8_t segment1_average_temp;
-		int8_t segment2_average_temp;
-		int8_t segment3_average_temp;
-		int8_t segment4_average_temp;
-		int8_t segment5_average_temp;
-		int8_t segment6_average_temp;
-	} segment_temp_msg_data;
-
-	segment_temp_msg_data.segment1_average_temp = segment_average_temps[0];
-	segment_temp_msg_data.segment2_average_temp = segment_average_temps[1];
-	segment_temp_msg_data.segment3_average_temp = segment_average_temps[2];
-	segment_temp_msg_data.segment4_average_temp = segment_average_temps[3];
-	segment_temp_msg_data.segment5_average_temp = segment_average_temps[4];
-	segment_temp_msg_data.segment6_average_temp = segment_average_temps[5];
-
-	can_msg_t msg = { .id = SEGMENT_TEMP_CANID,
-			  .len = SEGMENT_TEMP_SIZE,
-			  .data = { 0 } };
-
-	memcpy(msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
-
-	queue_can_msg(msg);
-}
-
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 {
 	struct __attribute__((__packed__)) {
@@ -397,32 +370,6 @@ void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
 			  .data = { 0 } };
 
 	memcpy(msg.data, &fault_timer_msg_data, sizeof(fault_timer_msg_data));
-
-	queue_can_msg(msg);
-}
-
-void send_voltage_noise_message(float *segment_noise_percentage)
-{
-	struct __attribute__((__packed__)) {
-		uint8_t seg1_noise;
-		uint8_t seg2_noise;
-		uint8_t seg3_noise;
-		uint8_t seg4_noise;
-		uint8_t seg5_noise;
-		uint8_t seg6_noise;
-	} voltage_noise_msg_data;
-
-	voltage_noise_msg_data.seg1_noise = segment_noise_percentage[0];
-	voltage_noise_msg_data.seg2_noise = segment_noise_percentage[1];
-	voltage_noise_msg_data.seg3_noise = segment_noise_percentage[2];
-	voltage_noise_msg_data.seg4_noise = segment_noise_percentage[3];
-	voltage_noise_msg_data.seg5_noise = segment_noise_percentage[4];
-	voltage_noise_msg_data.seg6_noise = segment_noise_percentage[5];
-
-	can_msg_t msg = { .id = NOISE_CANID, .len = NOISE_SIZE, .data = { 0 } };
-
-	memcpy(msg.data, &voltage_noise_msg_data,
-	       sizeof(voltage_noise_msg_data));
 
 	queue_can_msg(msg);
 }
