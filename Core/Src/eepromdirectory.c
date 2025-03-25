@@ -191,7 +191,7 @@ eeprom_status_t log_fault(eeprom_directory_t *directory, uint32_t fault_code)
 }
 
 eeprom_status_t get_faults(eeprom_directory_t *directory, uint32_t *faults,
-			   uint8_t n)
+			   uint16_t n, uint16_t *valid_count)
 {
 	uint8_t fault_index = 0;
 	eeprom_status_t status;
@@ -214,7 +214,7 @@ eeprom_status_t get_faults(eeprom_directory_t *directory, uint32_t *faults,
 	int start_index = (fault_index == 0) ? (max_faults - 1) :
 					       (fault_index - 1);
 
-	int valid_fault_count = 0;
+	*valid_count = 0;
 
 	for (int i = 0; i < n; i++) {
 		uint8_t fault_packet[5];
@@ -231,7 +231,7 @@ eeprom_status_t get_faults(eeprom_directory_t *directory, uint32_t *faults,
 		uint8_t checksum = fault_packet[4];
 
 		if (calculate_checksum(fault) == checksum) {
-			faults[valid_fault_count++] = fault;
+			faults[(*valid_count)++] = fault;
 		}
 
 		start_index = (start_index == 0) ? (max_faults - 1) :

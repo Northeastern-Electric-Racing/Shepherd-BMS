@@ -94,9 +94,10 @@ eeprom_status_t log_fault(eeprom_directory_t *directory, uint32_t fault_code);
  * @param directory Pointer to the EEPROM directory.
  * @param faults Pointer to an array where fault codes will be stored.
  * @param n Number of latest faults to retrieve.
+ * @param valid_count Pointer where the number of valid faults will be returned.
  * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
  */
 eeprom_status_t get_faults(eeprom_directory_t *directory, uint32_t *faults,
-			   uint8_t n);
+			   uint16_t n, uint16_t *valid_count);
 
 #endif // EEPROMDIRECTORY_H
