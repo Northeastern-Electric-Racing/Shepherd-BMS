@@ -504,7 +504,6 @@ void calcCCL(acc_data_t *bmsdata)
 	send_mc_charge_message(bmsdata);
 }
 
-//TODO: Change for P45B electrical characteristics.
 void calc_cont_ccl(acc_data_t *bmsdata)
 {
 	float max_temp = bmsdata->max_temp.val;
@@ -525,6 +524,19 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		temp_derate_factor =
 			(MAX_CELL_TEMP - max_temp) / (MAX_CELL_TEMP - 45.0f);
 	}
+
+	// Cell Voltage Derating: 4.15–4.205V ramp down
+	if (max_cell_voltage >= MAX_CHARGE_VOLT) {
+		cell_volt_derate_factor = 0.0f;
+	} else if (max_cell_voltage > 4.15f) {
+		cell_volt_derate_factor = (MAX_CHARGE_VOLT - max_cell_voltage) /
+					  (MAX_CHARGE_VOLT - 4.15f);
+	} else {
+		cell_volt_derate_factor = 1.0f;
+	}
+
+	bmsdata->cont_CCL =
+		MAX_CHG_CURR * temp_derate_factor * cell_volt_derate_factor;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
