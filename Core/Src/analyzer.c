@@ -512,7 +512,10 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 	float temp_derate_factor = 0.0f;
 	float cell_volt_derate_factor = 0.0f;
 
-	// Temperature Derating: 0–10°C ramp up, 45–60°C ramp down
+	// All cell charge limits were obtained from P45B Datasheet.
+
+	/* Temperature Derating: 0–10°C ramp up, 45–60°C ramp down
+	   10°C and 45°C chosen as safe margins from P45B charge temp limits. */
 	if (max_temp <= MIN_CHG_TEMP || max_temp >= MAX_CELL_TEMP) {
 		temp_derate_factor = 0.0f;
 	} else if (max_temp < 10.0f) {
@@ -522,10 +525,11 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		temp_derate_factor = 1.0f;
 	} else {
 		temp_derate_factor =
-			(MAX_CELL_TEMP - max_temp) / (MAX_CELL_TEMP - 45.0f);
+			(MAX_CELL_TEMP - max_temp) / (MAX_CELLs_TEMP - 45.0f);
 	}
 
-	// Cell Voltage Derating: 4.15–4.205V ramp down
+	/* Cell Voltage Derating: 4.15–4.205V ramp down
+	   4.15V was chosen to reduce current early and avoid overshooting the max limit. */
 	if (max_cell_voltage >= MAX_CHARGE_VOLT) {
 		cell_volt_derate_factor = 0.0f;
 	} else if (max_cell_voltage > 4.15f) {
