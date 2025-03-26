@@ -525,7 +525,7 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		temp_derate_factor = 1.0f;
 	} else {
 		temp_derate_factor =
-			(MAX_CELL_TEMP - max_temp) / (MAX_CELLs_TEMP - 45.0f);
+			(MAX_CELL_TEMP - max_temp) / (MAX_CELL_TEMP - 45.0f);
 	}
 
 	/* Cell Voltage Derating: 4.15–4.205V ramp down
