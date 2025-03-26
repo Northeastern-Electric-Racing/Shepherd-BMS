@@ -700,35 +700,36 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 //TODO: Change for P45B electrical characteristics.
 //TODO: Add coulomb couting.
 // FUTURE: State of power calcs.
-// void calc_state_of_charge(acc_data_t *bmsdata)
-// {
-// 	/* Spltting the delta voltage into 18 increments */
-// 	const uint16_t increments =
-// 		((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) /
-// 		 ((MAX_VOLT - MIN_VOLT) * 10));
+void calc_state_of_charge(acc_data_t *bmsdata)
+{
+	/* Spltting the delta voltage into 18 increments */
+	const uint16_t increments =
+		((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) /
+		 ((MAX_VOLT - MIN_VOLT) * 10));
 
-// 	/* Retrieving a index of 0-18 */
-// 	uint8_t index =
-// 		((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
+	/* Retrieving a index of 0-18 */
+	uint8_t index =
+		((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
 
-// 	bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
+	bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
 
-// 	if (bmsdata->soc != 100) {
-// 		float interpolation = (float)(STATE_OF_CHARGE_CURVE[index + 1] -
-// 					      STATE_OF_CHARGE_CURVE[index]) /
-// 				      increments;
-// 		bmsdata->soc += (uint8_t)(interpolation *
-// 					  (((bmsdata->min_ocv.val) -
-// 					    (int32_t)(MIN_VOLT * 10000)) %
-// 					   increments));
-// 	}
+	if (bmsdata->soc != 100) {
+		float interpolation = (float)(STATE_OF_CHARGE_CURVE[index + 1] -
+					      STATE_OF_CHARGE_CURVE[index]) /
+				      increments;
+		bmsdata->soc += (uint8_t)(interpolation *
+					  (((bmsdata->min_ocv.val) -
+					    (int32_t)(MIN_VOLT * 10000)) %
+					   increments));
+	}
 
-// 	if (bmsdata->soc < 0) {
-// 		bmsdata->soc = 0;
-// 	}
+	if (bmsdata->soc < 0) {
+		bmsdata->soc = 0;
+	}
 
-// 	send_acc_status_message(bmsdata);
-// }
+	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
+				bmsdata->soc);
+}
 
 // NOTE: This function is broken or something.
 // void calc_noise_volt_percent(acc_data_t *bmsdata)
