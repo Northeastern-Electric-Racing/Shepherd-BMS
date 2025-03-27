@@ -45,7 +45,7 @@
 
 // Pack Limits
 #define MAX_PACK_CHG_CURR \
-	30 /* Pack-level charge limit: (13.5A - 3.5A margin) × 3 cells in parallel */
+	30 /* Pack-level charge limit: (MAX_CHG_CURR - 3.5A margin) × 3 cells in parallel */
 
 // ADBMS6830 limits
 #define MAX_CHIP_TEMP 60
