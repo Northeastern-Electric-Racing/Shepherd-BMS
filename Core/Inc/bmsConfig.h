@@ -43,6 +43,10 @@
 #define MAX_CELL_TEMP	60 /* Celsius (rules) */
 #define TYP_IMPDNCE	0.015 /* Ohms, DC, 50% SoC */
 
+// Pack Limits
+#define MAX_PACK_CHG_CURR \
+	30 /* Pack-level charge limit: (13.5A - 3.5A margin) × 3 cells in parallel */
+
 // ADBMS6830 limits
 #define MAX_CHIP_TEMP 60
 

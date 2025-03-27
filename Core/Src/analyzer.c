@@ -539,8 +539,8 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		cell_volt_derate_factor = 1.0f;
 	}
 
-	bmsdata->cont_CCL =
-		MAX_CHG_CURR * temp_derate_factor * cell_volt_derate_factor;
+	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_derate_factor *
+			    cell_volt_derate_factor;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
