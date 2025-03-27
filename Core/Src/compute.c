@@ -217,12 +217,23 @@ void change_adc1_channel(uint8_t channel)
 	}
 }
 
-void toggle_adc_bms_default_led()
+void toggle_debug_led()
 {
 	HAL_GPIO_TogglePin(D, Debug_LED_Pin);
 }
 
-void set_adc_bms_poll_led(int mode)
+void set_poll_led(int mode)
 {
 	HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, mode);
+}
+
+void encode_signed_float(float num, float min, float max, float precision,
+			 size_t num_bits)
+{
+	float num_scaled = num / (1.0 / precision);
+	float num_range = (max - min) / precision;
+	uint32_t max_value = (1 << num_bits) - 1;
+	uint32_t encoded_value = ((uint32_t)roundf(
+		(num_scaled - (min / precision)) * (max_value / num_range)));
+	return encoded_value;
 }
