@@ -70,8 +70,8 @@ void Error_Handler(void);
 #define SPI2_CS_GPIO_Port GPIOC
 #define INTERLOCK_READ_Pin GPIO_PIN_2
 #define INTERLOCK_READ_GPIO_Port GPIOA
-#define FAULT_OUTPUT_Pin GPIO_PIN_3
-#define FAULT_OUTPUT_GPIO_Port GPIOA
+#define I_SENSE_0_Pin GPIO_PIN_3
+#define I_SENSE_0_GPIO_Port GPIOA
 #define SPI1_CS_Pin GPIO_PIN_4
 #define SPI1_CS_GPIO_Port GPIOA
 #define DEBUG_LED_2_Pin GPIO_PIN_4
@@ -82,8 +82,8 @@ void Error_Handler(void);
 #define I_SENSE_3_GPIO_Port GPIOB
 #define I_SENSE_1_Pin GPIO_PIN_1
 #define I_SENSE_1_GPIO_Port GPIOB
-#define I_SENSE_0_Pin GPIO_PIN_2
-#define I_SENSE_0_GPIO_Port GPIOB
+#define FAULT_MCU_Pin GPIO_PIN_2
+#define FAULT_MCU_GPIO_Port GPIOB
 #define DEBUG_LED_1_Pin GPIO_PIN_11
 #define DEBUG_LED_1_GPIO_Port GPIOB
 #define WATCHDOG_OUT_Pin GPIO_PIN_14

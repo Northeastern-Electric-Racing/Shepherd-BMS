@@ -20,7 +20,6 @@ extern TIM_HandleTypeDef htim1;
 extern TIM_HandleTypeDef htim8;
 
 extern ADC_HandleTypeDef hadc1;
-extern ADC_HandleTypeDef hadc2;
 
 TIM_OC_InitTypeDef pwm_config;
 ADC_ChannelConfTypeDef adc_config;
@@ -60,11 +59,6 @@ uint8_t compute_init(acc_data_t *bmsdata)
 	//DMA for first ADC channel -- raw_low_current and ref_5V
 	assert(!HAL_ADC_Start_DMA(&hadc1, channel_1_buf,
 				  sizeof(channel_1_buf) / sizeof(uint32_t)));
-
-	//DMA for second ADC channel -- raw_high_current
-	assert(!HAL_ADC_Start_DMA(&hadc2, &raw_high_current_buf,
-				  sizeof(raw_high_current_buf) /
-					  sizeof(uint32_t)));
 
 	return 0;
 }
@@ -110,7 +104,7 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 
 void compute_set_fault(int fault_state)
 {
-	HAL_GPIO_WritePin(FAULT_OUTPUT_GPIO_Port, FAULT_OUTPUT_Pin,
+	HAL_GPIO_WritePin(FAULT_MCU_GPIO_Port, FAULT_MCU_Pin,
 			  !fault_state);
 	// if (true) digitalWrite(CHARGE_SAFETY_RELAY, 1);
 }
