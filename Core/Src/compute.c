@@ -231,7 +231,6 @@ uint32_t encode_signed_float(float num, float min, float max, float precision,
 			     size_t num_bits)
 {
 	uint32_t max_value = (1 << num_bits) - 1;
-	printf("%d ", max_value);
 	uint32_t encoded_value =
 		((uint32_t)roundf((num - min) / (max - min) * max_value));
 	return encoded_value;
