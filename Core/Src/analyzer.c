@@ -573,6 +573,34 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 	}
 }
 
+/**
+ * @brief: Calculate the state of charge of the battery pack
+ * 
+ * @param volts The voltage of the battery pack
+ */
+static float battery_soc_regression(float volts)
+{
+	double soc = (2538385.1 * pow(0.2050576, volts)) -
+		     (2268926.47 * pow(0.2124681, volts)) -
+		     (907951.835 * pow(0.0744989, volts)) + 254.27464;
+
+	if (soc > 100) {
+		soc = 100;
+	} else if (soc < 0) {
+		soc = 0;
+	}
+
+	return (float)soc;
+}
+
+void calc_state_of_charge(acc_data_t *bmsdata)
+{
+	bmsdata->soc = battery_soc_regression(bmsdata->min_ocv.val);
+
+	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
+				bmsdata->soc);
+}
+
 //TODO: Make it actually calc OCVs. Revise algorithm and stuff.
 //TODO: Change for new cells (probs not needed).
 //void calc_open_cell_voltage(acc_data_t *bmsdata)
@@ -696,40 +724,6 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 // 		}
 // 	}
 // }
-
-//TODO: Change for P45B electrical characteristics.
-//TODO: Add coulomb couting.
-// FUTURE: State of power calcs.
-void calc_state_of_charge(acc_data_t *bmsdata)
-{
-	/* Spltting the delta voltage into 18 increments */
-	const uint16_t increments =
-		((uint16_t)(MAX_VOLT * 10000 - MIN_VOLT * 10000) /
-		 ((MAX_VOLT - MIN_VOLT) * 10));
-
-	/* Retrieving a index of 0-18 */
-	uint8_t index =
-		((bmsdata->min_ocv.val) - MIN_VOLT * 10000) / increments;
-
-	bmsdata->soc = STATE_OF_CHARGE_CURVE[index];
-
-	if (bmsdata->soc != 100) {
-		float interpolation = (float)(STATE_OF_CHARGE_CURVE[index + 1] -
-					      STATE_OF_CHARGE_CURVE[index]) /
-				      increments;
-		bmsdata->soc += (uint8_t)(interpolation *
-					  (((bmsdata->min_ocv.val) -
-					    (int32_t)(MIN_VOLT * 10000)) %
-					   increments));
-	}
-
-	if (bmsdata->soc < 0) {
-		bmsdata->soc = 0;
-	}
-
-	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
-				bmsdata->soc);
-}
 
 // NOTE: This function is broken or something.
 // void calc_noise_volt_percent(acc_data_t *bmsdata)

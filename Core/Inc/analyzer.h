@@ -97,6 +97,7 @@ void disable_therms(acc_data_t *bmsdata);
 /**
  * @brief Calcuate state of charge by interpolation using an OCV to SOC lookup table.
  * 
+ * @param bmsdata Pointer to BMS data struct.
  */
 void calc_state_of_charge(acc_data_t *bmsdata);
 
