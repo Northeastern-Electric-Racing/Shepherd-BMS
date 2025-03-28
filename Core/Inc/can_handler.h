@@ -35,7 +35,7 @@
 #define SEGMENT_TEMP_CANID  0x85
 #define SEGMENT_TEMP_SIZE   6
 #define SEGMENT_VOLT_CANID  0x90
-#define SEGMENT_VOLT_SIZE   6
+#define SEGMENT_VOLT_SIZE   8
 #define FAULT_CANID	    0x703 // TODO: cleanup
 #define FAULT_SIZE	    5
 #define NOISE_CANID	    0x88
