@@ -227,13 +227,19 @@ void set_poll_led(int mode)
 	HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, mode);
 }
 
-void encode_signed_float(float num, float min, float max, float precision,
-			 size_t num_bits)
+uint32_t encode_signed_float(float num, float min, float max, float precision,
+			     size_t num_bits)
 {
-	float num_scaled = num / (1.0 / precision);
-	float num_range = (max - min) / precision;
 	uint32_t max_value = (1 << num_bits) - 1;
-	uint32_t encoded_value = ((uint32_t)roundf(
-		(num_scaled - (min / precision)) * (max_value / num_range)));
+	printf("%d ", max_value);
+	uint32_t encoded_value =
+		((uint32_t)roundf((num - min) / (max - min) * max_value));
 	return encoded_value;
+}
+
+float decode_unsigned_int(uint32_t num, float min, float max, float precision,
+			  size_t num_bits)
+{
+	uint32_t max_value = (1 << num_bits) - 1;
+	return min + (((float)num) / max_value) * (max - min);
 }

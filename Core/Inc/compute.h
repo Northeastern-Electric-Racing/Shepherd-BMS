@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include "stm32f4xx.h"
 
