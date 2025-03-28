@@ -574,7 +574,7 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 }
 
 /**
- * @brief: Calculate the state of charge of the battery pack
+ * @brief: Calculate the state of charge of the battery pack using exponential regression
  * 
  * @param volts The voltage of the battery pack
  */
