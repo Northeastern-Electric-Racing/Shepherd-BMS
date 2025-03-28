@@ -79,10 +79,36 @@ void compute_set_fault(int fault_state);
 void toggle_adc_bms_default_led();
 
 /**
- * @brief turns LED on or off, for adc polling.A
+ * @brief turns LED on or off, for adc polling.
  * 
  * @param mode
  */
 void set_adc_bms_poll_led(int mode);
 
+/**
+ * @brief Given a float, its minimum bound, upperbound, its precision,
+ *  and the cap for the numbers of bits, calculates its signed version.
+ * 
+ * @param num
+ * @param min
+ * @param max
+ * @param precision
+ * @param num_bits
+ */
+uint32_t encode_signed_float(float num, float min, float max, float precision,
+			     size_t num_bits);
+
+/**
+ * @brief Given an unsigned integer, a minimum bound for the result and the maximum bound,
+ *  a resulting precision, and the cap for the number of bits, 
+ * decodes the number back into its float version.
+ * 
+ * @param num
+ * @param min
+ * @param max
+ * @param precision
+ * @param num_bits
+ */
+float decode_unsigned_int(uint32_t num, float min, float max, float precision,
+			  size_t num_bits);
 #endif // COMPUTE_H
