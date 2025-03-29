@@ -145,6 +145,19 @@ float calc_cell_temp(uint16_t x)
 	       34.184 * x + 2.7608;
 }
 
+/**
+ * @brief Calculate a cell temperature of onboard therm
+ * 
+ * @param voltage the voltage read by ADC
+ * @return float 
+ */
+float calc_cell_temp_onboard(float voltage)
+{
+	float res = (5600 * (5 - voltage)) / voltage;
+	float coef = res / 10000;
+	return -22.24*log(coef) + 31.4;
+}
+
 void calc_cell_temps(acc_data_t *bmsdata)
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
@@ -163,16 +176,21 @@ void calc_cell_temps(acc_data_t *bmsdata)
 		if (!bmsdata->chip_data[chip].alpha) {
 			// Take average of both onboard therms
 			bmsdata->chip_data[chip].on_board_temp =
-				(calc_cell_temp(getVoltage(
+				(calc_cell_temp_onboard(getVoltage(
 					 bmsdata->chips[chip].raux.ra_codes[6])) +
-				 calc_cell_temp(getVoltage(
+				 calc_cell_temp_onboard(getVoltage(
 					 bmsdata->chips[chip]
 						 .raux.ra_codes[7]))) /
 				2;
 		} else {
+			//printf("\nONBOARD alpHA %f\n\n",
+			//       getVoltage(
+			//	       bmsdata->chips[chip].raux.ra_codes[7]));
 			bmsdata->chip_data[chip].on_board_temp =
-				calc_cell_temp(getVoltage(
+				calc_cell_temp_onboard(getVoltage(
 					bmsdata->chips[chip].raux.ra_codes[7]));
+			//		printf("\n\n KBHFSJHSDJKBJKBSFJKBSFBJKSF %f\n", calc_cell_temp_onboard(getVoltage(
+			//			bmsdata->chips[chip].raux.ra_codes[7])));
 		}
 
 		/* set the die temp */

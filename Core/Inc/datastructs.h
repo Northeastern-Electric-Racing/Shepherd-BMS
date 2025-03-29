@@ -33,7 +33,7 @@ typedef struct {
 	bool alpha;
 
 	/* For temperatures of on-board therms. */
-	int8_t on_board_temp;
+	float on_board_temp;
 
 	float die_temp;
 } chipdata_t;
