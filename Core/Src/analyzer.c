@@ -135,27 +135,35 @@ uint8_t get_num_cells(chipdata_t *chip_data)
 /**
  * @brief Calculate a cell temperature based on the thermistor reading.
  * 
- * @param x The thremistor reading.
+ * @param voltage The thremistor reading.
  * @return float The temperature in degrees Celsius.
  */
-float calc_cell_temp(uint16_t x)
+float calc_cell_temp(uint16_t voltage)
 {
-	/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
-	return 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) - 10.278 * pow(x, 2) +
-	       34.184 * x + 2.7608;
+	float res = (5600 * (3 - voltage)) / voltage;
+	float coef = res / 10000;
+	// achieved via passing ThermCalcs into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
+	return -1149.531863 * (pow(coef, 1.0 / 8)) +
+	       658.9396848 * (pow(coef, 1.0 / 4)) +
+	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
+	       601.008351;
 }
 
 /**
  * @brief Calculate a cell temperature of onboard therm
  * 
  * @param voltage the voltage read by ADC
- * @return float 
+ * @return float The temperature in degrees C
  */
 float calc_cell_temp_onboard(float voltage)
 {
 	float res = (5600 * (5 - voltage)) / voltage;
 	float coef = res / 10000;
-	return -22.24*log(coef) + 31.4;
+	// achieved via passing ThermCalcs into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
+	return -1149.531863 * (pow(coef, 1.0 / 8)) +
+	       658.9396848 * (pow(coef, 1.0 / 4)) +
+	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
+	       601.008351;
 }
 
 void calc_cell_temps(acc_data_t *bmsdata)

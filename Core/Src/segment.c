@@ -29,6 +29,8 @@ nertimer_t variance_timer;
  */
 void init_chip(cell_asic *chip, bool is_alpha)
 {
+	chip->tx_cfga.gpo = 0;
+
 	set_REFON(chip, PWR_UP);
 
 	set_volt_adc_comp_thresh(chip, CVT_135mV);
@@ -52,8 +54,8 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	set_gpio_pull(chip, GPO8, GPO_SET); // this is a on board therm
 
 	// set outputs, 9=iso led 10=bal LED. false=lit up
-	set_gpio_pull(chip, GPO9, GPO_CLR);
-	set_gpio_pull(chip, GPO10, GPO_CLR);
+	set_gpio_pull(chip, GPO9, GPO_SET);
+	set_gpio_pull(chip, GPO10, GPO_SET);
 
 	// Registers are unfrozen
 	set_snapshot(chip, SNAP_OFF);
