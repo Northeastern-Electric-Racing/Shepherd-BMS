@@ -50,7 +50,8 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	set_gpio_pull(chip, GPO4, GPO_SET);
 	set_gpio_pull(chip, GPO5, GPO_SET);
 	set_gpio_pull(chip, GPO6, GPO_SET);
-	set_gpio_pull(chip, GPO7, GPO_SET); // this is a on board therm for beta only
+	set_gpio_pull(chip, GPO7,
+		      GPO_SET); // this is a on board therm for beta only
 	set_gpio_pull(chip, GPO8, GPO_SET); // this is a on board therm
 
 	// set outputs, 9=iso led 10=bal LED. false=lit up
