@@ -12,6 +12,14 @@ extern uint16_t crc_error_check;
 #define NUM_FAULTS 9
 
 /**
+ * @brief Called when we receive a message from the charger
+ * 
+ * @param bmsdata
+ * 
+ */
+void charger_message_recieved(acc_data_t *bmsdata);
+
+/**
  * @brief Returns if we want to balance cells during a particular frame
  *
  * @param bmsdata

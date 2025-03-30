@@ -38,6 +38,8 @@
 #define NOISE_CANID	    0x88
 #define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
+#define CHARGER_CANID	    0x1806E5F4
+#define CHARGERBOX_CANID    0x18FF50E5
 
 #define OVERFLOW_CANID	   0x6F1
 #define OVERFLOW_SIZE	   6
@@ -102,7 +104,7 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2);
 /**
  * @brief Task for sending CAN messages.
  * 
- * @param pv_params CAN_HandleTypeDef for the CAN line that messages will be sent out on.
+ * @param pv_params Pointer to acc_data_t struct containing BMS data
  */
 void vCanDispatch(void *pv_params);
 extern osThreadId_t can_dispatch_handle;
