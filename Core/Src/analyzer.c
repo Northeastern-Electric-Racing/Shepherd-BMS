@@ -48,22 +48,6 @@ const uint8_t TEMP_TO_DCL[14] =
 };
 
 /**
- * @brief Mapping Cell temperatue to the charge current limit based on the
- *      temperature charge limit curve profile of the Samsung 186500 INR
- *      in the Orion BMS software utility app
- *
- * @note Units are in Amps and indicies are in (degrees C)/5, stops at 65C
- * @note Limit should be *interpolated* from these values (i.e. if we are
- *      at 27C, we should take the limit that is halfway between 25C and 30C)
- *
- */
-const uint8_t TEMP_TO_CCL[14] =
-{
-	0, 25, 25, 25, 25, 25, 25, 25,
-	20, 15, 10, 5, 1, 1
-};
-
-/**
  * @brief Lookup table for State of Charge
  *
  * @note each index covers 0.1V increase (voltage range is 2.9V - 4.2V, deltaV = 1.3V, 
@@ -520,23 +504,43 @@ void calcCCL(acc_data_t *bmsdata)
 	send_mc_charge_message(bmsdata);
 }
 
-//TODO: Change for P45B electrical characteristics.
 void calc_cont_ccl(acc_data_t *bmsdata)
 {
-	uint8_t min_res_index =
-		(bmsdata->min_temp.val - MIN_TEMP) /
-		5; /* resistance LUT increments by 5C for each index */
-	uint8_t max_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5;
+	float max_temp = bmsdata->max_temp.val;
+	float max_cell_voltage = bmsdata->max_voltage.val;
 
-	if (TEMP_TO_CCL[min_res_index] < TEMP_TO_CCL[max_res_index]) {
-		bmsdata->cont_CCL = TEMP_TO_CCL[min_res_index];
+	float temp_derate_factor = 0.0f;
+	float cell_volt_derate_factor = 0.0f;
+
+	// All cell charge limits were obtained from P45B Datasheet.
+
+	/* Temperature Derating: 0–10°C ramp up, 45–60°C ramp down
+	   10°C and 45°C chosen as safe margins from P45B charge temp limits. */
+	if (max_temp <= MIN_CHG_TEMP || max_temp >= MAX_CELL_TEMP) {
+		temp_derate_factor = 0.0f;
+	} else if (max_temp < 10.0f) {
+		temp_derate_factor =
+			(max_temp - MIN_CHG_TEMP) / (10.0f - MIN_CHG_TEMP);
+	} else if (max_temp <= 45.0f) {
+		temp_derate_factor = 1.0f;
 	} else {
-		bmsdata->cont_CCL = TEMP_TO_CCL[max_res_index];
+		temp_derate_factor =
+			(MAX_CELL_TEMP - max_temp) / (MAX_CELL_TEMP - 45.0f);
 	}
 
-	if (bmsdata->cont_CCL > MAX_CHG_CURR) {
-		bmsdata->cont_CCL = MAX_CHG_CURR;
+	/* Cell Voltage Derating: 4.15–4.205V ramp down
+	   4.15V was chosen to reduce current early and avoid overshooting the max limit. */
+	if (max_cell_voltage >= MAX_CHARGE_VOLT) {
+		cell_volt_derate_factor = 0.0f;
+	} else if (max_cell_voltage > 4.15f) {
+		cell_volt_derate_factor = (MAX_CHARGE_VOLT - max_cell_voltage) /
+					  (MAX_CHARGE_VOLT - 4.15f);
+	} else {
+		cell_volt_derate_factor = 1.0f;
 	}
+
+	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_derate_factor *
+			    cell_volt_derate_factor;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
