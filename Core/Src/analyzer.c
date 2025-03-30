@@ -133,20 +133,31 @@ uint8_t get_num_cells(chipdata_t *chip_data)
 }
 
 /**
- * @brief Calculate a cell temperature based on the thermistor reading.
+ * @brief Calculate the cell temperature of a 10,000 ohm NTP resistor (model 103)
  * 
- * @param voltage The thremistor reading.
- * @return float The temperature in degrees Celsius.
+ * @param res The resistance of the resistor
+ * @return float The temperature
  */
-float calc_cell_temp(uint16_t voltage)
+float calc_temp(float res)
 {
-	float res = (5600 * (3 - voltage)) / voltage;
-	float coef = res / 10000;
+	float coef = res / 10000.0;
 	// achieved via passing ThermCalcs into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
 	return -1149.531863 * (pow(coef, 1.0 / 8)) +
 	       658.9396848 * (pow(coef, 1.0 / 4)) +
 	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
 	       601.008351;
+}
+
+/**
+ * @brief Calculate a cell temperature based on the thermistor reading.
+ * 
+ * @param voltage The thremistor reading.
+ * @return float The temperature in degrees Celsius.
+ */
+float calc_cell_temp(float voltage)
+{
+	float res = (5600 * (3 - voltage)) / voltage;
+	return calc_temp(res);
 }
 
 /**
@@ -158,12 +169,7 @@ float calc_cell_temp(uint16_t voltage)
 float calc_cell_temp_onboard(float voltage)
 {
 	float res = (5600 * (5 - voltage)) / voltage;
-	float coef = res / 10000;
-	// achieved via passing ThermCalcs into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
-	return -1149.531863 * (pow(coef, 1.0 / 8)) +
-	       658.9396848 * (pow(coef, 1.0 / 4)) +
-	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
-	       601.008351;
+	return calc_temp(res);
 }
 
 void calc_cell_temps(acc_data_t *bmsdata)
