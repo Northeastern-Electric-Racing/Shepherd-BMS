@@ -33,20 +33,19 @@ void vGetSegmentData(void *pv_params)
 
 	int i = 0;
 	for (;;) {
-		// printf("Get segment data\n");
 		segment_retrieve_data(bmsdata);
 
 		if (DEBUG_MODE_ENABLED) {
 			segment_retrieve_debug_data(bmsdata);
 		}
 
-// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
-#ifndef CHARGING_ENABLED
-		if (++i % (45 * SAMPLE_RATE) == 0) {
-			printf(" ***********  REBOOTING SEGMENT\n\n");
-			segment_restart(bmsdata);
+		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
+		if (current_state == READY_STATE) {
+			if (++i % (45 * SAMPLE_RATE) == 0) {
+				printf(" ***********  REBOOTING SEGMENT\n\n");
+				segment_restart(bmsdata);
+			}
 		}
-#endif
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
@@ -65,42 +64,34 @@ void vAnalyzer(void *pv_params)
 		osThreadFlagsWait(ANALYZER_FLAG, osFlagsWaitAny, osWaitForever);
 
 		osMutexAcquire(bmsdata->mutex, osWaitForever);
-		// disable_therms(bmsdata);
 
+		// calculate base values for later safety calcs
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
 		calc_cell_voltages(bmsdata);
 		calc_pack_voltage_stats(bmsdata);
 		calc_open_cell_voltage(bmsdata);
 		calc_cell_resistances(bmsdata);
-		calc_dcl(bmsdata);
-		calc_cont_dcl(bmsdata);
-		//calcCCL();
-		calc_cont_ccl(bmsdata);
-		// temporary
-		bmsdata->charge_limit = bmsdata->cont_CCL;
-		send_mc_charge_message(bmsdata->charge_limit);
-		// temporary end
 
-		// calc_state_of_charge(bmsdata);
-		// calc_noise_volt_percent(bmsdata);
+		// these are dependent on above calculations
+		calc_cont_dcl(bmsdata);
+		calc_cont_ccl(bmsdata);
 
 		osMutexRelease(bmsdata->mutex);
 	}
 }
 
 osThreadId_t current_monitor_thread;
-const osThreadAttr_t current_monitor_attrs = { .name = "Get Segment Data",
+const osThreadAttr_t current_monitor_attrs = { .name = "Get Current Data",
 					       .stack_size = 2048,
 					       .priority = osPriorityNormal };
 void vCurrentMonitor(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
+		// this info is sent in with the state machine debugging code
 		bmsdata->pack_current = compute_get_pack_current();
-		send_acc_status_message(bmsdata->pack_voltage,
-					bmsdata->pack_current, bmsdata->soc);
-		osDelay(1000 / SAMPLE_RATE);
+		osDelay(100);
 	}
 }
 
@@ -112,9 +103,27 @@ void vStateMachine(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
+	nertimer_t telem_timer;
+	// sends unimportant telemetry messages every 500ms
+	start_timer(&telem_timer, 500);
+
 	for (;;) {
 		sm_handle_state(bmsdata);
-		osDelay(10);
+
+		if (is_timer_expired(&telem_timer)) {
+			// these are unimportant telemetry messages so they can be sent infrequently
+			send_bms_status_message(
+				bmsdata->avg_temp, current_state,
+				segment_is_balancing(bmsdata->chips));
+			send_fault_status_message(bmsdata->fault_code_crit,
+						  bmsdata->fault_code_noncrit);
+			send_acc_status_message(bmsdata->pack_voltage,
+						bmsdata->pack_current,
+						bmsdata->soc);
+			start_timer(&telem_timer, 300);
+		}
+
+		osDelay(100);
 	}
 }
 
@@ -126,6 +135,7 @@ void vDebugMode(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
+	// try to even everything out for a 1 Hz refresh rate
 	uint16_t time_per_chip = 1000 / NUM_CHIPS;
 
 	while (69 < 420) {

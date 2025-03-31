@@ -6,16 +6,6 @@
 #include "can_handler.h"
 #include "bitstream.h"
 
-#define BYTE_TO_BITS 8
-#define THERM_BITS   10
-#define VOLT_BITS    13
-#define AUX_ADC_BITS 13
-#define CHIP_ID_BTIS 4
-#define CELL_ID_BITS 4
-#define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
-
-static unsigned short reverse_short(unsigned short val);
-
 static unsigned short reverse_short(unsigned short val)
 {
 	return reverse_bits(val) >> 4;

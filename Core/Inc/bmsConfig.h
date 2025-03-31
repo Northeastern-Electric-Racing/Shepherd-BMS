@@ -13,13 +13,15 @@
 #define NUM_CELLS                                \
 	((NUM_CELLS_ALPHA * (NUM_CHIPS / 2.0)) + \
 	 (NUM_CELLS_BETA * (NUM_CHIPS / 2.0)))
-#define NUM_THERMS_PER_CHIP 14
+// only actual flexPCB therms counted
+#define NUM_THERMS_ALPHA 7
+#define NUM_THERMS_BETA	 6
 
 // Firmware limits
 #define MAX_TEMP	  60 /* Celsius */
 #define MIN_TEMP	  -40 /* Celsius */
 #define MAX_CELL_TEMP_BAL 45 /* Celsius */
-#define MAX_DELTA_V	  0.015
+#define MAX_DELTA_V	  0.010
 #define BAL_MIN_V	  4.00
 
 // Boosting Parameters
@@ -35,7 +37,7 @@
 #define MIN_VOLT	2.5
 #define NOM_VOLT	3.6
 #define MAX_VOLT	4.2
-#define MAX_CHARGE_VOLT 4.205
+#define MAX_CHARGE_VOLT 4.19
 #define MAX_CHG_CURR	13.5 /* Amps */
 #define MAX_DISCHG_CURR 45 /* Amps */
 #define MIN_CHG_TEMP	0 /* Celsius */
@@ -74,9 +76,6 @@
 #define HIGH_TEMP_TIME	    60000
 #define CURR_ERR_MARG	    1.1 // scaling factor, ie 1.1 = 10% error
 #define MAX_CHIPTEMP_TIME   5000
-
-#define DCDC_CURRENT_DRAW \
-	0 // in A, was used because our DCDC was drawing current
 
 #define CAN_MESSAGE_WAIT 5
 

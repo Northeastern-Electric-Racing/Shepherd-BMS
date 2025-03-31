@@ -2,13 +2,12 @@
 #include "stateMachine.h"
 #include "segment.h"
 #include "compute.h"
-#include "BMSConfig.h"
+#include "bmsConfig.h"
+
+#include <math.h>
 
 /* Constants */
 static const uint8_t STD_FACTOR = 1;
-
-/* Private prototypes */
-static float calc_cell_voltage_std(acc_data_t *data);
 
 /* Find standard deviation from BMS data */
 static float calc_cell_voltage_std(acc_data_t *data)
@@ -31,8 +30,7 @@ static float calc_cell_voltage_std(acc_data_t *data)
 /* Send cell balancing config to the segment */
 void handle_balance_cells(acc_data_t *bmsdata)
 {
-	if (bmsdata->delt_voltage > MAX_DELTA_V ||
-	    sm_balancing_check(bmsdata) == false) {
+	if (bmsdata->delt_voltage <= MAX_DELTA_V) {
 		/* No balancing, return */
 		segment_disable_balancing(bmsdata);
 		return;

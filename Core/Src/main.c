@@ -348,22 +348,13 @@ int main(void)
   MX_IWDG_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
- //for (int i = 0; i < 58; i++) 
- //{
- //       HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_SET);
- //       HAL_Delay(58-i);
- //       HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_RESET);
- //       HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_SET);
- //       HAL_Delay(58-i);
- //       HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_RESET);
- //      
-  //}
-   
-
+  
   HAL_Delay(500);
 	init_both_can(&hcan1, &hcan2);
   segment_init(acc_data);
   compute_init();
+  // the BMS faults upon boot, the shutdown loop must clear out before drive
+  compute_set_fault(true);
   printf("Init passed\n");
   /* USER CODE END 2 */
 
@@ -1306,11 +1297,6 @@ void StartDefaultTask(void *argument)
     }
 
     alt = !alt;
-
-    send_bms_status_message(bmsdata->avg_temp, current_state,
-					segment_is_balancing(bmsdata->chips));
-    send_fault_status_message(bmsdata->fault_code_crit, 
-      bmsdata->fault_code_noncrit);
 
     send_git_version_message();
   

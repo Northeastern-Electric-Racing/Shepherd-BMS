@@ -16,32 +16,11 @@
 #define MC_BAUD		     1000000U
 #define MAX_ADC_RESOLUTION   4095 // 12 bit ADC
 
-typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
-
 /**
- * @brief inits the compute interface
- */
-uint8_t compute_init();
-
-/**
- * @brief Handle any messages received from the charger
- *
- * @param msg
- */
-//static void compute_charger_callback(const CAN_message_t& msg);
-
-//static void compute_mc_callback(const CAN_message_t& msg);
-
-/**
- * @brief Sets the desired fan speed
+ * @brief Init all necessary peripherals on compute, minus CAN, see can_handler
  * 
- * @param new_fan_speed 
- * @param fan_select 
- * 
- * @return uint8_t 0 = success, 1 = fan_select is out of range, 2 = PWM channel not able to be configured
  */
-uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
-			      fan_select_t fan_select, uint8_t duty_cycle);
+void compute_init();
 
 /**
  * @brief Returns the pack current sensor reading
@@ -55,6 +34,6 @@ float compute_get_pack_current();
  *
  * @param fault_state
  */
-void compute_set_fault(int fault_state);
+void compute_set_fault(bool fault_state);
 
 #endif // COMPUTE_H

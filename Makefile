@@ -73,6 +73,7 @@ Core/Src/can_handler.c \
 Core/Src/can_messages.c \
 Core/Src/shep_tasks.c \
 Core/Src/cell_data_logging.c \
+Core/Src/charging.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \
