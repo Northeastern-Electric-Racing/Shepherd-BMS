@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "datastructs.h"
+#include "stateMachine.h"
 
 #define CAN_MSG_QUEUE_SIZE 50 /* messages */
 
@@ -33,14 +35,22 @@ struct node_t *rl_bms_msgs = NULL;
 can_t *can1;
 can_t *can2;
 
-static uint32_t can1_id_list[] = {
+static uint16_t can1_id_list_standard[4] = {
 	//CANID_X,
 	0x002
 };
 
-static uint32_t can2_id_list[] = {
+static uint32_t can1_id_list_extended[2] = {
 	//CANID_X,
-	0x18FF50E5
+};
+
+static uint16_t can2_id_list_standard[4] = {
+	//CANID_X,
+};
+
+static uint32_t can2_id_list_extended[2] = {
+	//CANID_X,
+	CHARGERBOX_CANID
 };
 
 osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
@@ -108,20 +118,14 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
 	assert(can2);
 
 	can1->hcan = hcan1;
-
-	uint32_t can1_id_list_size_four[4] = { can1_id_list[0], can1_id_list[0],
-					       can1_id_list[0],
-					       can1_id_list[0] };
-	assert(!can_add_filter(can1, can1_id_list_size_four));
 	assert(!can_init(can1));
+	assert(!can_add_filter_standard(can1, can1_id_list_standard));
+	assert(!can_add_filter_extended(can1, can1_id_list_extended));
 
 	can2->hcan = hcan2;
-
-	uint32_t can2_id_list_size_four[4] = { can2_id_list[0], can2_id_list[0],
-					       can2_id_list[0],
-					       can2_id_list[0] };
-	assert(!can_add_filter(can2, can2_id_list_size_four));
 	assert(!can_init(can2));
+	assert(!can_add_filter_standard(can2, can2_id_list_standard));
+	assert(!can_add_filter_extended(can2, can2_id_list_extended));
 
 	can_outbound_queue =
 		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
@@ -141,12 +145,17 @@ void can_receive_callback(CAN_HandleTypeDef *hcan)
 		// TODO add non crtical fault capability - could create one for failed can receieve
 		return;
 	}
+
 	new_msg.len = rx_header.DLC;
 
-	if (hcan == can1->hcan) {
-		new_msg.id = rx_header.StdId;
-	} else {
+	if (rx_header.IDE == CAN_ID_EXT) {
+		// If the message has an extended CAN ID, save the message accordingly.
 		new_msg.id = rx_header.ExtId;
+		new_msg.id_is_extended = true;
+	} else {
+		// If the message has a standard CAN ID, save the message accordingly.
+		new_msg.id = rx_header.StdId;
+		new_msg.id_is_extended = false;
 	}
 
 	queue_and_set_flag(can_inbound_queue, &new_msg, can_receive_thread,
@@ -193,11 +202,13 @@ void vCanDispatch(void *pv_params)
 	can_msg_t msg_from_queue;
 	HAL_StatusTypeDef msg_status;
 
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
 	can_t *line;
-#ifdef CHARGING
-	line = can2;
-#endif
-	line = can1;
+	if (bmsdata->is_charger_connected)
+		line = can2;
+	else
+		line = can1;
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
@@ -212,7 +223,7 @@ void vCanDispatch(void *pv_params)
 				osDelay(1);
 			}
 
-			msg_status = can_send_msg(can1, &msg_from_queue);
+			msg_status = can_send_msg(line, &msg_from_queue);
 
 			if (msg_status != HAL_OK) {
 				// temporary
@@ -235,13 +246,17 @@ void vCanReceive(void *pv_params)
 {
 	can_msg_t msg;
 
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
 	for (;;) {
 		osThreadFlagsWait(NEW_CAN_MSG_FLAG, osFlagsWaitAny,
 				  osWaitForever);
 		while (osOK ==
 		       osMessageQueueGet(can_inbound_queue, &msg, 0U, 0U)) {
-			printf("RECIEVED MESSAGE: %lu", msg.id);
 			switch (msg.id) {
+			case CHARGERBOX_CANID:
+				charger_message_recieved(bmsdata);
+				break;
 			default:
 				break;
 			}
