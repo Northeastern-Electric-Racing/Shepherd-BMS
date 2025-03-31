@@ -123,8 +123,7 @@ void handle_charging(acc_data_t *bmsdata)
 			bmsdata->is_charging_enabled = true;
 		else {
 			compute_enable_charging(false);
-			send_charging_message(0, 0,
-					      false);
+			send_charging_message(0, 0, false);
 		}
 
 		/* Check if we should balance */
