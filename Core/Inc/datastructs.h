@@ -33,7 +33,9 @@ typedef struct {
 	bool alpha;
 
 	/* For temperatures of on-board therms. */
-	int8_t on_board_temp;
+	float on_board_temp;
+
+	float die_temp;
 } chipdata_t;
 
 /**
@@ -64,6 +66,7 @@ enum {
 	BATTERY_THERMISTOR				    = 0x8000,
 	CHARGER_CAN_FAULT				    = 0x10000,
 	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
+	DIE_TEMP_MAXIMUM_FAULT       	    = 0x40000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
 };
@@ -79,6 +82,15 @@ typedef struct {
 	uint8_t chipIndex;
 	uint8_t cellNum;
 } crit_cellval_t;
+
+/**
+ * @brief Stores critical values for the pack (across all chips), and where that critical value can be found
+ *
+ */
+typedef struct {
+	float val;
+	uint8_t chipNum;
+} crit_chipval_t;
 
 /**
  * @brief Represents one "frame" of BMS data
@@ -97,7 +109,7 @@ typedef struct {
 
 	int fault_status; // FIXME: this field is unused
 
-	float pack_current; /* this value is multiplied by 10 to account for decimal precision */
+	float pack_current;
 	float pack_voltage;
 	float pack_ocv;
 	float pack_res;
@@ -109,6 +121,7 @@ typedef struct {
 	float soc;
 
 	float segment_average_temps[NUM_SEGMENTS];
+	float segment_average_volts[NUM_SEGMENTS];
 	uint8_t segment_noise_percentage[NUM_SEGMENTS];
 
 	/**
@@ -122,6 +135,8 @@ typedef struct {
 	crit_cellval_t max_temp;
 	crit_cellval_t min_temp;
 	float avg_temp;
+
+	crit_chipval_t max_chiptemp;
 
 	/* Max and min cell resistances */
 	crit_cellval_t max_res;
@@ -141,6 +156,7 @@ typedef struct {
 	uint16_t boost_setting;
 
 	bool is_charger_connected;
+	bool is_charging_enabled;
 
 	osMutexId_t mutex;
 } acc_data_t;

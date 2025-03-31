@@ -17,33 +17,24 @@
 #define MAX_VOLT_DELTA	  2500
 #define MAX_CONSEC_NOISE  10
 
-extern TIM_HandleTypeDef htim2;
-
 uint8_t therm_avg_counter = 0;
 
 nertimer_t variance_timer;
-
-/* private function prototypes */
-// void variance_therm_check(void);
-// void discard_neutrals(chipdata_t segment_data[NUM_CHIPS]);
-// void pull_chip_configuration(void);
-// int16_t calc_average(chipdata_t segment_data[NUM_CHIPS]);
-// int8_t calc_therm_standard_dev(int16_t avg_temp);
-void init_chip(cell_asic *chip);
-void write_config_regs(cell_asic chip[NUM_CHIPS]);
-void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge);
 
 /**
  * @brief Initialize a chip with our default values.
  * 
  * @param chip Pointer to chip to initialize.
+ * @param is_alpha if the chip is alpha
  */
-void init_chip(cell_asic *chip)
+void init_chip(cell_asic *chip, bool is_alpha)
 {
+	chip->tx_cfga.gpo = 0;
+
 	set_REFON(chip, PWR_UP);
-	// WARNING, THE ENUM IS WRONG, CHECK TABLE 102
+
 	set_volt_adc_comp_thresh(chip, CVT_135mV);
-	chip->tx_cfga.flag_d = 0;
+	clear_diagnostic_flags(chip);
 
 	// Short soak on ADAX
 	set_soak_on(chip, SOAKON_SET);
@@ -53,18 +44,19 @@ void init_chip(cell_asic *chip)
 	set_open_wire_soak_time(chip, OWA0);
 
 	// Set therm GPIOs
-	set_gpio_pull(chip, 1, true);
-	set_gpio_pull(chip, 2, true);
-	set_gpio_pull(chip, 3, true);
-	set_gpio_pull(chip, 4, true);
-	set_gpio_pull(chip, 5, true);
-	set_gpio_pull(chip, 6, true);
-	set_gpio_pull(chip, 7, true); // this is a on board therm for beta only
-	set_gpio_pull(chip, 8, true); // this is a on board therm
+	set_gpio_pull(chip, GPO1, GPO_SET);
+	set_gpio_pull(chip, GPO2, GPO_SET);
+	set_gpio_pull(chip, GPO3, GPO_SET);
+	set_gpio_pull(chip, GPO4, GPO_SET);
+	set_gpio_pull(chip, GPO5, GPO_SET);
+	set_gpio_pull(chip, GPO6, GPO_SET);
+	set_gpio_pull(chip, GPO7,
+		      GPO_SET); // this is a on board therm for beta only
+	set_gpio_pull(chip, GPO8, GPO_SET); // this is a on board therm
 
-	// set outputs, 9=iso led 10=bal LED
-	set_gpio_pull(chip, 9, false);
-	set_gpio_pull(chip, 10, false);
+	// set outputs, 9=iso led 10=bal LED. false=lit up
+	set_gpio_pull(chip, GPO9, GPO_SET);
+	set_gpio_pull(chip, GPO10, GPO_SET);
 
 	// Registers are unfrozen
 	set_snapshot(chip, SNAP_OFF);
@@ -73,9 +65,8 @@ void init_chip(cell_asic *chip)
 	set_mute_state(chip, true);
 
 	// Not an endpoint in the daisy chain
-	set_comm_break(chip, false);
+	set_comm_break(chip, COMM_BK_OFF);
 
-	// IIR filter disabled
 	set_iir_corner_freq(chip, IIR_FPA16);
 
 	// Init config B
@@ -85,13 +76,13 @@ void init_chip(cell_asic *chip)
 	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
 
 	// Discharge timer monitor off
-	set_discharge_timer_monitor(chip, false);
+	set_discharge_timer_monitor(chip, DTMEN_OFF);
 
 	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
 	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
 
 	// Disable discharge for all cells
-	chip->tx_cfgb.dcc = 0;
+	clear_cell_discharge(chip);
 }
 
 /**
@@ -102,9 +93,9 @@ void segment_init(acc_data_t *bmsdata)
 {
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		init_chip(&bmsdata->chips[chip]);
-		// TODO: Make sure this is accurate
 		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
+		init_chip(&bmsdata->chips[chip],
+			  bmsdata->chip_data[chip].alpha);
 	}
 	write_config_regs(bmsdata->chips);
 
@@ -144,6 +135,15 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		if (chips[chip].statc.cs_flt > 0) {
+			printf("C VS S MISMATCH on cells ");
+			for (int i = 0; i < 16; i++) {
+				if (NER_GET_BIT(chips[chip].statc.cs_flt, i)) {
+					printf("%d, ", i);
+				}
+			}
+			printf("\n");
+		}
 		if (chips[chip].statc.va_ov) {
 			printf("A OV FLT c%d\n", chip);
 		}
@@ -242,9 +242,10 @@ void segment_configure_balancing(
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&bmsdata->chips[chip], cell + 1,
+			set_cell_discharge(&bmsdata->chips[chip], cell,
 					   discharge_config[chip][cell]);
-			set_mute_state(&bmsdata->chips[chip], false);
+			if (discharge_config[chip][cell] > 0)
+				set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
 	write_config_regs(bmsdata->chips);
