@@ -185,7 +185,7 @@ typedef enum {
  * @brief Represents data to be packaged into a fault evaluation
  */
 typedef struct {
-	char *id;
+	char id[100];
 	nertimer_t timer;
 
 	int data_1;

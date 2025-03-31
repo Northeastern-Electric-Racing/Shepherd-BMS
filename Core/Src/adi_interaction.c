@@ -84,8 +84,8 @@ void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge)
 	} else {
 		chip->tx_cfgb.dcc &= ~(1 << cell);
 	}
-	printf("DCC %d\n ", chip->tx_cfgb.dcc);
 }
+
 void clear_cell_discharge(cell_asic *chip)
 {
 	chip->tx_cfgb.dcc = 0;

@@ -108,7 +108,7 @@ void vCurrentMonitor(void *pv_params)
 
 osThreadId_t state_machine_thread;
 const osThreadAttr_t state_machine_attrs = { .name = "State machine task",
-					     .stack_size = 2048,
+					     .stack_size = 4096,
 					     .priority = osPriorityRealtime };
 void vStateMachine(void *pv_params)
 {

@@ -212,6 +212,7 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
          * no need to free it */
 		fault_table = (fault_eval_t *)malloc(NUM_FAULTS *
 						     sizeof(fault_eval_t));
+
 		// clang-format off
     											// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   ____________________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ ________________________DATA 2______________   __THRESHOLD 2_____ ______CRITICAL________
         fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =     fault_data->pack_current,  .optype_1 = GT, .lim_1 = fault_data->cont_DCL ,                                                .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
@@ -222,7 +223,6 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
         fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =     fault_data->max_temp.val,  .optype_1 = GT, .lim_1 =                                                        MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
     	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 =  fault_data->min_voltage.val,  .optype_1 = LT, .lim_1 =                                                                  0.9, .timeout =       LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
 		fault_table[7]  = (fault_eval_t) {.id = "Die Overtemp",            .timer =   die_overtemp_timer, .data_1 = fault_data->max_chiptemp.val,  .optype_1 = GT, .lim_1 = 													   MAX_CHIP_TEMP, .timeout =   MAX_CHIPTEMP_TIME, .code =            DIE_TEMP_MAXIMUM_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-		fault_table[8]  = (fault_eval_t) {.id = NULL};
 
 		cancel_timer(&ovr_curr_timer);
 		cancel_timer(&ovr_chgcurr_timer);
@@ -246,22 +246,21 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
 		fault_table[7].data_1 = fault_data->max_chiptemp.val;
 	}
 
-	int incr = 0;
-	while (fault_table[incr].id != NULL) {
-		uint32_t item_code = fault_table[incr].code;
-		if (sm_fault_eval(&fault_table[incr])) {
-			if (fault_table[incr].is_critical) {
+	for (int i = 0; i < NUM_FAULTS; i++) {
+		uint32_t item_code = fault_table[i].code;
+		if (sm_fault_eval(&fault_table[i])) {
+			if (fault_table[i].is_critical) {
 				fault_status_crit |= item_code;
 			} else {
 				fault_status_noncrit |= item_code;
 			}
 		} else {
 			// Clear bit for non-critical faults
-			if (!fault_table[incr].is_critical) {
+			if (!fault_table[i].is_critical) {
 				fault_status_noncrit &= ~item_code;
 			}
 		}
-		incr++;
+		i++;
 	}
 
 	bms_fault_t return_faults = { .all = 0 };
