@@ -56,7 +56,8 @@ static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
 	return 0;
 }
 
-int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set)
+int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
+			  bool is_charging_enabled)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
@@ -71,7 +72,7 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set)
 	charger_msg_data.charger_voltage = voltage_to_set * 10;
 	charger_msg_data.charger_current = current_to_set * 10;
 
-	if (bms_data->is_charging_enabled) {
+	if (is_charging_enabled) {
 		charger_msg_data.charger_control = 0x00; // 0：Start charging.
 	} else {
 		charger_msg_data.charger_control =
@@ -94,7 +95,7 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set)
 	charger_msg.data[2] = charger_msg.data[3];
 	charger_msg.data[3] = temp;
 
-	if (bms_data->is_charging_enabled) {
+	if (is_charging_enabled) {
 		HAL_StatusTypeDef res = queue_can_msg(charger_msg);
 		if (res != HAL_OK) {
 			printf("queue_can_msg() ERROR CODE %X", res);

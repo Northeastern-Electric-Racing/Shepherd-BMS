@@ -408,7 +408,6 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	send_cell_voltage_message(bmsdata->max_voltage, bmsdata->min_voltage,
 				  bmsdata->avg_voltage);
 	send_segment_volt_message(bmsdata);
-
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)
