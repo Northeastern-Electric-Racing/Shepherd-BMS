@@ -293,7 +293,8 @@ void calc_pack_temps(acc_data_t *bmsdata)
 	/* Takes the average of all the cell temperatures. */
 	bmsdata->avg_temp = total_temp / NUM_CELLS;
 
-	send_cell_temp_message(bmsdata);
+	send_cell_temp_message(bmsdata->max_temp, bmsdata->min_temp,
+			       bmsdata->avg_temp);
 }
 
 void calc_cell_voltages(acc_data_t *bmsdata)
@@ -329,6 +330,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 
 	float total_volt = 0;
 	float total_ocv = 0;
+	float total_seg_volt = 0;
 
 	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
@@ -374,6 +376,17 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			total_volt += bmsdata->chip_data[c].cell_voltages[cell];
 			total_ocv +=
 				bmsdata->chip_data[c].open_cell_voltage[cell];
+
+			total_seg_volt +=
+				bmsdata->chip_data[c].cell_voltages[cell];
+
+			if (c % 2 == 0) {
+				bmsdata->segment_average_volts[c / 2] =
+					total_seg_volt /
+					((float)(NUM_CELLS_ALPHA +
+						 NUM_CELLS_BETA));
+				total_seg_volt = 0;
+			}
 		}
 	}
 
@@ -390,8 +403,11 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->pack_ocv = total_ocv;
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
 
-	send_acc_status_message(bmsdata);
-	send_cell_voltage_message(bmsdata);
+	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
+				bmsdata->soc);
+	send_cell_voltage_message(bmsdata->max_voltage, bmsdata->min_voltage,
+				  bmsdata->avg_voltage);
+	send_segment_volt_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)
@@ -484,7 +500,7 @@ void calc_dcl(acc_data_t *bmsdata)
 		prev_dcl -= DCDC_CURRENT_DRAW;
 	}
 
-	send_mc_discharge_message(bmsdata);
+	send_mc_discharge_message(bmsdata->discharge_limit);
 }
 
 //TODO: Fix for new cells and BMS
@@ -533,7 +549,7 @@ void calcCCL(acc_data_t *bmsdata)
 		bmsdata->charge_limit = currentLimit;
 	}
 
-	send_mc_charge_message(bmsdata);
+	send_mc_charge_message(bmsdata->charge_limit);
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)

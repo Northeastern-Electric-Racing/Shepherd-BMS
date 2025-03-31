@@ -121,6 +121,7 @@ typedef struct {
 	float soc;
 
 	float segment_average_temps[NUM_SEGMENTS];
+	float segment_average_volts[NUM_SEGMENTS];
 	uint8_t segment_noise_percentage[NUM_SEGMENTS];
 
 	/**
@@ -155,6 +156,7 @@ typedef struct {
 	uint16_t boost_setting;
 
 	bool is_charger_connected;
+	bool is_charging_enabled;
 
 	osMutexId_t mutex;
 } acc_data_t;

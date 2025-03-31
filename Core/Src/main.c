@@ -317,6 +317,7 @@ int main(void)
 
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
   acc_data->is_charger_connected = false;
+  acc_data->is_charging_enabled = false;
   acc_data->fault_code_crit = FAULTS_CLEAR;
   acc_data->fault_code_noncrit = FAULTS_CLEAR;
   
@@ -392,10 +393,10 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   
   /* Messaging */
-  can_dispatch_handle = osThreadNew(vCanDispatch, &hcan1, &can_dispatch_attributes);
+  can_dispatch_handle = osThreadNew(vCanDispatch, acc_data, &can_dispatch_attributes);
   assert(can_dispatch_handle);
   
-  can_receive_thread = osThreadNew(vCanReceive, NULL, &can_receive_attributes);
+  can_receive_thread = osThreadNew(vCanReceive, acc_data, &can_receive_attributes);
   assert(can_receive_thread);
 
   get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
@@ -1306,9 +1307,10 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
-    send_bms_status_message(bmsdata, current_state,
+    send_bms_status_message(bmsdata->avg_temp, current_state,
 					segment_is_balancing(bmsdata->chips));
-    send_fault_status_message(bmsdata);
+    send_fault_status_message(bmsdata->fault_code_crit, 
+      bmsdata->fault_code_noncrit);
 
     send_git_version_message();
   

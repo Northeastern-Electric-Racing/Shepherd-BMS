@@ -14,8 +14,6 @@
 #define CELL_ID_BITS 4
 #define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
 
-extern is_charging_enabled;
-
 static unsigned short reverse_short(unsigned short val);
 
 static unsigned short reverse_short(unsigned short val)
@@ -59,7 +57,7 @@ static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
 }
 
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
-			  acc_data_t *bms_data)
+			  bool is_charging_enabled)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
@@ -84,7 +82,7 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 	charger_msg_data.reserved_1 = 0x00;
 	charger_msg_data.reserved_23 = 0x0000;
 
-	can_msg_t charger_msg = { .id = 0x1806E5F4,
+	can_msg_t charger_msg = { .id = CHARGER_CANID,
 				  .id_is_extended = true,
 				  .len = 8,
 				  .data = { 0 } };
@@ -97,24 +95,24 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 	charger_msg.data[2] = charger_msg.data[3];
 	charger_msg.data[3] = temp;
 
-#ifdef CHARGING_ENABLED
-	HAL_StatusTypeDef res = can_send_msg(&can2, &msg);
-	if (res != HAL_OK) {
-		printf("CAN ERROR CODE %X", res);
+	if (is_charging_enabled) {
+		HAL_StatusTypeDef res = queue_can_msg(charger_msg);
+		if (res != HAL_OK) {
+			printf("queue_can_msg() ERROR CODE %X", res);
+		}
 	}
-#endif
 
 	return 0;
 }
 
-void send_mc_discharge_message(acc_data_t *bmsdata)
+void send_mc_discharge_message(float discharge_limit)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t max_discharge;
 	} discharge_data;
 
 	/* scale to A * 10 */
-	discharge_data.max_discharge = 10 * bmsdata->discharge_limit;
+	discharge_data.max_discharge = 10 * discharge_limit;
 
 	/* convert to big endian */
 	endian_swap(&discharge_data.max_discharge,
@@ -129,14 +127,14 @@ void send_mc_discharge_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
-void send_mc_charge_message(acc_data_t *bmsdata)
+void send_mc_charge_message(float charge_limit)
 {
 	struct __attribute__((__packed__)) {
 		int16_t max_charge;
 	} charge_data;
 
 	/* scale to A * 10 */
-	charge_data.max_charge = -10 * bmsdata->charge_limit;
+	charge_data.max_charge = -10 * charge_limit;
 
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
@@ -150,7 +148,7 @@ void send_mc_charge_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
-void send_acc_status_message(acc_data_t *bmsdata)
+void send_acc_status_message(float pack_voltage, float pack_current, float soc)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t packVolt;
@@ -160,12 +158,12 @@ void send_acc_status_message(acc_data_t *bmsdata)
 		uint8_t pack_health;
 	} acc_status_msg_data;
 
-	acc_status_msg_data.packVolt = bmsdata->pack_voltage;
+	acc_status_msg_data.packVolt = pack_voltage;
 	acc_status_msg_data.pack_current =
-		(int16_t)(bmsdata->pack_current *
+		(int16_t)(pack_current *
 			  10); // converted to signed int and scaled by 10
 	acc_status_msg_data.pack_ah = 0;
-	acc_status_msg_data.pack_soc = bmsdata->soc;
+	acc_status_msg_data.pack_soc = soc;
 	acc_status_msg_data.pack_health = 0;
 
 	/* convert to big endian */
@@ -185,7 +183,8 @@ void send_acc_status_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
-void send_fault_status_message(acc_data_t *bmsdata)
+void send_fault_status_message(uint32_t fault_code_crit,
+			       uint32_t fault_code_noncrit)
 {
 	struct __attribute__((__packed__)) {
 		uint32_t fault_crit;
@@ -198,8 +197,8 @@ void send_fault_status_message(acc_data_t *bmsdata)
 	endian_swap(&fault_status_msg_data.fault_noncrit,
 		    sizeof(fault_status_msg_data.fault_noncrit));
 
-	fault_status_msg_data.fault_crit = bmsdata->fault_code_crit;
-	fault_status_msg_data.fault_noncrit = bmsdata->fault_code_noncrit;
+	fault_status_msg_data.fault_crit = fault_code_crit;
+	fault_status_msg_data.fault_noncrit = fault_code_noncrit;
 
 	can_msg_t fault_msg = { .id = FAULT_STATUS_CANID,
 				.len = FAULT_STATUS_SIZE,
@@ -211,7 +210,7 @@ void send_fault_status_message(acc_data_t *bmsdata)
 	queue_can_msg(fault_msg);
 }
 
-void send_bms_status_message(acc_data_t *bmsdata, int bms_state, bool balance)
+void send_bms_status_message(float avg_temp, int bms_state, bool balance)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t state;
@@ -220,7 +219,7 @@ void send_bms_status_message(acc_data_t *bmsdata, int bms_state, bool balance)
 		uint8_t balance;
 	} bms_status_msg_data;
 
-	bms_status_msg_data.temp_avg = (int8_t)(bmsdata->avg_temp);
+	bms_status_msg_data.temp_avg = (int8_t)(avg_temp);
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
 	bms_status_msg_data.balance = (uint8_t)(balance);
@@ -252,7 +251,8 @@ void send_shutdown_ctrl_message(uint8_t mpe_state)
 	queue_can_msg(msg);
 }
 
-void send_cell_voltage_message(acc_data_t *bmsdata)
+void send_cell_voltage_message(crit_cellval_t max_voltage,
+			       crit_cellval_t min_voltage, float avg_voltage)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t high_cell_voltage;
@@ -262,14 +262,13 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 		uint16_t volt_avg;
 	} cell_data_msg_data;
 
-	cell_data_msg_data.high_cell_voltage = bmsdata->max_voltage.val;
-	cell_data_msg_data.high_cell_id =
-		(bmsdata->max_voltage.chipIndex << 4) |
-		bmsdata->max_voltage.cellNum;
-	cell_data_msg_data.low_cell_voltage = bmsdata->min_voltage.val;
-	cell_data_msg_data.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) |
-					 bmsdata->min_voltage.cellNum;
-	cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
+	cell_data_msg_data.high_cell_voltage = max_voltage.val;
+	cell_data_msg_data.high_cell_id = (max_voltage.chipIndex << 4) |
+					  max_voltage.cellNum;
+	cell_data_msg_data.low_cell_voltage = min_voltage.val;
+	cell_data_msg_data.low_cell_id = (min_voltage.chipIndex << 4) |
+					 min_voltage.cellNum;
+	cell_data_msg_data.volt_avg = avg_voltage;
 
 	/* convert to big endian */
 	endian_swap(&cell_data_msg_data.high_cell_voltage,
@@ -287,8 +286,35 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 
 	queue_can_msg(msg);
 }
+void send_segment_volt_message(acc_data_t *bmsdata)
+{
+	bitstream_t segment_volt_msg_data;
+	uint8_t bitstream_data[9];
+	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
 
-void send_cell_temp_message(acc_data_t *bmsdata)
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
+		      12);
+
+	can_msg_t msg;
+	msg.id = SEGMENT_VOLT_CANID;
+	msg.len = SEGMENT_VOLT_SIZE;
+
+	memcpy(msg.data, &segment_volt_msg_data, 8);
+
+	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
+	queue_can_msg(msg);
+}
+
+void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
+			    float avg_temp)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t max_cell_temp;
@@ -298,13 +324,13 @@ void send_cell_temp_message(acc_data_t *bmsdata)
 		uint16_t average_temp;
 	} cell_temp_msg_data;
 
-	cell_temp_msg_data.max_cell_temp = bmsdata->max_temp.val;
-	cell_temp_msg_data.max_cell_id = (bmsdata->max_temp.chipIndex << 4) |
-					 (bmsdata->max_temp.cellNum - 17);
-	cell_temp_msg_data.min_cell_temp = bmsdata->min_temp.val;
-	cell_temp_msg_data.min_cell_id = (bmsdata->min_temp.chipIndex << 4) |
-					 (bmsdata->min_temp.cellNum - 17);
-	cell_temp_msg_data.average_temp = bmsdata->avg_temp;
+	cell_temp_msg_data.max_cell_temp = max_temp.val;
+	cell_temp_msg_data.max_cell_id = (max_temp.chipIndex << 4) |
+					 (max_temp.cellNum - 17);
+	cell_temp_msg_data.min_cell_temp = min_temp.val;
+	cell_temp_msg_data.min_cell_id = (min_temp.chipIndex << 4) |
+					 (min_temp.cellNum - 17);
+	cell_temp_msg_data.average_temp = avg_temp;
 
 	/* convert to big endian */
 	endian_swap(&cell_temp_msg_data.max_cell_temp,
@@ -403,38 +429,6 @@ void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
 			  .data = { 0 } };
 
 	memcpy(msg.data, &fault_timer_msg_data, sizeof(fault_timer_msg_data));
-
-	queue_can_msg(msg);
-}
-
-void send_voltage_noise_message(acc_data_t *bmsdata)
-{
-	struct __attribute__((__packed__)) {
-		uint8_t seg1_noise;
-		uint8_t seg2_noise;
-		uint8_t seg3_noise;
-		uint8_t seg4_noise;
-		uint8_t seg5_noise;
-		uint8_t seg6_noise;
-	} voltage_noise_msg_data;
-
-	voltage_noise_msg_data.seg1_noise =
-		bmsdata->segment_noise_percentage[0];
-	voltage_noise_msg_data.seg2_noise =
-		bmsdata->segment_noise_percentage[1];
-	voltage_noise_msg_data.seg3_noise =
-		bmsdata->segment_noise_percentage[2];
-	voltage_noise_msg_data.seg4_noise =
-		bmsdata->segment_noise_percentage[3];
-	voltage_noise_msg_data.seg5_noise =
-		bmsdata->segment_noise_percentage[4];
-	voltage_noise_msg_data.seg6_noise =
-		bmsdata->segment_noise_percentage[5];
-
-	can_msg_t msg = { .id = NOISE_CANID, .len = NOISE_SIZE, .data = { 0 } };
-
-	memcpy(msg.data, &voltage_noise_msg_data,
-	       sizeof(voltage_noise_msg_data));
 
 	queue_can_msg(msg);
 }

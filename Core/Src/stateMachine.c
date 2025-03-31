@@ -74,7 +74,7 @@ void handle_boot(acc_data_t *bmsdata)
 {
 	prevAccData = NULL;
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
+	bmsdata->is_charging_enabled = false;
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
 
@@ -88,14 +88,14 @@ void handle_boot(acc_data_t *bmsdata)
 void init_ready(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
+	bmsdata->is_charging_enabled = false;
 	return;
 }
 
 void handle_ready(acc_data_t *bmsdata)
 {
 	/* check for charger connection */
-	if (compute_charger_connected() &&
+	if (bmsdata->is_charger_connected &&
 	    is_timer_expired(&bootup_timer)) { // TODO Fix once charger works
 		request_transition(bmsdata, READY_STATE);
 	} else {
@@ -113,17 +113,17 @@ void init_charging(acc_data_t *bmsdata)
 // TODO: Improve algorithm. Change for new cells. Make more configurable.
 void handle_charging(acc_data_t *bmsdata)
 {
-	if (!compute_charger_connected()) {
+	if (!bmsdata->is_charger_connected) {
 		request_transition(bmsdata, READY_STATE);
 		return;
 
 	} else {
 		/* Check if we should charge */
 		if (sm_charging_check(bmsdata))
-			compute_enable_charging(true);
+			bmsdata->is_charging_enabled = true;
 		else {
-			compute_enable_charging(false);
-			send_charging_message(0, 0, bmsdata);
+			bmsdata->is_charging_enabled = false;
+			send_charging_message(0, 0, false);
 		}
 
 		/* Check if we should balance */
@@ -139,17 +139,23 @@ void handle_charging(acc_data_t *bmsdata)
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
-				5, bmsdata);
+				5, true);
 			start_timer(&charger_message_timer,
 				    CHARGE_MESSAGE_WAIT);
 		}
 	}
 }
 
+void charger_message_recieved(acc_data_t *bmsdata)
+{
+	bmsdata->is_charger_connected = true;
+	handle_charging(bmsdata);
+}
+
 void init_faulted(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
+	bmsdata->is_charging_enabled = false;
 	entered_faulted = true;
 	return;
 }
@@ -194,8 +200,6 @@ void sm_handle_state(acc_data_t *bmsdata)
 	}
 
 	handler_LUT[current_state](bmsdata);
-
-	bmsdata->is_charger_connected = compute_charger_connected();
 
 	sm_broadcast_current_limit(bmsdata);
 }
@@ -386,7 +390,7 @@ bool sm_fault_eval(fault_eval_t *item)
  * trying to start again */
 bool sm_charging_check(acc_data_t *bmsdata)
 {
-	if (!compute_charger_connected()) {
+	if (!bmsdata->is_charger_connected) {
 		printf("Charger not connected\r\n");
 		return false;
 	}
@@ -430,7 +434,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // TODO: Improve algorithm.
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
-	if (!compute_charger_connected())
+	if (!bmsdata->is_charger_connected)
 		return false;
 	if (bmsdata->max_temp.val > MAX_CELL_TEMP_BAL)
 		return false;
