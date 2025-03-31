@@ -3,7 +3,6 @@
 #include "adi_interaction.h"
 #include "analyzer.h"
 #include "c_utils.h"
-#include "compute.h"
 #include "serialPrintResult.h"
 
 /**
@@ -117,14 +116,6 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 	}
 }
 
-uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
-{
-	set_poll_led(1);
-	uint32_t result = adBmsPollAdc(poll_type);
-	set_poll_led(0);
-	return result;
-}
-
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
@@ -210,9 +201,7 @@ void segment_restart(acc_data_t *bmsdata)
 
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 {
-	// read status B which contains the DCC
-	// cannot trust that status registers have been read as that is in debug mode only
-	read_status_register_b(chips);
+	read_config_register_b(chips);
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		if (chips[chip].rx_cfgb.dcc > 0) {
 			return true;

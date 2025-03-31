@@ -3,6 +3,7 @@
 #include "adBms6830GenericType.h"
 #include "mcuWrapper.h"
 #include "can_messages.h"
+#include "compute.h"
 
 /**
  * @brief Count and reset PEC errors for all chips, then send a CAN message if needed.
@@ -83,6 +84,7 @@ void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge)
 	} else {
 		chip->tx_cfgb.dcc &= ~(1 << cell);
 	}
+	printf("DCC %d\n ", chip->tx_cfgb.dcc);
 }
 void clear_cell_discharge(cell_asic *chip)
 {
@@ -216,7 +218,7 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 {
 	adbms_wake_isospi();
 
-	adBmsWriteData(NUM_CHIPS, &chips[0], command, type, group);
+	adBmsWriteData(NUM_CHIPS, chips, command, type, group);
 }
 
 /**
@@ -232,9 +234,17 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 {
 	adbms_wake_isospi();
 
-	adBmsReadData(NUM_CHIPS, &chips[0], command, type, group);
+	adBmsReadData(NUM_CHIPS, chips, command, type, group);
 
 	count_pec_errors(chips);
+}
+
+uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
+{
+	set_poll_led(1);
+	uint32_t result = adBmsPollAdc(poll_type);
+	set_poll_led(0);
+	return result;
 }
 
 // --- BEGIN WRITE COMMANDS ---
@@ -317,14 +327,14 @@ void read_status_registers(cell_asic chips[NUM_CHIPS])
 	read_adbms_data(chips, RDSTATE, Status, E);
 }
 
-void read_status_register_b(cell_asic chips[NUM_CHIPS])
-{
-	read_adbms_data(chips, RDSTATB, Status, B);
-}
-
 void read_status_register_c(cell_asic chips[NUM_CHIPS])
 {
 	read_adbms_data(chips, RDSTATC, Status, C);
+}
+
+void read_config_register_b(cell_asic chips[NUM_CHIPS])
+{
+	read_adbms_data(chips, RDCFGB, Config, B);
 }
 
 void read_status_aux_registers(cell_asic chips[NUM_CHIPS])

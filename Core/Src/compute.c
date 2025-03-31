@@ -45,7 +45,7 @@ float compute_get_pack_current()
 
 void toggle_debug_led()
 {
-	HAL_GPIO_TogglePin(Debug_LEDB11_GPIO_Port, Debug_LED_Pin);
+	HAL_GPIO_TogglePin(Debug_LED_GPIO_Port, Debug_LED_Pin);
 }
 
 void set_poll_led(int mode)

@@ -234,18 +234,18 @@ void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
 void read_status_registers(cell_asic chips[NUM_CHIPS]);
 
 /**
- * @brief Read status register b, containing DCC and more
- * 
- * @param chips 
- */
-void read_status_register_b(cell_asic chips[NUM_CHIPS]);
-
-/**
  * @brief Read status register c, containing chip level faults.
  * 
  * @param chips 
  */
 void read_status_register_c(cell_asic chips[NUM_CHIPS]);
+
+/**
+ * @brief Read config register b, containing DCC and more
+ * 
+ * @param chips 
+ */
+void read_config_register_b(cell_asic chips[NUM_CHIPS]);
 
 /**
  * @brief Read status and aux registers in one command.

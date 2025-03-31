@@ -77,9 +77,4 @@ void read_serial_id(cell_asic chips[NUM_CHIPS]);
  */
 void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
 
-/**
- * @brief Turns LED on when polling ADC.
- */
-uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2]);
-
 #endif
