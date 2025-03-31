@@ -51,19 +51,6 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 	}
 }
 
-/**
- * @brief Set a bit in a uint16
- *
- * @param number uint16 to change.
- * @param n Nth bit to change.
- * @param x true sets, false clears.
- * @return uint16_t New uint16.
- */
-inline uint16_t set_uint16_bit(uint16_t number, uint16_t n, bool x)
-{
-	return (number & ~((uint16_t)1 << n)) | ((uint16_t)x << n);
-}
-
 // --- BEGIN SET HELPERS ---
 
 void set_REFON(cell_asic *chip, REFON state)
@@ -76,15 +63,30 @@ void set_volt_adc_comp_thresh(cell_asic *chip, CTH threshold)
 	chip->tx_cfga.cth = threshold;
 }
 
-void set_diagnostic_flags(cell_asic *chip, FLAG_D config)
+void set_diagnostic_flags(cell_asic *chip, FLAG_D config, CFGA_FLAG state)
 {
-	chip->tx_cfga.flag_d =
-		(uint8_t)set_uint16_bit(chip->tx_cfga.flag_d, config, true);
+	if (state == FLAG_SET) {
+		chip->tx_cfga.flag_d |= ConfigA_Flag(config, state);
+	} else {
+		chip->tx_cfga.flag_d &= ~(1 << config);
+	}
+}
+void clear_diagnostic_flags(cell_asic *chip)
+{
+	chip->tx_cfga.flag_d = 0;
 }
 
-void set_cell_discharge(cell_asic *chip, uint8_t cell, bool discharge)
+void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge)
 {
-	chip->tx_cfgb.dcc = set_uint16_bit(chip->tx_cfgb.dcc, cell, discharge);
+	if (discharge == DCC_BIT_SET) {
+		chip->tx_cfgb.dcc |= ConfigB_DccBit(cell, discharge);
+	} else {
+		chip->tx_cfgb.dcc &= ~(1 << cell);
+	}
+}
+void clear_cell_discharge(cell_asic *chip)
+{
+	chip->tx_cfgb.dcc = 0;
 }
 
 void set_soak_on(cell_asic *chip, SOAKON state)
@@ -102,13 +104,13 @@ void set_open_wire_soak_time(cell_asic *chip, OWA time)
 	chip->tx_cfga.owa = time;
 }
 
-void set_gpio_pull(cell_asic *chip, uint8_t gpio, bool input)
+void set_gpio_pull(cell_asic *chip, GPO gpio, CFGA_GPO input)
 {
-	if (gpio > 10 || gpio < 1) {
-		printf("ERROR: Invalid GPIO pin %d\n", gpio);
-		return;
+	if (input == GPO_SET) {
+		chip->tx_cfga.gpo |= ConfigA_Gpo(gpio, input);
+	} else {
+		chip->tx_cfga.gpo &= ~(1 << gpio);
 	}
-	chip->tx_cfga.gpo = set_uint16_bit(chip->tx_cfga.gpo, gpio - 1, input);
 }
 
 void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq)
@@ -116,7 +118,7 @@ void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq)
 	chip->tx_cfga.fc = freq;
 }
 
-void set_comm_break(cell_asic *chip, bool is_break)
+void set_comm_break(cell_asic *chip, COMM_BK is_break)
 {
 	chip->tx_cfga.comm_bk = is_break;
 }
@@ -126,28 +128,23 @@ void set_mute_state(cell_asic *chip, bool disable_discharge)
 	chip->tx_cfga.mute_st = disable_discharge;
 }
 
-void set_snapshot(cell_asic *chip, bool take_snapshot)
+void set_snapshot(cell_asic *chip, SNAPSHOT take_snapshot)
 {
 	chip->tx_cfga.snap = take_snapshot;
 }
 
-void set_discharge_timer_monitor(cell_asic *chip, bool enabled)
+void set_discharge_timer_monitor(cell_asic *chip, DTMEN enabled)
 {
 	chip->tx_cfgb.dtmen = enabled;
 }
 
-void set_discharge_timer_range(cell_asic *chip, bool large)
+void set_discharge_timer_range(cell_asic *chip, DTRNG range)
 {
-	chip->tx_cfgb.dtrng = large;
+	chip->tx_cfgb.dtrng = range;
 }
 
-void set_discharge_timeout(cell_asic *chip, uint8_t timeout)
+void set_discharge_timeout(cell_asic *chip, DCTO timeout)
 {
-	if (timeout >> 6 > 0) {
-		printf("Invalid discharge time\n");
-		return;
-		// TODO: Non-critical fault
-	}
 	chip->tx_cfgb.dcto = timeout;
 }
 

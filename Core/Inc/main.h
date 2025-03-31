@@ -76,8 +76,6 @@ void Error_Handler(void);
 #define Debug_LED_GPIO_Port GPIOC
 #define I_Sense_Pin GPIO_PIN_5
 #define I_Sense_GPIO_Port GPIOC
-#define I_SenseB0_Pin GPIO_PIN_0
-#define I_SenseB0_GPIO_Port GPIOB
 #define I_SenseB2_Pin GPIO_PIN_2
 #define I_SenseB2_GPIO_Port GPIOB
 #define Debug_LEDB11_Pin GPIO_PIN_11

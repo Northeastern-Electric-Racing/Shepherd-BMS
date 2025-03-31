@@ -14,8 +14,6 @@
 #define CELL_ID_BITS 4
 #define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
 
-extern is_charging_enabled;
-
 static unsigned short reverse_short(unsigned short val);
 
 static unsigned short reverse_short(unsigned short val)
@@ -47,9 +45,9 @@ static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
 	overflow_data.can_id = can_id;
 	overflow_data.overflow_cnt = overflow_cnt;
 
-	can_msg_t overflow_msg;
-	overflow_msg.id = OVERFLOW_CANID;
-	overflow_msg.len = OVERFLOW_SIZE;
+	can_msg_t overflow_msg = { .id = OVERFLOW_CANID,
+				   .len = 6,
+				   .data = { 0 } };
 
 	memcpy(&overflow_msg.data, &overflow_data, sizeof(overflow_data));
 
@@ -59,7 +57,7 @@ static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
 }
 
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
-			  acc_data_t *bms_data)
+			  bool is_charging_enabled)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
@@ -84,9 +82,10 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 	charger_msg_data.reserved_1 = 0x00;
 	charger_msg_data.reserved_23 = 0x0000;
 
-	can_msg_t charger_msg;
-	charger_msg.id = 0x1806E5F4;
-	charger_msg.len = 8;
+	can_msg_t charger_msg = { .id = CHARGER_CANID,
+				  .id_is_extended = true,
+				  .len = 8,
+				  .data = { 0 } };
 	memcpy(charger_msg.data, &charger_msg_data, sizeof(charger_msg_data));
 
 	uint8_t temp = charger_msg.data[0];
@@ -96,74 +95,75 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 	charger_msg.data[2] = charger_msg.data[3];
 	charger_msg.data[3] = temp;
 
-#ifdef CHARGING_ENABLED
-	HAL_StatusTypeDef res = can_send_extended_msg(&can2, &charger_msg);
-	if (res != HAL_OK) {
-		printf("CAN ERROR CODE %X", res);
+	if (is_charging_enabled) {
+		HAL_StatusTypeDef res = queue_can_msg(charger_msg);
+		if (res != HAL_OK) {
+			printf("queue_can_msg() ERROR CODE %X", res);
+		}
 	}
-#endif
 
 	return 0;
 }
 
-void send_mc_discharge_message(acc_data_t *bmsdata)
+void send_mc_discharge_message(float discharge_limit)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t max_discharge;
 	} discharge_data;
 
 	/* scale to A * 10 */
-	discharge_data.max_discharge = 10 * bmsdata->discharge_limit;
+	discharge_data.max_discharge = 10 * discharge_limit;
 
 	/* convert to big endian */
 	endian_swap(&discharge_data.max_discharge,
 		    sizeof(discharge_data.max_discharge));
 
-	can_msg_t msg;
-	msg.id = DISCHARGE_CANID;
-	msg.len = DISCHARGE_SIZE;
+	can_msg_t msg = { .id = DISCHARGE_CANID,
+			  .len = DISCHARGE_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &discharge_data, sizeof(discharge_data));
 
 	queue_can_msg(msg);
 }
 
-void send_mc_charge_message(acc_data_t *bmsdata)
+void send_mc_charge_message(float charge_limit)
 {
 	struct __attribute__((__packed__)) {
 		int16_t max_charge;
 	} charge_data;
 
 	/* scale to A * 10 */
-	charge_data.max_charge = -10 * bmsdata->charge_limit;
+	charge_data.max_charge = -10 * charge_limit;
 
 	/* convert to big endian */
 	endian_swap(&charge_data.max_charge, sizeof(charge_data.max_charge));
 
-	can_msg_t msg;
-	msg.id = CHARGE_CANID;
-	msg.len = CHARGE_SIZE;
+	can_msg_t msg = { .id = CHARGE_CANID,
+			  .len = CHARGE_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &charge_data, sizeof(charge_data));
 
 	queue_can_msg(msg);
 }
 
-void send_acc_status_message(acc_data_t *bmsdata)
+void send_acc_status_message(float pack_voltage, float pack_current, float soc)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t packVolt;
-		uint16_t pack_current;
+		int16_t pack_current;
 		uint16_t pack_ah;
 		uint8_t pack_soc;
 		uint8_t pack_health;
 	} acc_status_msg_data;
 
-	acc_status_msg_data.packVolt = bmsdata->pack_voltage;
+	acc_status_msg_data.packVolt = pack_voltage;
 	acc_status_msg_data.pack_current =
-		(uint16_t)(bmsdata->pack_current); // convert with 2s complement
+		(int16_t)(pack_current *
+			  10); // converted to signed int and scaled by 10
 	acc_status_msg_data.pack_ah = 0;
-	acc_status_msg_data.pack_soc = bmsdata->soc;
+	acc_status_msg_data.pack_soc = soc;
 	acc_status_msg_data.pack_health = 0;
 
 	/* convert to big endian */
@@ -174,16 +174,17 @@ void send_acc_status_message(acc_data_t *bmsdata)
 	endian_swap(&acc_status_msg_data.pack_ah,
 		    sizeof(acc_status_msg_data.pack_ah));
 
-	can_msg_t msg;
-	msg.id = ACC_STATUS_CANID;
-	msg.len = ACC_STATUS_SIZE;
+	can_msg_t msg = { .id = ACC_STATUS_CANID,
+			  .len = ACC_STATUS_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &acc_status_msg_data, sizeof(acc_status_msg_data));
 
 	queue_can_msg(msg);
 }
 
-void send_fault_status_message(acc_data_t *bmsdata)
+void send_fault_status_message(uint32_t fault_code_crit,
+			       uint32_t fault_code_noncrit)
 {
 	struct __attribute__((__packed__)) {
 		uint32_t fault_crit;
@@ -196,12 +197,12 @@ void send_fault_status_message(acc_data_t *bmsdata)
 	endian_swap(&fault_status_msg_data.fault_noncrit,
 		    sizeof(fault_status_msg_data.fault_noncrit));
 
-	fault_status_msg_data.fault_crit = bmsdata->fault_code_crit;
-	fault_status_msg_data.fault_noncrit = bmsdata->fault_code_noncrit;
+	fault_status_msg_data.fault_crit = fault_code_crit;
+	fault_status_msg_data.fault_noncrit = fault_code_noncrit;
 
-	can_msg_t fault_msg;
-	fault_msg.id = FAULT_STATUS_CANID;
-	fault_msg.len = FAULT_STATUS_SIZE;
+	can_msg_t fault_msg = { .id = FAULT_STATUS_CANID,
+				.len = FAULT_STATUS_SIZE,
+				.data = { 0 } };
 
 	memcpy(fault_msg.data, &fault_status_msg_data,
 	       sizeof(fault_status_msg_data));
@@ -209,7 +210,7 @@ void send_fault_status_message(acc_data_t *bmsdata)
 	queue_can_msg(fault_msg);
 }
 
-void send_bms_status_message(acc_data_t *bmsdata, int bms_state, bool balance)
+void send_bms_status_message(float avg_temp, int bms_state, bool balance)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t state;
@@ -218,14 +219,14 @@ void send_bms_status_message(acc_data_t *bmsdata, int bms_state, bool balance)
 		uint8_t balance;
 	} bms_status_msg_data;
 
-	bms_status_msg_data.temp_avg = (int8_t)(bmsdata->avg_temp);
+	bms_status_msg_data.temp_avg = (int8_t)(avg_temp);
 	bms_status_msg_data.state = (uint8_t)(bms_state);
 	bms_status_msg_data.temp_internal = (uint8_t)(0);
 	bms_status_msg_data.balance = (uint8_t)(balance);
 
-	can_msg_t msg;
-	msg.id = BMS_STATUS_CANID;
-	msg.len = BMS_STATUS_SIZE;
+	can_msg_t msg = { .id = BMS_STATUS_CANID,
+			  .len = BMS_STATUS_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &bms_status_msg_data, sizeof(bms_status_msg_data));
 
@@ -240,9 +241,9 @@ void send_shutdown_ctrl_message(uint8_t mpe_state)
 
 	shutdown_control_msg_data.mpeState = mpe_state;
 
-	can_msg_t msg;
-	msg.id = SHUTDOWN_CTRL_CANID;
-	msg.len = SHUTDOWN_CTRL_SIZE;
+	can_msg_t msg = { .id = SHUTDOWN_CTRL_CANID,
+			  .len = SHUTDOWN_CTRL_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &shutdown_control_msg_data,
 	       sizeof(shutdown_control_msg_data));
@@ -250,7 +251,8 @@ void send_shutdown_ctrl_message(uint8_t mpe_state)
 	queue_can_msg(msg);
 }
 
-void send_cell_voltage_message(acc_data_t *bmsdata)
+void send_cell_voltage_message(crit_cellval_t max_voltage,
+			       crit_cellval_t min_voltage, float avg_voltage)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t high_cell_voltage;
@@ -260,14 +262,13 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 		uint16_t volt_avg;
 	} cell_data_msg_data;
 
-	cell_data_msg_data.high_cell_voltage = bmsdata->max_voltage.val;
-	cell_data_msg_data.high_cell_id =
-		(bmsdata->max_voltage.chipIndex << 4) |
-		bmsdata->max_voltage.cellNum;
-	cell_data_msg_data.low_cell_voltage = bmsdata->min_voltage.val;
-	cell_data_msg_data.low_cell_id = (bmsdata->min_voltage.chipIndex << 4) |
-					 bmsdata->min_voltage.cellNum;
-	cell_data_msg_data.volt_avg = bmsdata->avg_voltage;
+	cell_data_msg_data.high_cell_voltage = max_voltage.val;
+	cell_data_msg_data.high_cell_id = (max_voltage.chipIndex << 4) |
+					  max_voltage.cellNum;
+	cell_data_msg_data.low_cell_voltage = min_voltage.val;
+	cell_data_msg_data.low_cell_id = (min_voltage.chipIndex << 4) |
+					 min_voltage.cellNum;
+	cell_data_msg_data.volt_avg = avg_voltage;
 
 	/* convert to big endian */
 	endian_swap(&cell_data_msg_data.high_cell_voltage,
@@ -277,46 +278,43 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 	endian_swap(&cell_data_msg_data.volt_avg,
 		    sizeof(cell_data_msg_data.volt_avg));
 
-	can_msg_t msg;
-	msg.id = CELL_DATA_CANID;
-	msg.len = CELL_DATA_SIZE;
+	can_msg_t msg = { .id = CELL_DATA_CANID,
+			  .len = CELL_DATA_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
 	queue_can_msg(msg);
 }
-
-void send_current_message(acc_data_t *bmsdata)
+void send_segment_volt_message(acc_data_t *bmsdata)
 {
-	struct __attribute__((__packed__)) {
-		uint16_t dcl;
-		int16_t ccl;
-		uint16_t pack_curr;
-	} current_status_msg_data;
+	bitstream_t segment_volt_msg_data;
+	uint8_t bitstream_data[9];
+	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
 
-	current_status_msg_data.dcl = bmsdata->discharge_limit;
-	current_status_msg_data.ccl = -1 * bmsdata->charge_limit;
-	current_status_msg_data.pack_curr = bmsdata->pack_current;
-
-	/* convert to big endian */
-	endian_swap(&current_status_msg_data.dcl,
-		    sizeof(current_status_msg_data.dcl));
-	endian_swap(&current_status_msg_data.ccl,
-		    sizeof(current_status_msg_data.ccl));
-	endian_swap(&current_status_msg_data.pack_curr,
-		    sizeof(current_status_msg_data.pack_curr));
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
+		      12);
 
 	can_msg_t msg;
-	msg.id = CURRENT_CANID;
-	msg.len = CURRENT_SIZE;
+	msg.id = SEGMENT_VOLT_CANID;
+	msg.len = SEGMENT_VOLT_SIZE;
 
-	memcpy(msg.data, &current_status_msg_data,
-	       sizeof(current_status_msg_data));
+	memcpy(msg.data, &segment_volt_msg_data, 8);
 
+	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
 	queue_can_msg(msg);
 }
 
-void send_cell_temp_message(acc_data_t *bmsdata)
+void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
+			    float avg_temp)
 {
 	struct __attribute__((__packed__)) {
 		uint16_t max_cell_temp;
@@ -326,13 +324,13 @@ void send_cell_temp_message(acc_data_t *bmsdata)
 		uint16_t average_temp;
 	} cell_temp_msg_data;
 
-	cell_temp_msg_data.max_cell_temp = bmsdata->max_temp.val;
-	cell_temp_msg_data.max_cell_id = (bmsdata->max_temp.chipIndex << 4) |
-					 (bmsdata->max_temp.cellNum - 17);
-	cell_temp_msg_data.min_cell_temp = bmsdata->min_temp.val;
-	cell_temp_msg_data.min_cell_id = (bmsdata->min_temp.chipIndex << 4) |
-					 (bmsdata->min_temp.cellNum - 17);
-	cell_temp_msg_data.average_temp = bmsdata->avg_temp;
+	cell_temp_msg_data.max_cell_temp = max_temp.val;
+	cell_temp_msg_data.max_cell_id = (max_temp.chipIndex << 4) |
+					 (max_temp.cellNum - 17);
+	cell_temp_msg_data.min_cell_temp = min_temp.val;
+	cell_temp_msg_data.min_cell_id = (min_temp.chipIndex << 4) |
+					 (min_temp.cellNum - 17);
+	cell_temp_msg_data.average_temp = avg_temp;
 
 	/* convert to big endian */
 	endian_swap(&cell_temp_msg_data.max_cell_temp,
@@ -342,9 +340,9 @@ void send_cell_temp_message(acc_data_t *bmsdata)
 	endian_swap(&cell_temp_msg_data.average_temp,
 		    sizeof(cell_temp_msg_data.average_temp));
 
-	can_msg_t msg;
-	msg.id = CELL_TEMP_CANID;
-	msg.len = CELL_TEMP_SIZE;
+	can_msg_t msg = { .id = CELL_TEMP_CANID,
+			  .len = CELL_TEMP_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
 
@@ -376,9 +374,9 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 	segment_temp_msg_data.segment6_average_temp =
 		bmsdata->segment_average_temps[5];
 
-	can_msg_t msg;
-	msg.id = SEGMENT_TEMP_CANID;
-	msg.len = SEGMENT_TEMP_SIZE;
+	can_msg_t msg = { .id = SEGMENT_TEMP_CANID,
+			  .len = SEGMENT_TEMP_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
 
@@ -401,9 +399,7 @@ void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 		    sizeof(fault_msg_data.pack_curr));
 	endian_swap(&fault_msg_data.dcl, sizeof(fault_msg_data.dcl));
 
-	can_msg_t msg;
-	msg.id = FAULT_CANID;
-	msg.len = FAULT_SIZE;
+	can_msg_t msg = { .id = FAULT_CANID, .len = FAULT_SIZE, .data = { 0 } };
 
 	memcpy(msg.data, &fault_msg_data, sizeof(fault_msg_data));
 
@@ -428,45 +424,11 @@ void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
 	endian_swap(&fault_timer_msg_data.data_1,
 		    sizeof(fault_timer_msg_data.data_1));
 
-	can_msg_t msg;
-	msg.id = FAULT_TIMER_CANID;
-	msg.len = FAULT_TIMER_SIZE;
+	can_msg_t msg = { .id = FAULT_TIMER_CANID,
+			  .len = FAULT_TIMER_SIZE,
+			  .data = { 0 } };
 
 	memcpy(msg.data, &fault_timer_msg_data, sizeof(fault_timer_msg_data));
-
-	queue_can_msg(msg);
-}
-
-void send_voltage_noise_message(acc_data_t *bmsdata)
-{
-	struct __attribute__((__packed__)) {
-		uint8_t seg1_noise;
-		uint8_t seg2_noise;
-		uint8_t seg3_noise;
-		uint8_t seg4_noise;
-		uint8_t seg5_noise;
-		uint8_t seg6_noise;
-	} voltage_noise_msg_data;
-
-	voltage_noise_msg_data.seg1_noise =
-		bmsdata->segment_noise_percentage[0];
-	voltage_noise_msg_data.seg2_noise =
-		bmsdata->segment_noise_percentage[1];
-	voltage_noise_msg_data.seg3_noise =
-		bmsdata->segment_noise_percentage[2];
-	voltage_noise_msg_data.seg4_noise =
-		bmsdata->segment_noise_percentage[3];
-	voltage_noise_msg_data.seg5_noise =
-		bmsdata->segment_noise_percentage[4];
-	voltage_noise_msg_data.seg6_noise =
-		bmsdata->segment_noise_percentage[5];
-
-	can_msg_t msg;
-	msg.id = NOISE_CANID;
-	msg.len = NOISE_SIZE;
-
-	memcpy(msg.data, &voltage_noise_msg_data,
-	       sizeof(voltage_noise_msg_data));
 
 	queue_can_msg(msg);
 }
@@ -489,9 +451,7 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	endian_swap(&debug_msg_data.debug2, sizeof(debug_msg_data.debug2));
 	endian_swap(&debug_msg_data.debug3, sizeof(debug_msg_data.debug3));
 
-	can_msg_t msg;
-	msg.id = DEBUG_CANID;
-	msg.len = DEBUG_SIZE;
+	can_msg_t msg = { .id = DEBUG_CANID, .len = DEBUG_SIZE, .data = { 0 } };
 
 	memcpy(msg.data, &debug_msg_data, 8);
 
@@ -505,13 +465,12 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 			    bool discharging_b)
 {
 	// clang-format off
-	can_msg_t msg;
+	can_msg_t msg = { .len = CELL_MSG_SIZE, .data = { 0 } };
 	if (alpha) {
 		msg.id = ALPHA_CELL_CANID;
 	} else {
 		msg.id = BETA_CELL_CANID;
 	}
-	msg.len = CELL_MSG_SIZE;
 
 	// patch bc 0 to 4
 	chip_ID /= 2;
@@ -550,7 +509,6 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	handle_bitstream_overflow(&cell_data_message, msg.id);
 
 	queue_can_msg(msg);
-	// clang-format on
 }
 
 // TODO confirm cell 10 vs 11?. Jack verified VPV wil chip 0 on 3/17/2025
@@ -559,9 +517,7 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 				float segment_temperature,
 				float die_temperature, float vpv)
 {
-	can_msg_t msg;
-	msg.id = BETA_STAT_A_CANID;
-	msg.len = BETA_STAT_A_SIZE;
+	can_msg_t msg = { .id = BETA_STAT_A_CANID, .len = BETA_STAT_A_SIZE, .data = { 0 } };
 
 	// patch bc 0 to 4
 	chip /= 2;
@@ -607,10 +563,7 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 				uint8_t chip, float v_res, float vmv)
 {
-	// clang-format off
-	can_msg_t msg;
-	msg.id = BETA_STAT_B_CANID;
-	msg.len = BETA_STAT_B_SIZE;
+	can_msg_t msg = { .id = BETA_STAT_B_CANID, .len = BETA_STAT_B_SIZE, .data = { 0 } };
 
 	// patch bc 0 to 4
 	chip /= 2;
@@ -645,16 +598,12 @@ void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 	handle_bitstream_overflow(&beta_status_b_message, msg.id);
 
 	queue_can_msg(msg);
-	// clang-format on
 }
 
 // verified by Jack on chip 0 3/12/2025.  For some reason OTP1_MED triggering without print?
 void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 {
-	// clang-format off
-	can_msg_t msg;
-	msg.id = BETA_STAT_C_CANID;
-	msg.len = BETA_STAT_C_SIZE;
+	can_msg_t msg = { .id = BETA_STAT_C_CANID, .len = BETA_STAT_C_SIZE, .data = { 0 } };
 
 	// patch bc 0 to 4
 	chip /= 2;
@@ -684,7 +633,6 @@ void send_beta_status_c_message(uint8_t chip, stc_ *flt_reg)
 	handle_bitstream_overflow(&beta_status_c_message, msg.id);
 
 	queue_can_msg(msg);
-	// clang-format on
 }
 
 // verified 3/17/2025 for chip 0 by Jack, EXCLUDING VMV (see TODO)
@@ -692,10 +640,7 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 				 float die_temperature, float vpv, float vmv,
 				 stc_ *flt_reg)
 {
-	// clang-format off
-	can_msg_t msg;
-	msg.id = ALPHA_STAT_A_CANID;
-	msg.len = ALPHA_STAT_A_SIZE;
+	can_msg_t msg = { .id = ALPHA_STAT_A_CANID, .len = ALPHA_STAT_A_SIZE, .data = { 0 } };
 
 
 	// printf("SegTemp %f\n", segment_temp);
@@ -737,17 +682,13 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	handle_bitstream_overflow(&alpha_status_a_message, msg.id);
 
 	queue_can_msg(msg);
-	// clang-format on
 }
 
 // verified 3/17/2025 for chip 0 by Jack. mostly faults too
 void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 				 float v_analog, float v_digital, stc_ *flt_reg)
 {
-	// clang-format off
-	can_msg_t msg;
-	msg.id = ALPHA_STAT_B_CANID;
-	msg.len = ALPHA_STAT_B_SIZE;
+	can_msg_t msg = { .id = ALPHA_STAT_B_CANID, .len = ALPHA_STAT_B_SIZE, .data = { 0 } };
 
 	// printf("Vres %f\n", v_res);
 	// printf("Vref2 %f\n", vref2);
@@ -799,9 +740,9 @@ void send_pec_error_message(uint8_t chip_num, uint16_t pec_count)
 	endian_swap(&pec_data.pec_error_count,
 		    sizeof(pec_data.pec_error_count));
 
-	can_msg_t msg;
-	msg.id = PEC_ERROR_CANID;
-	msg.len = PEC_ERROR_SIZE;
+	can_msg_t msg = { .id = PEC_ERROR_CANID,
+			  .len = PEC_ERROR_SIZE,
+			  .data = { 0 } };
 
 	memcpy(&msg.data, &pec_data, sizeof(pec_data));
 
