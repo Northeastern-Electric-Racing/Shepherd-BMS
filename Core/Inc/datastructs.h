@@ -155,6 +155,7 @@ typedef struct {
 	uint16_t boost_setting;
 
 	bool is_charger_connected;
+	bool is_charging_enabled;
 
 	osMutexId_t mutex;
 } acc_data_t;
