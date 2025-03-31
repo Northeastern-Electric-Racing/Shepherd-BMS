@@ -1,85 +1,103 @@
+/**
+ * @file eepromdirectory.h
+ * @brief Functionality for EEPROM partition management, data read/write operations, and fault logging.
+ * 
+ * @note Per M24C32 datasheet, ensure a minimum 5 ms delay after each EEPROM write to avoid data corruption (tWR = 5 ms max).
+ * It is the user's responsibility to maintain this delay.
+ *
+ * Functions return `eeprom_status_t` error codes, which are defined in `eeprom_status.h`.
+ */
+
 #ifndef EEPROMDIRECTORY_H
 #define EEPROMDIRECTORY_H
 
+#include "eeprom_status.h"
+#include "eeprom_directory.h"
 #include <stdint.h>
-#include <stdbool.h>
-
-#define NUM_EEPROM_FAULTS 5
-#define NUM_EEPROM_ITEMS  2
-#define EEPROM_ROOT_ADDR  0
-
-/* index 0 = newest, index 4 = oldest */
-static uint32_t eeprom_faults[NUM_EEPROM_FAULTS];
-
-struct eeprom_partition {
-	char *id; /*  key  */
-	uint16_t size; /* bytes */
-	uint16_t address; /* start address */
-};
-
-struct eeprom_partition eeprom_data[NUM_EEPROM_ITEMS];
-/*  ____________KEY________________         _BYTES_   */
 
 /**
- * @brief partitions eeprom addresses given table of data and size
- * 
- * 
- */
-void eepromInit();
-
-/**
- * @brief returns the starting address of the passed key
- * 
- * @param key
- * @return int 
- */
-uint16_t eeprom_get_index(char *key);
-
-/**
- * @brief returns the key at the passed index
- *  
- * 
- */
-char *eeprom_get_key(int index);
-
-/**
- * @brief fills passed data pointer with data from eeprom
- * 
- * @note user is responsible for passing data of correct size
- * @param key
- * @param data
- */
-bool eeprom_read_data_key(char *key, void *data, uint16_t size);
-
-bool eeprom_read_data_address(uint16_t address, void *data, uint16_t size);
-
-/**
- * @brief loads eeprom with data from passed pointer
- * 
- * @note user is responsible for passing data of correct size
- * @param key 
- * @param data 
- */
-bool eeprom_write_data_key(char *key, void *data, uint16_t size);
-
-bool eeprom_write_data_address(uint16_t address, void *data, uint16_t size);
-
-/**
- * @brief logs fault code in eeprom
- * 
- * 
- * @param fault_code 
- */
-void log_fault(uint32_t fault_code);
-/**
- * @brief reads all stored faults from eeprom
+ * @brief Initializes the EEPROM directory with given partitions.
  *
- * 
- * @note this updates a static array of fault codes, should be called before accessing the array
- * @note this function is blocking, and will take a few ms to complete. This is why it is kept seperate from log_fault(), 
- *      allwing the user more control as to when to use this
+ * @param directory Pointer to the EEPROM directory structure.
+ * @param partitions Array of partition configurations.
+ * @param num_partitions Number of partitions in the array.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
  */
+eeprom_status_t eepromInit(eeprom_directory_t *directory,
+			   const struct partition_cfg *partitions,
+			   size_t num_partitions);
 
-void get_faults();
+/**
+ * @brief Reads data from EEPROM using a key.
+ *
+ * @param directory Pointer to the EEPROM directory.
+ * @param key Key representing the EEPROM partition.
+ * @param data Pointer to buffer where data will be stored.
+ * @param size Size of data to be read.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
+ */
+eeprom_status_t eeprom_read_data_key(eeprom_directory_t *directory,
+				     const char *key, void *data,
+				     uint16_t size);
 
-#endif
+/**
+ * @brief Reads data from EEPROM using a memory address.
+ *
+ * @param directory Pointer to the EEPROM directory.
+ * @param address EEPROM memory address to read from.
+ * @param data Pointer to buffer where data will be stored.
+ * @param size Size of data to be read.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
+ */
+eeprom_status_t eeprom_read_data_address(eeprom_directory_t *directory,
+					 const char *key, uint16_t address,
+					 void *data, uint16_t size);
+
+/**
+ * @brief Writes data to EEPROM using a key.
+ *
+ * @param directory Pointer to the EEPROM directory.
+ * @param key Key representing the EEPROM partition.
+ * @param data Pointer to the data to be written.
+ * @param size Size of data to be written.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
+ */
+eeprom_status_t eeprom_write_data_key(eeprom_directory_t *directory,
+				      const char *key, void *data,
+				      uint16_t size);
+
+/**
+ * @brief Writes data to EEPROM using a memory address.
+ *
+ * @param directory Pointer to the EEPROM directory.
+ * @param address EEPROM memory address to write to.
+ * @param data Pointer to the data to be written.
+ * @param size Size of data to be written.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
+ */
+eeprom_status_t eeprom_write_data_address(eeprom_directory_t *directory,
+					  const char *key, uint16_t address,
+					  void *data, uint16_t size);
+
+/**
+ * @brief Logs a fault code into the EEPROM faults partition.
+ *
+ * @param directory Pointer to the EEPROM directory.
+ * @param fault_code The fault code to log.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
+ */
+eeprom_status_t log_fault(eeprom_directory_t *directory, uint32_t fault_code);
+
+/**
+ * @brief Retrieves the latest stored faults from the EEPROM faults partition.
+ *
+ * @param directory Pointer to the EEPROM directory.
+ * @param faults Pointer to an array where fault codes will be stored.
+ * @param n Number of latest faults to retrieve.
+ * @param valid_count Pointer where the number of valid faults will be returned.
+ * @return eeprom_status_t EEPROM_OK on success, error code otherwise.
+ */
+eeprom_status_t get_faults(eeprom_directory_t *directory, uint32_t *faults,
+			   uint16_t n, uint16_t *valid_count);
+
+#endif // EEPROMDIRECTORY_H

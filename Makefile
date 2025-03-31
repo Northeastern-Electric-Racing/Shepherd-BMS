@@ -78,6 +78,8 @@ Core/Src/stm32f4xx_hal_msp.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \
 Drivers/Embedded-Base/general/src/m24c32.c \
 Drivers/Embedded-Base/general/src/sht30.c \
+Drivers/Embedded-Base/middleware/src/eeprom_directory.c \
+Drivers/Embedded-Base/middleware/src/m24c32_eeprom_directory.c \
 Drivers/Embedded-Base/middleware/src/timer.c \
 Drivers/Embedded-Base/middleware/src/ringbuffer.c \
 Drivers/Embedded-Base/middleware/src/bitstream.c \
