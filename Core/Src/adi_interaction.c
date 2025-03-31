@@ -319,7 +319,7 @@ void read_status_registers(cell_asic chips[NUM_CHIPS])
 
 void read_status_register_b(cell_asic chips[NUM_CHIPS])
 {
-	read_adbms_data_data(chips, RDSTATB, Status, B);
+	read_adbms_data(chips, RDSTATB, Status, B);
 }
 
 void read_status_register_c(cell_asic chips[NUM_CHIPS])
