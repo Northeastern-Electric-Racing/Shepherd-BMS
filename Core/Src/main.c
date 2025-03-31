@@ -1302,6 +1302,8 @@ void StartDefaultTask(void *argument)
   
     HAL_IWDG_Refresh(&hiwdg);
 
+    toggle_debug_led();
+
     osDelay(1000);
   }
   /* USER CODE END 5 */
