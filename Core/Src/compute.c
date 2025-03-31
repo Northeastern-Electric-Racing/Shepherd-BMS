@@ -11,8 +11,6 @@
 // #define CHARGING_ENABLED
 
 uint8_t fan_speed;
-bool is_charging_enabled;
-enum { CHARGE_ENABLED, CHARGE_DISABLED };
 uint32_t channel_1_buf;
 
 extern TIM_HandleTypeDef htim1;
@@ -53,20 +51,6 @@ uint8_t compute_init(acc_data_t *bmsdata)
 				  sizeof(channel_1_buf) / sizeof(uint32_t)));
 
 	return 0;
-}
-
-void compute_enable_charging(bool enable_charging)
-{
-	is_charging_enabled = enable_charging;
-}
-
-bool compute_charger_connected()
-{
-#ifdef CHARGING
-	return true;
-#endif
-	//TODO need to set up CAN msg that actually toggles this bool
-	return false; //bmsdata->is_charger_connected;
 }
 
 // TODO add this back

@@ -65,7 +65,11 @@ void set_volt_adc_comp_thresh(cell_asic *chip, CTH threshold)
 
 void set_diagnostic_flags(cell_asic *chip, FLAG_D config, CFGA_FLAG state)
 {
-	chip->tx_cfga.flag_d |= ConfigA_Flag(config, state);
+	if (state == FLAG_SET) {
+		chip->tx_cfga.flag_d |= ConfigA_Flag(config, state);
+	} else {
+		chip->tx_cfga.flag_d &= ~(1 << config);
+	}
 }
 void clear_diagnostic_flags(cell_asic *chip)
 {
@@ -74,7 +78,11 @@ void clear_diagnostic_flags(cell_asic *chip)
 
 void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge)
 {
-	chip->tx_cfgb.dcc |= ConfigB_DccBit(cell, discharge);
+	if (discharge == DCC_BIT_SET) {
+		chip->tx_cfgb.dcc |= ConfigB_DccBit(cell, discharge);
+	} else {
+		chip->tx_cfgb.dcc &= ~(1 << cell);
+	}
 }
 void clear_cell_discharge(cell_asic *chip)
 {
@@ -98,7 +106,11 @@ void set_open_wire_soak_time(cell_asic *chip, OWA time)
 
 void set_gpio_pull(cell_asic *chip, GPO gpio, CFGA_GPO input)
 {
-	chip->tx_cfga.gpo |= ConfigA_Gpo(gpio, input);
+	if (input == GPO_SET) {
+		chip->tx_cfga.gpo |= ConfigA_Gpo(gpio, input);
+	} else {
+		chip->tx_cfga.gpo &= ~(1 << gpio);
+	}
 }
 
 void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq)
