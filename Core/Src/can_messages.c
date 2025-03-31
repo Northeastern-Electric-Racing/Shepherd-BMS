@@ -14,8 +14,6 @@
 #define CELL_ID_BITS 4
 #define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
 
-extern is_charging_enabled;
-
 static unsigned short reverse_short(unsigned short val);
 
 static unsigned short reverse_short(unsigned short val)
@@ -73,7 +71,7 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set)
 	charger_msg_data.charger_voltage = voltage_to_set * 10;
 	charger_msg_data.charger_current = current_to_set * 10;
 
-	if (is_charging_enabled) {
+	if (bms_data->is_charging_enabled) {
 		charger_msg_data.charger_control = 0x00; // 0：Start charging.
 	} else {
 		charger_msg_data.charger_control =
@@ -83,7 +81,7 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set)
 	charger_msg_data.reserved_1 = 0x00;
 	charger_msg_data.reserved_23 = 0x0000;
 
-	can_msg_t charger_msg = { .id = 0x1806E5F4,
+	can_msg_t charger_msg = { .id = CHARGER_CANID,
 				  .id_is_extended = true,
 				  .len = 8,
 				  .data = { 0 } };
@@ -96,12 +94,12 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set)
 	charger_msg.data[2] = charger_msg.data[3];
 	charger_msg.data[3] = temp;
 
-#ifdef CHARGING_ENABLED
-	HAL_StatusTypeDef res = can_send_msg(&can2, &msg);
-	if (res != HAL_OK) {
-		printf("CAN ERROR CODE %X", res);
+	if (bms_data->is_charging_enabled) {
+		HAL_StatusTypeDef res = queue_can_msg(charger_msg);
+		if (res != HAL_OK) {
+			printf("queue_can_msg() ERROR CODE %X", res);
+		}
 	}
-#endif
 
 	return 0;
 }
@@ -285,6 +283,32 @@ void send_cell_voltage_message(crit_cellval_t max_voltage,
 
 	memcpy(msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
 
+	queue_can_msg(msg);
+}
+void send_segment_volt_message(acc_data_t *bmsdata)
+{
+	bitstream_t segment_volt_msg_data;
+	uint8_t bitstream_data[9];
+	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
+
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
+		      12);
+
+	can_msg_t msg;
+	msg.id = SEGMENT_VOLT_CANID;
+	msg.len = SEGMENT_VOLT_SIZE;
+
+	memcpy(msg.data, &segment_volt_msg_data, 8);
+
+	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
 	queue_can_msg(msg);
 }
 

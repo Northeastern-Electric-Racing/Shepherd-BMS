@@ -6,7 +6,7 @@
 
 // Hardware definition
 #define NUM_SEGMENTS	1
-#define NUM_CHIPS	1 //NUM_SEGMENTS * 2
+#define NUM_CHIPS	2 //NUM_SEGMENTS * 2
 #define NUM_CELLS_ALPHA 14
 #define NUM_CELLS_BETA	11
 #define NUM_CELLS_SEG	NUM_CELLS_ALPHA + NUM_CELLS_BETA
@@ -42,6 +42,10 @@
 #define MIN_DISCHG_TEMP -40 /* Celsius */
 #define MAX_CELL_TEMP	60 /* Celsius (rules) */
 #define TYP_IMPDNCE	0.015 /* Ohms, DC, 50% SoC */
+
+// Pack Limits
+#define MAX_PACK_CHG_CURR \
+	30 /* Pack-level charge limit: (MAX_CHG_CURR - 3.5A margin) × 3 cells in parallel */
 
 // ADBMS6830 limits
 #define MAX_CHIP_TEMP 60

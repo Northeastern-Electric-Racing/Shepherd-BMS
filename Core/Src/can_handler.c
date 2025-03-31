@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "datastructs.h"
+#include "stateMachine.h"
 
 #define CAN_MSG_QUEUE_SIZE 50 /* messages */
 
@@ -48,7 +50,7 @@ static uint16_t can2_id_list_standard[4] = {
 
 static uint32_t can2_id_list_extended[2] = {
 	//CANID_X,
-	0x18FF50E5
+	CHARGERBOX_CANID
 };
 
 osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
@@ -200,11 +202,13 @@ void vCanDispatch(void *pv_params)
 	can_msg_t msg_from_queue;
 	HAL_StatusTypeDef msg_status;
 
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
 	can_t *line;
-#ifdef CHARGING
-	line = can2;
-#endif
-	line = can1;
+	if (bmsdata->is_charger_connected)
+		line = can2;
+	else
+		line = can1;
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
@@ -219,7 +223,7 @@ void vCanDispatch(void *pv_params)
 				osDelay(1);
 			}
 
-			msg_status = can_send_msg(can1, &msg_from_queue);
+			msg_status = can_send_msg(line, &msg_from_queue);
 
 			if (msg_status != HAL_OK) {
 				// temporary
@@ -242,12 +246,17 @@ void vCanReceive(void *pv_params)
 {
 	can_msg_t msg;
 
+	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+
 	for (;;) {
 		osThreadFlagsWait(NEW_CAN_MSG_FLAG, osFlagsWaitAny,
 				  osWaitForever);
 		while (osOK ==
 		       osMessageQueueGet(can_inbound_queue, &msg, 0U, 0U)) {
 			switch (msg.id) {
+			case CHARGERBOX_CANID:
+				charger_message_recieved(bmsdata);
+				break;
 			default:
 				break;
 			}
