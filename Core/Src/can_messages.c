@@ -285,6 +285,32 @@ void send_cell_voltage_message(acc_data_t *bmsdata)
 
 	queue_can_msg(msg);
 }
+void send_segment_volt_message(acc_data_t *bmsdata)
+{
+	bitstream_t segment_volt_msg_data;
+	uint8_t bitstream_data[9];
+	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
+
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
+		      12);
+	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
+		      12);
+
+	can_msg_t msg;
+	msg.id = SEGMENT_VOLT_CANID;
+	msg.len = SEGMENT_VOLT_SIZE;
+
+	memcpy(msg.data, &segment_volt_msg_data, 8);
+
+	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
+	queue_can_msg(msg);
+}
 
 void send_cell_temp_message(acc_data_t *bmsdata)
 {
