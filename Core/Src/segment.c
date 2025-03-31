@@ -3,6 +3,7 @@
 #include "adi_interaction.h"
 #include "analyzer.h"
 #include "c_utils.h"
+#include "compute.h"
 #include "serialPrintResult.h"
 
 /**
@@ -116,7 +117,7 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 	}
 }
 
-uint32_t adBmsPollAdc_indicator(uint8_t poll_type)
+uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 {
 	set_poll_led(1);
 	uint32_t result = adBmsPollAdc(poll_type);
