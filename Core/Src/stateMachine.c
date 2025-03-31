@@ -123,7 +123,7 @@ void handle_charging(acc_data_t *bmsdata)
 			bmsdata->is_charging_enabled = true;
 		else {
 			bmsdata->is_charging_enabled = false;
-			send_charging_message(0, 0, bmsdata);
+			send_charging_message(0, 0, false);
 		}
 
 		/* Check if we should balance */
@@ -139,7 +139,7 @@ void handle_charging(acc_data_t *bmsdata)
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
-				5, bmsdata);
+				5, true);
 			start_timer(&charger_message_timer,
 				    CHARGE_MESSAGE_WAIT);
 		}

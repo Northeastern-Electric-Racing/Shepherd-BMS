@@ -1307,9 +1307,10 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
-    send_bms_status_message(bmsdata, current_state,
+    send_bms_status_message(bmsdata->avg_temp, current_state,
 					segment_is_balancing(bmsdata->chips));
-    send_fault_status_message(bmsdata);
+    send_fault_status_message(bmsdata->fault_code_crit, 
+      bmsdata->fault_code_noncrit);
 
     send_git_version_message();
   
