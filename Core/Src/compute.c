@@ -102,9 +102,8 @@ float compute_get_pack_current()
 		((float)adcValue * CURRENT_ADC_RESOLUTION / VOLTAGE_DIVIDER) -
 		SENSOR_V_REF;
 	float amps = volts / 0.0125; // Sensativity of 0.0125 Volts per Amp
-  return amps;
+	return amps;
 }
-
 
 void toggle_debug_led()
 {
