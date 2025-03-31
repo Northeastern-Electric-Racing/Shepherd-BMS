@@ -324,6 +324,40 @@ void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
 	queue_can_msg(msg);
 }
 
+void send_segment_temp_message(acc_data_t *bmsdata)
+{
+	struct __attribute__((__packed__)) {
+		int8_t segment1_average_temp;
+		int8_t segment2_average_temp;
+		int8_t segment3_average_temp;
+		int8_t segment4_average_temp;
+		int8_t segment5_average_temp;
+		int8_t segment6_average_temp;
+
+	} segment_temp_msg_data;
+
+	segment_temp_msg_data.segment1_average_temp =
+		bmsdata->segment_average_temps[0];
+	segment_temp_msg_data.segment2_average_temp =
+		bmsdata->segment_average_temps[1];
+	segment_temp_msg_data.segment3_average_temp =
+		bmsdata->segment_average_temps[2];
+	segment_temp_msg_data.segment4_average_temp =
+		bmsdata->segment_average_temps[3];
+	segment_temp_msg_data.segment5_average_temp =
+		bmsdata->segment_average_temps[4];
+	segment_temp_msg_data.segment6_average_temp =
+		bmsdata->segment_average_temps[5];
+
+	can_msg_t msg = { .id = SEGMENT_TEMP_CANID,
+			  .len = SEGMENT_TEMP_SIZE,
+			  .data = { 0 } };
+
+	memcpy(msg.data, &segment_temp_msg_data, sizeof(segment_temp_msg_data));
+
+	queue_can_msg(msg);
+}
+
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 {
 	struct __attribute__((__packed__)) {
