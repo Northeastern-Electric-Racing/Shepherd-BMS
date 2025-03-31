@@ -91,7 +91,6 @@ void init_charging(acc_data_t *bmsdata)
 	return;
 }
 
-// TODO: Improve algorithm. Change for new cells. Make more configurable.
 void handle_charging(acc_data_t *bmsdata)
 {
 	/* Check if we should charge */
