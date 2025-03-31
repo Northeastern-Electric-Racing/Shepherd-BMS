@@ -95,6 +95,15 @@ void send_segment_volt_message(acc_data_t *bmsdata);
 void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
 			    float avg_temp);
 
+/**	
+ * @brief sends the average segment temperatures	
+ *	
+ *	
+ *	
+ * @return Returns a fault if we are not able to send	
+ */
+void send_segment_temp_message(acc_data_t *bmsdata);
+
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
 
 void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
