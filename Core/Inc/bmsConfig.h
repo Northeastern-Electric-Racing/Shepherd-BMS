@@ -18,16 +18,10 @@
 #define NUM_THERMS_BETA	 6
 
 // Firmware limits
-#define MAX_TEMP	  60 /* Celsius */
-#define MIN_TEMP	  -40 /* Celsius */
-#define MAX_CELL_TEMP_BAL 45 /* Celsius */
-#define MAX_DELTA_V	  0.010
-#define BAL_MIN_V	  4.00
-
-// Boosting Parameters
-#define BOOST_TIME	    5 // seconds
-#define BOOST_RECHARGE_TIME 30 // seconds
-#define CONTDCL_MULTIPLIER  3
+#define MAX_TEMP    60 /* Celsius */
+#define MIN_TEMP    -40 /* Celsius */
+#define MAX_DELTA_V 0.010
+#define BAL_MIN_V   4.00
 
 /* Molicel P45B Cell Specifications */
 #define TYP_CAPICITY_AH 4.5 /* Amp-hours */
@@ -53,16 +47,14 @@
 #define MAX_CHIP_TEMP 60
 
 // Algorithm settings
-#define CHARGE_SETL_TIMEOUT 60000 // 1 minute, may need adjustment
-#define CHARGE_SETL_TIMEUP  300000 // 5 minutes, may need adjustment
-#define CHARGE_VOLT_TIMEOUT 300000 // 5 minutes, may need adjustment
 #define VOLT_SAG_MARGIN \
 	0.45 // Volts above the minimum cell voltage we would like to aim for
 #define OCV_CURR_THRESH 0.0015 /* 1.5 mA */
 
-#define OCV_AVG 3
-
-#define MAX_STANDARD_DEV 3 // only used for standard deviation for therms calc
+// Charging settings
+#define CHARGING_CURRENT    5
+#define CHARGE_SETL_TIMEOUT 60000 // 1 minute, may need adjustment
+#define CHARGE_SETL_TIMEUP  300000 // 5 minutes, may need adjustment
 
 //Fault times
 #define OVER_CURR_TIME \
@@ -77,12 +69,7 @@
 #define CURR_ERR_MARG	    1.1 // scaling factor, ie 1.1 = 10% error
 #define MAX_CHIPTEMP_TIME   5000
 
-#define CAN_MESSAGE_WAIT 5
-
-#define CAN_DISPATCH_DELAY 5
-
-// #define CHARGING
-
+// system wide base ADBMS sample rate
 #define SAMPLE_RATE 2 /* Hz */
 
 #endif

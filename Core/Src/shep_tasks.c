@@ -77,6 +77,17 @@ void vAnalyzer(void *pv_params)
 		calc_cont_dcl(bmsdata);
 		calc_cont_ccl(bmsdata);
 
+		// send out telemetry data sourced from the above functions
+		send_acc_status_message(bmsdata->pack_voltage,
+					bmsdata->pack_current, bmsdata->soc);
+		send_cell_voltage_message(bmsdata->max_voltage,
+					  bmsdata->min_voltage,
+					  bmsdata->avg_voltage);
+		send_segment_volt_message(bmsdata);
+		send_cell_temp_message(bmsdata->max_temp, bmsdata->min_temp,
+				       bmsdata->avg_temp);
+		send_segment_temp_message(bmsdata);
+
 		osMutexRelease(bmsdata->mutex);
 	}
 }
@@ -117,9 +128,6 @@ void vStateMachine(void *pv_params)
 				segment_is_balancing(bmsdata->chips));
 			send_fault_status_message(bmsdata->fault_code_crit,
 						  bmsdata->fault_code_noncrit);
-			send_acc_status_message(bmsdata->pack_voltage,
-						bmsdata->pack_current,
-						bmsdata->soc);
 			start_timer(&telem_timer, 300);
 		}
 

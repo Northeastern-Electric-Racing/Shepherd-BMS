@@ -317,6 +317,11 @@ void read_status_registers(cell_asic chips[NUM_CHIPS])
 	read_adbms_data(chips, RDSTATE, Status, E);
 }
 
+void read_status_register_b(cell_asic chips[NUM_CHIPS])
+{
+	read_adbms_data_data(chips, RDSTATB, Status, B);
+}
+
 void read_status_register_c(cell_asic chips[NUM_CHIPS])
 {
 	read_adbms_data(chips, RDSTATC, Status, C);

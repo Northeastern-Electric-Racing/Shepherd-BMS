@@ -57,7 +57,7 @@ void init_chip(cell_asic *chip, bool is_alpha)
 
 	// If the corresponding fault bits are sent high, it does not affect the IC
 	chip->tx_cfgb.vov = SetOverVoltageThreshold(4.2);
-	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(3.0);
+	chip->tx_cfgb.vuv = SetUnderVoltageThreshold(2.5);
 
 	// Discharge timer monitor off
 	set_discharge_timer_monitor(chip, DTMEN_OFF);
@@ -201,8 +201,11 @@ void segment_restart(acc_data_t *bmsdata)
 
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 {
+	// read status B which contains the DCC
+	// cannot trust that status registers have been read as that is in debug mode only
+	read_status_register_b(chips);
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		if (chips[chip].tx_cfgb.dcc > 0) {
+		if (chips[chip].rx_cfgb.dcc > 0) {
 			return true;
 		}
 	}

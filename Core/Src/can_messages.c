@@ -223,6 +223,7 @@ void send_bms_status_message(float avg_temp, int bms_state, bool balance)
 	queue_can_msg(msg);
 }
 
+// UNUSED
 void send_shutdown_ctrl_message(uint8_t mpe_state)
 {
 	struct __attribute__((__packed__)) {
@@ -373,6 +374,7 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
+// UNUSED
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 {
 	struct __attribute__((__packed__)) {

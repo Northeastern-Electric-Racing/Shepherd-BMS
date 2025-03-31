@@ -34,7 +34,7 @@ uint8_t get_num_cells(chipdata_t *chip_data)
 float calc_temp(float res)
 {
 	float coef = res / 10000.0;
-	// achieved via passing ThermCalcs into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
+	// achieved via passing ThermCalcs.xlsx into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
 	return -1149.531863 * (pow(coef, 1.0 / 8)) +
 	       658.9396848 * (pow(coef, 1.0 / 4)) +
 	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
@@ -90,14 +90,12 @@ void calc_cell_temps(acc_data_t *bmsdata)
 						 .raux.ra_codes[7]))) /
 				2;
 		} else {
-			//printf("\nONBOARD alpHA %f\n\n",
+			//printf("\nONBOARD alpha %f\n\n",
 			//       getVoltage(
 			//	       bmsdata->chips[chip].raux.ra_codes[7]));
 			bmsdata->chip_data[chip].on_board_temp =
 				calc_cell_temp_onboard(getVoltage(
 					bmsdata->chips[chip].raux.ra_codes[7]));
-			//		printf("\n\n KBHFSJHSDJKBJKBSFJKBSFBJKSF %f\n", calc_cell_temp_onboard(getVoltage(
-			//			bmsdata->chips[chip].raux.ra_codes[7])));
 		}
 
 		/* set the die temp */
@@ -166,9 +164,6 @@ void calc_pack_temps(acc_data_t *bmsdata)
 
 	/* Takes the average of all the cell temperatures. */
 	bmsdata->avg_temp = total_temp / NUM_CELLS;
-
-	send_cell_temp_message(bmsdata->max_temp, bmsdata->min_temp,
-			       bmsdata->avg_temp);
 }
 
 void calc_cell_voltages(acc_data_t *bmsdata)
@@ -276,12 +271,6 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 	bmsdata->avg_ocv = total_ocv / NUM_CELLS;
 	bmsdata->pack_ocv = total_ocv;
 	bmsdata->delt_ocv = bmsdata->max_ocv.val - bmsdata->min_ocv.val;
-
-	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
-				bmsdata->soc);
-	send_cell_voltage_message(bmsdata->max_voltage, bmsdata->min_voltage,
-				  bmsdata->avg_voltage);
-	send_segment_volt_message(bmsdata);
 }
 
 void calc_cell_resistances(acc_data_t *bmsdata)

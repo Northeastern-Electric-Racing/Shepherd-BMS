@@ -32,6 +32,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 {
 	if (bmsdata->delt_voltage <= MAX_DELTA_V) {
 		/* No balancing, return */
+		// technically this should never be reached
 		segment_disable_balancing(bmsdata);
 		return;
 	}

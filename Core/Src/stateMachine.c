@@ -94,9 +94,20 @@ void init_charging(acc_data_t *bmsdata)
 void handle_charging(acc_data_t *bmsdata)
 {
 	/* Check if we should charge */
-	if (sm_charging_check(bmsdata))
+	if (sm_charging_check(bmsdata)) {
 		bmsdata->is_charging_enabled = true;
-	else {
+
+		/* Send CAN message, but not too often */
+		if (is_timer_expired(&charger_message_timer) ||
+		    !is_timer_active(&charger_message_timer)) {
+			send_charging_message(
+				(MAX_CHARGE_VOLT *
+				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
+				 NUM_CHIPS),
+				5, true);
+			start_timer(&charger_message_timer, 1000);
+		}
+	} else {
 		bmsdata->is_charging_enabled = false;
 		send_charging_message(0, 0, false);
 	}
@@ -107,15 +118,6 @@ void handle_charging(acc_data_t *bmsdata)
 	else
 		segment_disable_balancing(bmsdata);
 
-	/* Send CAN message, but not too often */
-	if (is_timer_expired(&charger_message_timer) ||
-	    !is_timer_active(&charger_message_timer)) {
-		send_charging_message((MAX_CHARGE_VOLT *
-				       (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
-				       NUM_CHIPS),
-				      5, true);
-		start_timer(&charger_message_timer, 1000);
-	}
 	// disable discharge and charge from the MC
 	send_mc_discharge_message(0);
 	send_mc_charge_message(0);
@@ -351,29 +353,30 @@ bool sm_fault_eval(fault_eval_t *item)
 /* charger settle countdown = 5 minute interval between 1 minute settle pauses */
 bool sm_charging_check(acc_data_t *bmsdata)
 {
+	// samity check
 	if (!bmsdata->is_charger_connected) {
-		printf("Charger not connected\r\n");
+		//printf("Charger not connected\r\n");
 		return false;
 	}
 
+	// dont charge during the countup
 	if (!is_timer_expired(&charger_settle_countup) &&
 	    is_timer_active(&charger_settle_countup)) {
-		printf("Charger settle countup active\r\n");
+		//printf("Charger settle countup active\r\n");
 		return false;
 	}
 
+	// if we are counting down (the normal charging time)
 	if (is_timer_active(&charger_settle_countdown)) {
+		// if we need to stop charging, start the pause timer and stop charging immediately
 		if (is_timer_expired(&charger_settle_countdown)) {
 			start_timer(&charger_settle_countup,
 				    CHARGE_SETL_TIMEOUT);
 			return false;
-		}
-
-		else
+		} else
 			return true;
-	}
-
-	else {
+	} else {
+		// start the countdown timer if it is inactive, meaning we went from pause --> unpause
 		start_timer(&charger_settle_countdown, CHARGE_SETL_TIMEUP);
 		return true;
 	}
@@ -384,14 +387,12 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 {
 	if (!bmsdata->is_charger_connected)
 		return false;
-	if (bmsdata->max_temp.val >
-	    MAX_CELL_TEMP_BAL) // TODO figure this and MAX_DELTA_V out
-		return false;
 	if (bmsdata->max_voltage.val <= BAL_MIN_V)
 		return false;
 	if (bmsdata->delt_voltage <= MAX_DELTA_V)
 		return false;
 
+	// do not balance either during the countup
 	if (is_timer_active(&charger_settle_countup) &&
 	    !is_timer_expired(&charger_settle_countup))
 		return false;
