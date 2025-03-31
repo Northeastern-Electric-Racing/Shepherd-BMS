@@ -778,4 +778,3 @@ void send_pec_error_message(uint8_t chip_num, uint16_t pec_count)
 
 	queue_can_msg(msg);
 }
-
