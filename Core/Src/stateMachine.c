@@ -5,7 +5,6 @@
 #include "segment.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
-extern UART_HandleTypeDef huart4;
 
 acc_data_t *prevAccData;
 uint32_t bms_fault = FAULTS_CLEAR;

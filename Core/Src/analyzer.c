@@ -117,16 +117,43 @@ uint8_t get_num_cells(chipdata_t *chip_data)
 }
 
 /**
+ * @brief Calculate the cell temperature of a 10,000 ohm NTP resistor (model 103)
+ * 
+ * @param res The resistance of the resistor
+ * @return float The temperature
+ */
+float calc_temp(float res)
+{
+	float coef = res / 10000.0;
+	// achieved via passing ThermCalcs into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
+	return -1149.531863 * (pow(coef, 1.0 / 8)) +
+	       658.9396848 * (pow(coef, 1.0 / 4)) +
+	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
+	       601.008351;
+}
+
+/**
  * @brief Calculate a cell temperature based on the thermistor reading.
  * 
- * @param x The thremistor reading.
+ * @param voltage The thremistor reading.
  * @return float The temperature in degrees Celsius.
  */
-float calc_cell_temp(uint16_t x)
+float calc_cell_temp(float voltage)
 {
-	/* Polynomial fit of temperatures -7 -> 65 celsius vs. thermistor voltage. */
-	return 0.6984 * pow(x, 4) + 4.4933 * pow(x, 3) - 10.278 * pow(x, 2) +
-	       34.184 * x + 2.7608;
+	float res = (5600 * (3 - voltage)) / voltage;
+	return calc_temp(res);
+}
+
+/**
+ * @brief Calculate a cell temperature of onboard therm
+ * 
+ * @param voltage the voltage read by ADC
+ * @return float The temperature in degrees C
+ */
+float calc_cell_temp_onboard(float voltage)
+{
+	float res = (5600 * (5 - voltage)) / voltage;
+	return calc_temp(res);
 }
 
 void calc_cell_temps(acc_data_t *bmsdata)
@@ -147,16 +174,21 @@ void calc_cell_temps(acc_data_t *bmsdata)
 		if (!bmsdata->chip_data[chip].alpha) {
 			// Take average of both onboard therms
 			bmsdata->chip_data[chip].on_board_temp =
-				(calc_cell_temp(getVoltage(
+				(calc_cell_temp_onboard(getVoltage(
 					 bmsdata->chips[chip].raux.ra_codes[6])) +
-				 calc_cell_temp(getVoltage(
+				 calc_cell_temp_onboard(getVoltage(
 					 bmsdata->chips[chip]
 						 .raux.ra_codes[7]))) /
 				2;
 		} else {
+			//printf("\nONBOARD alpHA %f\n\n",
+			//       getVoltage(
+			//	       bmsdata->chips[chip].raux.ra_codes[7]));
 			bmsdata->chip_data[chip].on_board_temp =
-				calc_cell_temp(getVoltage(
+				calc_cell_temp_onboard(getVoltage(
 					bmsdata->chips[chip].raux.ra_codes[7]));
+			//		printf("\n\n KBHFSJHSDJKBJKBSFJKBSFBJKSF %f\n", calc_cell_temp_onboard(getVoltage(
+			//			bmsdata->chips[chip].raux.ra_codes[7])));
 		}
 
 		/* set the die temp */
