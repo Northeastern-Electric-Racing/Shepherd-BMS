@@ -134,11 +134,13 @@ void send_voltage_noise_message(acc_data_t *bmsdata);
  * @param cell_b The number of cell B.
  * @param discharging_a The state of cell A while balancing.
  * @param discharging_b The state of cell B while balancing.
+ * @param cvs_a The C v S fault of cell A.
+ * @param cvs_b The C v S fault of cell B.
  */
 void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 			    float voltage_b, uint8_t chip_ID, uint8_t cell_a,
 			    uint8_t cell_b, bool discharging_a,
-			    bool discharging_b);
+			    bool discharging_b, bool cvs_a, bool cvs_b);
 
 /**
  * @brief Send cell message containing Beta cell 10, the Beta onboard therm, the temperature of the ADBMS6830 die, and the voltage from V+ to V-.
@@ -165,9 +167,10 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
  * @param chip ID of the chip.
  * @param v_res VREF2 across a resistor for open wire detection.
  * @param vmv Voltage between S1N and V-.
+ * @param cvs The C v S fault of Beta chip 10
  */
 void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
-				uint8_t chip, float v_res, float vmv);
+				uint8_t chip, float v_res, float vmv, bool cvs);
 
 /**
  * @brief Send a message for the faults of beta chips.

@@ -154,6 +154,11 @@ void vDebugMode(void *pv_params)
 
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 (cell + 1)) &
+						1,
+					(bmsdata->chips[chip].statc.cs_flt >>
+					 cell) & 1,
+					(bmsdata->chips[chip].statc.cs_flt >>
+					 (cell + 1)) &
 						1);
 				// split half the time amongst the cells (over 2)
 				osDelay(time_per_chip / 2 / num_cells / 2);
@@ -194,8 +199,9 @@ void vDebugMode(void *pv_params)
 						bmsdata->chips[chip].statb.vr4k),
 					20.0 * getVoltage( // VMV is ra_code 10
 						       bmsdata->chips[chip]
-							       .aux
-							       .a_codes[10]));
+							       .aux.a_codes[10]),
+					(bmsdata->chips[chip].statc.cs_flt >>
+					 9) & 1);
 				send_beta_status_c_message(
 					chip, &bmsdata->chips[chip].statc);
 			} else {
