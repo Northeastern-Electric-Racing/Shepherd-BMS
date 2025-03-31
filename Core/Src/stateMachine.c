@@ -122,6 +122,7 @@ void handle_charging(acc_data_t *bmsdata)
 		if (sm_charging_check(bmsdata))
 			bmsdata->is_charging_enabled = true;
 		else {
+			bmsdata->is_charging_enabled = false;
 			send_charging_message(0, 0, false);
 		}
 
