@@ -301,17 +301,38 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 	float min_cell_voltage = bmsdata->min_voltage.val;
 
 	float temp_derate_factor = 0.0f;
-	float volt_derate_factor = 0.0f;
+	float cell_volt_derate_factor = 0.0f;
 
-	if (min_temp <= MIN_DISCHG_TEMP || max_temp >= MAX_CELL_TEMP) {
-		temp_derate_factor = 0.0f;
+	if (min_temp <= MIN_DISCHG_TEMP || max_temp >= MAX_CELL_TEMP ||
+	    min_cell_voltage <= MIN_VOLT) {
+		bmsdata->cont_DCL = 0.0f;
+		return;
 	}
-	else if (max_temp >= 55.0f) {
-		temp_derate_factor = 30.0f / (float)(MAX_PACK_DISCHG_CURR);
+
+	if (max_temp >= 55.0f) {
+		temp_derate_factor = MIN_DCL / (float)(MAX_PACK_DISCHG_CURR);
+	} else if (max_temp > 50.0f) {
+		temp_derate_factor =
+			1.0f - ((max_temp - 50.0f) / 5.0f) *
+				       (1.0f - (MIN_DCL /
+						(float)(MAX_PACK_DISCHG_CURR)));
 	}
-	else if (max_temp > 50.0f) {
-		temp_derate_factor = 1.0f - ((max_temp - 50.0f) / 5.0f) * (1.0f - (30.0f / (float)(MAX_PACK_DISCHG_CURR)));
+
+	if (min_cell_voltage < 3.0f && min_cell_voltage > 2.5f) {
+		volt_derate_factor =
+			1.0f - ((3.0f - min_cell_voltage) / 0.5f) *
+				       (1.0f - (MIN_DCL /
+						(float)(MAX_PACK_DISCHG_CURR)));
 	}
+
+	float scaled_dcl =
+		MAX_PACK_DISCHG_CURR * temp_derate_factor * volt_derate_factor;
+
+	if (scaled_dcl < MIN_DCL) {
+		scaled_dcl = MIN_DCL;
+	}
+
+	bmsdata->cont_DCL = scaled_dcl;
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)

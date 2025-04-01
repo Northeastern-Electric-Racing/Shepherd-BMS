@@ -45,6 +45,7 @@
 #define MAX_PACK_DISCHG_CURR \
 	(MAX_DISCHG_CURR *   \
 	 3) /* Pack-level discharge limit: MAX_DISCHG_CURR × 3 cells in parallel */
+#define MIN_DCL 30.0f
 
 // ADBMS6830 limits
 #define MAX_CHIP_TEMP 60
