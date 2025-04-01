@@ -63,19 +63,6 @@ const uint8_t TEMP_TO_CCL[14] =
 	20, 15, 10, 5, 1, 1
 };
 
-/**
- * @brief Lookup table for State of Charge
- *
- * @note each index covers 0.1V increase (voltage range is 2.9V - 4.2V, deltaV = 1.3V, 
- *      currently 13 data points)
- * @note values are unitless percentages that represent % charge
- *
- */
-const uint8_t STATE_OF_CHARGE_CURVE[18] =
-{
-	0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 15, 24, 56, 74, 85, 95, 98, 100
-};
-
 // END TODO
 
 /**
