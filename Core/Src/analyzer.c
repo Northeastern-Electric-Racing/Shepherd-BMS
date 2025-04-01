@@ -350,25 +350,32 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 void calc_cont_ccl(acc_data_t *bmsdata)
 {
 	float max_temp = bmsdata->max_temp.val;
+	float min_temp = bmsdata->min_temp.val;
 	float max_cell_voltage = bmsdata->max_voltage.val;
 
-	float temp_derate_factor = 0.0f;
+	float temp_cold_factor = 0.0f;
+	float temp_hot_factor = 0.0f;
 	float cell_volt_derate_factor = 0.0f;
 
 	// All cell charge limits were obtained from P45B Datasheet.
 
 	/* Temperature Derating: 0–10°C ramp up, 45–60°C ramp down
 	   10°C and 45°C chosen as safe margins from P45B charge temp limits. */
-	if (max_temp <= MIN_CHG_TEMP || max_temp >= MAX_CELL_TEMP) {
-		temp_derate_factor = 0.0f;
-	} else if (max_temp < 10.0f) {
-		temp_derate_factor =
-			(max_temp - MIN_CHG_TEMP) / (10.0f - MIN_CHG_TEMP);
-	} else if (max_temp <= 45.0f) {
-		temp_derate_factor = 1.0f;
+	if (min_temp <= MIN_CHG_TEMP || max_temp >= MAX_CELL_TEMP) {
+		bmsdata->cont_CCL = 0.0f;
+		return;
+	} else if (min_temp < 10.0f) {
+		temp_cold_factor =
+			(min_temp - MIN_CHG_TEMP) / (10.0f - MIN_CHG_TEMP);
 	} else {
-		temp_derate_factor =
+		temp_cold_factor = 1.0f;
+	}
+
+	if (max_temp > 45.0f) {
+		temp_hot_factor =
 			(MAX_CELL_TEMP - max_temp) / (MAX_CELL_TEMP - 45.0f);
+	} else {
+		temp_hot_factor = 1.0f;
 	}
 
 	/* Cell Voltage Derating: 4.15–4.205V ramp down
@@ -382,8 +389,8 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		cell_volt_derate_factor = 1.0f;
 	}
 
-	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_derate_factor *
-			    cell_volt_derate_factor;
+	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_cold_factor *
+			    temp_hot_factor * cell_volt_derate_factor;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
