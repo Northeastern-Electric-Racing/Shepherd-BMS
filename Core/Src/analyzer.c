@@ -296,17 +296,22 @@ void calc_cell_resistances(acc_data_t *bmsdata)
 
 void calc_cont_dcl(acc_data_t *bmsdata)
 {
-	// uint8_t min_res_index =
-	// 	(bmsdata->min_temp.val - MIN_TEMP) /
-	// 	5; /* resistance LUT increments by 5C for each index */
-	// uint8_t max_res_index = (bmsdata->max_temp.val - MIN_TEMP) / 5;
+	float max_temp = bmsdata->max_temp.val;
+	float min_temp = bmsdata->min_temp.val;
+	float min_cell_voltage = bmsdata->min_voltage.val;
 
-	// if (TEMP_TO_DCL[min_res_index] < TEMP_TO_DCL[max_res_index]) {
-	// 	bmsdata->cont_DCL = TEMP_TO_DCL[min_res_index];
-	// } else {
-	// 	bmsdata->cont_DCL = TEMP_TO_DCL[max_res_index];
-	// }
-	bmsdata->cont_DCL = 0;
+	float temp_derate_factor = 0.0f;
+	float volt_derate_factor = 0.0f;
+
+	if (min_temp <= MIN_DISCHG_TEMP || max_temp >= MAX_CELL_TEMP) {
+		temp_derate_factor = 0.0f;
+	}
+	else if (max_temp >= 55.0f) {
+		temp_derate_factor = 30.0f / (float)(MAX_PACK_DISCHG_CURR);
+	}
+	else if (max_temp > 50.0f) {
+		temp_derate_factor = 1.0f - ((max_temp - 50.0f) / 5.0f) * (1.0f - (30.0f / (float)(MAX_PACK_DISCHG_CURR)));
+	}
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)
