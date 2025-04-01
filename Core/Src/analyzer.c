@@ -381,7 +381,7 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 
 void calc_state_of_charge(acc_data_t *bmsdata)
 {
-	float volts = bmsdata->min_ocv.val;
+	double volts = (double)bmsdata->min_ocv.val;
 
 	double soc = (-55.919476 * pow(16.1336555, volts)) +
 		     (55.9296372 * pow(16.1330198, volts)) - 6.3330011;
