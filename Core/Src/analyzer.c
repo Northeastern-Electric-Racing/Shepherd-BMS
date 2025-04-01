@@ -411,30 +411,19 @@ void calc_dcl(acc_data_t *bmsdata)
 
 	static uint16_t prev_dcl;
 
-	int16_t current_limit = 0x7FFF;
+	int16_t current_limit = MAX_DISCHG_CURR;
 
-	for (uint8_t c = 0; c < NUM_CHIPS; c++) {
-		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[c]);
-		for (uint8_t cell = 0; cell < num_cells; cell++) {
-			/* Apply equation */
-			/* Multiplying resistance by 10 to convert from mOhm to Ohm and then to Ohm * 10000 to
-			 * account for the voltage units */
-			uint16_t tmpDCL =
-				(bmsdata->chip_data[c].open_cell_voltage[cell] -
-				 (MIN_VOLT + VOLT_SAG_MARGIN)) /
-				(bmsdata->chip_data[c].cell_resistance[cell] *
-				 10);
-
-			/* Taking the minimum DCL of all the cells */
-			if (tmpDCL < current_limit)
-				current_limit = tmpDCL;
+	// Linearly reduce current down to 15A, startinng with 45A at 50c to 15A at 55c
+	if (bmsdata->max_temp.val >= 50) {
+		if (bmsdata->max_temp.val >= 55) {
+			current_limit = 15;
+		} else {
+			current_limit = MAX_DISCHG_CURR *
+					(1 - (bmsdata->max_temp.val - 49) * 6);
 		}
-	}
-
-	/* ceiling for current limit */
-	if (current_limit > MAX_DISCHG_CURR) {
-		bmsdata->discharge_limit = MAX_DISCHG_CURR;
-		return;
+	} // if less than 2 laps remaining reduce current to 20A & prevent dropping voltage too low // TODO fix with coulomb counting
+	else if (bmsdata->max_ocv.val <= 2.8) {
+		current_limit = 20;
 	}
 
 	/* protection against being init to a high value */
