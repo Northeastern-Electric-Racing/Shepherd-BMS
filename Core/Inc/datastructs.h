@@ -24,17 +24,13 @@ typedef struct {
 
 	float cell_voltages[NUM_CELLS_ALPHA];
 
-	uint8_t noise_reading
-		[NUM_CELLS_ALPHA]; /* bool representing noise ignored read */
-	uint8_t consecutive_noise
-		[NUM_CELLS_ALPHA]; /* count representing consecutive noisy reads */
-
 	/* True if chip is alpha, False if Chip is Beta */
 	bool alpha;
 
 	/* For temperatures of on-board therms. */
 	float on_board_temp;
 
+	/// temperature of the die
 	float die_temp;
 } chipdata_t;
 
@@ -107,22 +103,17 @@ typedef struct {
 	/* Array of structs containing raw data from and configurations for the ADBMS6830 chips */
 	cell_asic chips[NUM_CHIPS];
 
-	int fault_status; // FIXME: this field is unused
-
 	float pack_current;
 	float pack_voltage;
 	float pack_ocv;
 	float pack_res;
 
-	float discharge_limit;
-	float charge_limit;
 	float cont_DCL;
 	float cont_CCL;
 	float soc;
 
 	float segment_average_temps[NUM_SEGMENTS];
 	float segment_average_volts[NUM_SEGMENTS];
-	uint8_t segment_noise_percentage[NUM_SEGMENTS];
 
 	/**
 	 * @brief Note that this is a 32 bit integer, so there are 32 max possible fault codes
@@ -136,6 +127,7 @@ typedef struct {
 	crit_cellval_t min_temp;
 	float avg_temp;
 
+	// the highest current chip temperature, for faulting
 	crit_chipval_t max_chiptemp;
 
 	/* Max and min cell resistances */
@@ -153,9 +145,9 @@ typedef struct {
 	float avg_ocv;
 	float delt_ocv;
 
-	uint16_t boost_setting;
-
+	/// whether the charger is connected, synonymous with being in the state of CHARGING, and therefore irreversible
 	bool is_charger_connected;
+	/// whether the state machine has determined its time to charge
 	bool is_charging_enabled;
 
 	osMutexId_t mutex;
@@ -193,7 +185,7 @@ typedef enum {
  * @brief Represents data to be packaged into a fault evaluation
  */
 typedef struct {
-	char *id;
+	char id[100];
 	nertimer_t timer;
 
 	int data_1;

@@ -6,16 +6,6 @@
 #include "can_handler.h"
 #include "bitstream.h"
 
-#define BYTE_TO_BITS 8
-#define THERM_BITS   10
-#define VOLT_BITS    13
-#define AUX_ADC_BITS 13
-#define CHIP_ID_BTIS 4
-#define CELL_ID_BITS 4
-#define VA_VD_BITS   10 /* Vanalog and Vdigital internal references */
-
-static unsigned short reverse_short(unsigned short val);
-
 static unsigned short reverse_short(unsigned short val)
 {
 	return reverse_bits(val) >> 4;
@@ -233,6 +223,7 @@ void send_bms_status_message(float avg_temp, int bms_state, bool balance)
 	queue_can_msg(msg);
 }
 
+// UNUSED
 void send_shutdown_ctrl_message(uint8_t mpe_state)
 {
 	struct __attribute__((__packed__)) {
@@ -383,6 +374,7 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 	queue_can_msg(msg);
 }
 
+// UNUSED
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl)
 {
 	struct __attribute__((__packed__)) {

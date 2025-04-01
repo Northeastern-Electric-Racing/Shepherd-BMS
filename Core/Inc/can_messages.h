@@ -6,10 +6,10 @@
 /**
  * @brief sends charger message
  *
- * @param voltage_to_set
- * @param currentToSet
+ * @param voltage_to_set the voltage to charge at
+ * @param current_to_set the current to charge at
+ * @param is_charging_enabled whether charging is allowed
  *
- * @return Returns a fault if we are not able to communicate with charger
  */
 int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 			  bool is_charging_enabled);
