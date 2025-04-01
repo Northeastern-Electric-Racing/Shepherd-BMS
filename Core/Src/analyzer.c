@@ -309,6 +309,11 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 		return;
 	}
 
+	// All cell discharge limits were obtained from P45B Datasheet.
+
+	/* Temperature Derating: 50–55°C ramp down
+	   Derating begins at 50°C to limit stress as the pack heats up.
+	   DCL drops to 30A (10A per cell) at 55°C and shuts off above MAX_CELL_TEMP. */
 	if (max_temp >= 55.0f) {
 		temp_derate_factor = MIN_DCL / (float)(MAX_PACK_DISCHG_CURR);
 	} else if (max_temp > 50.0f) {
@@ -316,13 +321,20 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 			1.0f - ((max_temp - 50.0f) / 5.0f) *
 				       (1.0f - (MIN_DCL /
 						(float)(MAX_PACK_DISCHG_CURR)));
+	} else {
+		temp_derate_factor = 1.0f;
 	}
 
+	/* Cell Voltage Derating: 3.0–2.5V ramp down
+	   Below 3.0V, the pack begins reducing DCL to avoid deep discharge.
+	   DCL drops to 30A at 2.5V, and shuts off completely below MIN_VOLT. */
 	if (min_cell_voltage < 3.0f && min_cell_voltage > 2.5f) {
 		cell_volt_derate_factor =
 			1.0f - ((3.0f - min_cell_voltage) / 0.5f) *
 				       (1.0f - (MIN_DCL /
 						(float)(MAX_PACK_DISCHG_CURR)));
+	} else {
+		cell_volt_derate_factor = 1.0f;
 	}
 
 	float scaled_dcl = MAX_PACK_DISCHG_CURR * temp_derate_factor *
