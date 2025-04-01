@@ -72,13 +72,17 @@ Core/Src/stateMachine.c \
 Core/Src/can_handler.c \
 Core/Src/can_messages.c \
 Core/Src/shep_tasks.c \
+Core/Src/cell_data_logging.c \
 Core/Src/stm32f4xx_it.c \
 Core/Src/stm32f4xx_hal_msp.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \
 Drivers/Embedded-Base/general/src/m24c32.c \
 Drivers/Embedded-Base/general/src/sht30.c \
+Drivers/Embedded-Base/middleware/src/eeprom_directory.c \
+Drivers/Embedded-Base/middleware/src/m24c32_eeprom_directory.c \
 Drivers/Embedded-Base/middleware/src/timer.c \
 Drivers/Embedded-Base/middleware/src/ringbuffer.c \
+Drivers/Embedded-Base/middleware/src/bitstream.c \
 Drivers/Embedded-Base/middleware/src/c_utils.c \
 Drivers/adbms/lib/src/adBms6830GenericType.c \
 Drivers/adbms/lib/src/adBms6830ParseCreate.c \

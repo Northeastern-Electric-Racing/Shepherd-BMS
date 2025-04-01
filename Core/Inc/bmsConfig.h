@@ -6,7 +6,7 @@
 
 // Hardware definition
 #define NUM_SEGMENTS	1
-#define NUM_CHIPS	1 //NUM_SEGMENTS * 2
+#define NUM_CHIPS	2 //NUM_SEGMENTS * 2
 #define NUM_CELLS_ALPHA 14
 #define NUM_CELLS_BETA	11
 #define NUM_CELLS_SEG	NUM_CELLS_ALPHA + NUM_CELLS_BETA
@@ -40,8 +40,15 @@
 #define MAX_DISCHG_CURR 45 /* Amps */
 #define MIN_CHG_TEMP	0 /* Celsius */
 #define MIN_DISCHG_TEMP -40 /* Celsius */
-#define MAX_CELL_TEMP	60 /* Celsius */
+#define MAX_CELL_TEMP	60 /* Celsius (rules) */
 #define TYP_IMPDNCE	0.015 /* Ohms, DC, 50% SoC */
+
+// Pack Limits
+#define MAX_PACK_CHG_CURR \
+	30 /* Pack-level charge limit: (MAX_CHG_CURR - 3.5A margin) × 3 cells in parallel */
+
+// ADBMS6830 limits
+#define MAX_CHIP_TEMP 60
 
 // Algorithm settings
 #define CHARGE_SETL_TIMEOUT 60000 // 1 minute, may need adjustment
@@ -66,6 +73,7 @@
 #define LOW_CELL_TIME	    45000
 #define HIGH_TEMP_TIME	    60000
 #define CURR_ERR_MARG	    1.1 // scaling factor, ie 1.1 = 10% error
+#define MAX_CHIPTEMP_TIME   5000
 
 #define DCDC_CURRENT_DRAW \
 	0 // in A, was used because our DCDC was drawing current

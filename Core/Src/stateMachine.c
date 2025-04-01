@@ -5,7 +5,6 @@
 #include "segment.h"
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
-extern UART_HandleTypeDef huart4;
 
 acc_data_t *prevAccData;
 uint32_t bms_fault = FAULTS_CLEAR;
@@ -75,7 +74,7 @@ void handle_boot(acc_data_t *bmsdata)
 {
 	prevAccData = NULL;
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
+	bmsdata->is_charging_enabled = false;
 	start_timer(&bootup_timer, 10000);
 	printf("Bootup timer started\r\n");
 
@@ -89,14 +88,14 @@ void handle_boot(acc_data_t *bmsdata)
 void init_ready(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
+	bmsdata->is_charging_enabled = false;
 	return;
 }
 
 void handle_ready(acc_data_t *bmsdata)
 {
 	/* check for charger connection */
-	if (compute_charger_connected() &&
+	if (bmsdata->is_charger_connected &&
 	    is_timer_expired(&bootup_timer)) { // TODO Fix once charger works
 		request_transition(bmsdata, READY_STATE);
 	} else {
@@ -114,17 +113,17 @@ void init_charging(acc_data_t *bmsdata)
 // TODO: Improve algorithm. Change for new cells. Make more configurable.
 void handle_charging(acc_data_t *bmsdata)
 {
-	if (!compute_charger_connected()) {
+	if (!bmsdata->is_charger_connected) {
 		request_transition(bmsdata, READY_STATE);
 		return;
 
 	} else {
 		/* Check if we should charge */
 		if (sm_charging_check(bmsdata))
-			compute_enable_charging(true);
+			bmsdata->is_charging_enabled = true;
 		else {
-			compute_enable_charging(false);
-			send_charging_message(0, 0, bmsdata);
+			bmsdata->is_charging_enabled = false;
+			send_charging_message(0, 0, false);
 		}
 
 		/* Check if we should balance */
@@ -140,17 +139,23 @@ void handle_charging(acc_data_t *bmsdata)
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
-				5, bmsdata);
+				5, true);
 			start_timer(&charger_message_timer,
 				    CHARGE_MESSAGE_WAIT);
 		}
 	}
 }
 
+void charger_message_recieved(acc_data_t *bmsdata)
+{
+	bmsdata->is_charger_connected = true;
+	handle_charging(bmsdata);
+}
+
 void init_faulted(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	compute_enable_charging(false);
+	bmsdata->is_charging_enabled = false;
 	entered_faulted = true;
 	return;
 }
@@ -158,6 +163,8 @@ void init_faulted(acc_data_t *bmsdata)
 void handle_faulted(acc_data_t *bmsdata)
 {
 	if (entered_faulted) {
+		// we cannot balance while we are faulted
+		segment_disable_balancing(bmsdata);
 		previousFault = bmsdata->fault_code_crit;
 		entered_faulted = false;
 
@@ -194,8 +201,6 @@ void sm_handle_state(acc_data_t *bmsdata)
 
 	handler_LUT[current_state](bmsdata);
 
-	bmsdata->is_charger_connected = compute_charger_connected();
-
 	sm_broadcast_current_limit(bmsdata);
 }
 
@@ -221,6 +226,7 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
 	static nertimer_t ovr_volt_timer = { 0 };
 	static nertimer_t low_cell_timer = { 0 };
 	static nertimer_t high_temp_timer = { 0 };
+	static nertimer_t die_overtemp_timer = { 0 };
 	static fault_eval_t *fault_table = NULL;
 	static acc_data_t *fault_data = NULL;
 
@@ -237,14 +243,15 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
 						     sizeof(fault_eval_t));
 		// clang-format off
     											// ___________FAULT ID____________   __________TIMER___________   _____________DATA________________    __OPERATOR__   ____________________________________THRESHOLD____________________________  _______TIMER LENGTH_________  _____________FAULT CODE_________________    	___OPERATOR 2__ ________________________DATA 2______________   __THRESHOLD 2_____ ______CRITICAL________
-        fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10 * CURR_ERR_MARG, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-        fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =    fault_data->pack_current, .optype_1 = GT, .lim_1 =                                        (fault_data->charge_limit)*10, .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =          0, .is_critical = true  };
-        fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                     MIN_VOLT * 10000, .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-        fault_table[3]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =    ovr_chgvolt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                              MAX_CHARGE_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-        fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 = fault_data->max_voltage.val, .optype_1 = GT, .lim_1 =                                                     MAX_VOLT * 10000, .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ,  .data_2 = fault_data->is_charger_connected,  .lim_2 =      false, .is_critical = true  };
-        fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =    fault_data->max_temp.val, .optype_1 = GT, .lim_1 =                                                        MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-    	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 = fault_data->min_voltage.val, .optype_1 = LT, .lim_1 =                                                                  900, .timeout =       LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-		fault_table[7]  = (fault_eval_t) {.id = NULL};
+        fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =     fault_data->pack_current,  .optype_1 = GT, .lim_1 = (fault_data->discharge_limit + DCDC_CURRENT_DRAW)*10 * CURR_ERR_MARG, .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+        fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =     fault_data->pack_current,  .optype_1 = GT, .lim_1 =                                        fault_data->charge_limit,      .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =          0, .is_critical = true  };
+        fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 =  fault_data->min_voltage.val,  .optype_1 = LT, .lim_1 =                                                     MIN_VOLT,         .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+        fault_table[3]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =    ovr_chgvolt_timer, .data_1 =  fault_data->max_voltage.val,  .optype_1 = GT, .lim_1 =                                              MAX_CHARGE_VOLT,         .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+        fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 =  fault_data->max_voltage.val,  .optype_1 = GT, .lim_1 =                                                     MAX_VOLT,         .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ,  .data_2 = fault_data->is_charger_connected,  .lim_2 =      false, .is_critical = true  };
+        fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =     fault_data->max_temp.val,  .optype_1 = GT, .lim_1 =                                                        MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+    	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 =  fault_data->min_voltage.val,  .optype_1 = LT, .lim_1 =                                                                  0.9, .timeout =       LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+		fault_table[7]  = (fault_eval_t) {.id = "Die Overtemp",            .timer =   die_overtemp_timer, .data_1 = fault_data->max_chiptemp.val,  .optype_1 = GT, .lim_1 = 													   MAX_CHIP_TEMP, .timeout =   MAX_CHIPTEMP_TIME, .code =            DIE_TEMP_MAXIMUM_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+		fault_table[8]  = (fault_eval_t) {.id = NULL};
 
 		cancel_timer(&ovr_curr_timer);
 		cancel_timer(&ovr_chgcurr_timer);
@@ -267,6 +274,7 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
 		fault_table[4].data_2 = fault_data->is_charger_connected;
 		fault_table[5].data_1 = fault_data->max_temp.val;
 		fault_table[6].data_1 = fault_data->min_voltage.val;
+		fault_table[7].data_1 = fault_data->max_chiptemp.val;
 	}
 
 	int incr = 0;
@@ -382,7 +390,7 @@ bool sm_fault_eval(fault_eval_t *item)
  * trying to start again */
 bool sm_charging_check(acc_data_t *bmsdata)
 {
-	if (!compute_charger_connected()) {
+	if (!bmsdata->is_charger_connected) {
 		printf("Charger not connected\r\n");
 		return false;
 	}
@@ -426,7 +434,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // TODO: Improve algorithm.
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
-	if (!compute_charger_connected())
+	if (!bmsdata->is_charger_connected)
 		return false;
 	if (bmsdata->max_temp.val > MAX_CELL_TEMP_BAL)
 		return false;
