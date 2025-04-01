@@ -395,7 +395,4 @@ void calc_state_of_charge(acc_data_t *bmsdata)
 	}
 
 	bmsdata->soc = (float)soc;
-
-	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
-				bmsdata->soc);
 }
