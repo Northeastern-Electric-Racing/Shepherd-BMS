@@ -573,29 +573,22 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 	}
 }
 
-/**
- * @brief: Calculate the state of charge of the battery pack using exponential regression
- * 
- * @param volts The voltage of the battery pack
- */
-static float battery_soc_regression(float volts)
+void calc_state_of_charge(acc_data_t *bmsdata)
 {
-	double soc = (2538385.1 * pow(0.2050576, volts)) -
-		     (2268926.47 * pow(0.2124681, volts)) -
-		     (907951.835 * pow(0.0744989, volts)) + 254.27464;
+	float volts = bmsdata->min_ocv.val;
+
+	double soc = (-55.919476 * pow(16.1336555, volts)) +
+		     (55.9296372 * pow(16.1330198, volts)) - 6.3330011;
 
 	if (soc > 100) {
 		soc = 100;
-	} else if (soc < 0) {
+	}
+
+	else if (soc < 0) {
 		soc = 0;
 	}
 
-	return (float)soc;
-}
-
-void calc_state_of_charge(acc_data_t *bmsdata)
-{
-	bmsdata->soc = battery_soc_regression(bmsdata->min_ocv.val);
+	bmsdata->soc = (float)soc;
 
 	send_acc_status_message(bmsdata->pack_voltage, bmsdata->pack_current,
 				bmsdata->soc);
