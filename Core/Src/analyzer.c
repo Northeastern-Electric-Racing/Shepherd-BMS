@@ -303,13 +303,13 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 	float temp_derate_factor = 0.0f;
 	float cell_volt_derate_factor = 0.0f;
 
+	// All cell discharge limits were obtained from P45B Datasheet.
+
 	if (min_temp <= MIN_DISCHG_TEMP || max_temp >= MAX_CELL_TEMP ||
 	    min_cell_voltage <= MIN_VOLT) {
 		bmsdata->cont_DCL = 0.0f;
 		return;
 	}
-
-	// All cell discharge limits were obtained from P45B Datasheet.
 
 	/* Temperature Derating: 50–55°C ramp down
 	   Derating begins at 50°C to limit stress as the pack heats up.
