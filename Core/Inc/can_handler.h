@@ -28,18 +28,25 @@
 #define CELL_DATA_SIZE	    8
 #define CELL_VOLTAGE_CANID  0x87
 #define CELL_VOLTAGE_SIZE   8
-#define CURRENT_CANID	    0x86
 #define CURRENT_SIZE	    6
 #define CELL_TEMP_CANID	    0x84
 #define CELL_TEMP_SIZE	    8
 #define SEGMENT_TEMP_CANID  0x85
 #define SEGMENT_TEMP_SIZE   6
+#define SEGMENT_VOLT_CANID  0x90
+#define SEGMENT_VOLT_SIZE   8
 #define FAULT_CANID	    0x703 // TODO: cleanup
 #define FAULT_SIZE	    5
 #define NOISE_CANID	    0x88
 #define NOISE_SIZE	    6
 #define DEBUG_CANID	    0x702
+#define CHARGER_CANID	    0x1806E5F4
+#define CHARGERBOX_CANID    0x18FF50E5
 
+#define OVERFLOW_CANID	   0x6F1
+#define OVERFLOW_SIZE	   6
+#define PEC_ERROR_CANID	   0x6F2
+#define PEC_ERROR_SIZE	   3
 #define ALPHA_CELL_CANID   0x6FA
 #define BETA_CELL_CANID	   0x6FB
 #define CELL_MSG_SIZE	   7
@@ -77,7 +84,7 @@ typedef enum {
 } rate_lim_t;
 
 #define DEBUG_SIZE	  8
-#define FAULT_TIMER_CANID 0x6FF
+#define FAULT_TIMER_CANID 0x6F9
 #define FAULT_TIMER_SIZE  4
 
 void can_receive_callback(CAN_HandleTypeDef *hcan);
@@ -99,7 +106,7 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2);
 /**
  * @brief Task for sending CAN messages.
  * 
- * @param pv_params CAN_HandleTypeDef for the CAN line that messages will be sent out on.
+ * @param pv_params Pointer to acc_data_t struct containing BMS data
  */
 void vCanDispatch(void *pv_params);
 extern osThreadId_t can_dispatch_handle;

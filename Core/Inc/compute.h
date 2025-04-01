@@ -24,21 +24,6 @@ typedef enum { FAN1, FAN2, FAN3, FAN4, FAN5, FAN6, FANMAX } fan_select_t;
 uint8_t compute_init();
 
 /**
- * @brief sets safeguard bool to check whether charging is enabled or disabled
- *
- * @param is_enabled
- */
-void compute_enable_charging(bool enable_charging);
-
-/**
- * @brief Returns if charger interlock is engaged, indicating charger LV connector is plugged in
- *
- * @return true
- * @return false
- */
-bool compute_charger_connected();
-
-/**
  * @brief Handle any messages received from the charger
  *
  * @param msg
@@ -61,9 +46,9 @@ uint8_t compute_set_fan_speed(TIM_HandleTypeDef *pwmhandle,
 /**
  * @brief Returns the pack current sensor reading
  *
- * @return int16_t
+ * @return float
  */
-int16_t compute_get_pack_current();
+float compute_get_pack_current();
 
 /**
  * @brief updates fault relay
@@ -71,5 +56,17 @@ int16_t compute_get_pack_current();
  * @param fault_state
  */
 void compute_set_fault(int fault_state);
+
+/**
+ * @brief blinks debug LED.
+ */
+void toggle_debug_led();
+
+/**
+ * @brief turns LED on or off, for adc polling.A
+ * 
+ * @param mode
+ */
+void set_poll_led(int mode);
 
 #endif // COMPUTE_H

@@ -65,7 +65,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata);
 void calc_open_cell_voltage(acc_data_t *bmsdata);
 
 /**
- * @brief Calculate cell resistances using cell temperatures and a cell temp to resistance lookup table.
+ * @brief Calculate cell resistances using Rin = ( Voc - V )/I
  * 
  */
 void calc_cell_resistances(acc_data_t *bmsdata);
@@ -83,8 +83,9 @@ void calc_dcl(acc_data_t *bmsdata);
 void calc_cont_dcl(acc_data_t *bmsdata);
 
 /**
- * @brief Calculate the continuous charging current limit based on cell temperatures and a cell temp to CCL lookup table.
- * 
+ * @brief Calculate continuous charge current limit (CCL) using linear derating from max cell temperature and voltage.
+ *
+ * @param bmsdata Pointer to BMS data structure.
  */
 void calc_cont_ccl(acc_data_t *bmsdata);
 
