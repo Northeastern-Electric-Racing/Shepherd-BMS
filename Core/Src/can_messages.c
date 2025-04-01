@@ -450,11 +450,12 @@ void send_debug_message(uint8_t debug0, uint8_t debug1, uint16_t debug2,
 	queue_can_msg(msg);
 }
 
+// Changes made by Sam on 3/30/25, not verified
 // verified by Jack on 3/17/2025 for beta and alpha chip 0
 void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 			    float voltage_b, uint8_t chip_ID, uint8_t cell_a,
 			    uint8_t cell_b, bool discharging_a,
-			    bool discharging_b)
+			    bool discharging_b, bool cvs_a, bool cvs_b)
 {
 	// clang-format off
 	can_msg_t msg = { .len = CELL_MSG_SIZE, .data = { 0 } };
@@ -494,7 +495,9 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	bitstream_add(&cell_data_message, cell_b, 4);    // Cell B (4 bits)
 	bitstream_add(&cell_data_message, discharging_a, 1); 			// Discharging A (1 bit)
 	bitstream_add(&cell_data_message, discharging_b, 1); 			// Discharging B (1 bit)
-	bitstream_add(&cell_data_message, 0, 6);             			// Extra (6 bits)
+	bitstream_add(&cell_data_message, cvs_a, 1); 			// C v S of A (1 bit)
+	bitstream_add(&cell_data_message, cvs_b, 1); 			// C v S of B (1 bit)
+	bitstream_add(&cell_data_message, 0, 4);             			// Extra (4 bits)
 
 	memcpy(msg.data, &bitstream_data, CELL_MSG_SIZE);
 
@@ -551,9 +554,10 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 	queue_can_msg(msg);
 }
 
+// Changes made by Sam on 3/30/25, not verified
 // verified by Jack on chip 0, 3/12/2025.
 void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
-				uint8_t chip, float v_res, float vmv)
+				uint8_t chip, float v_res, float vmv, bool cvs)
 {
 	can_msg_t msg = { .id = BETA_STAT_B_CANID, .len = BETA_STAT_B_SIZE, .data = { 0 } };
 
@@ -583,7 +587,7 @@ void send_beta_status_b_message(float vref2, float v_analog, float v_digital,
 	bitstream_add(&beta_status_b_message, chip, 4); 	// Chip ID (4 bits)
 	bitstream_add(&beta_status_b_message, v_res, 13); 				// Vres (13 bits)
 	bitstream_add(&beta_status_b_message, vmv, 13); 				// Vmv (13 bits)
-	bitstream_add(&beta_status_b_message, 0, 1); 					// Extra (1 bit)
+	bitstream_add(&beta_status_b_message, cvs, 1); 					// C v S fault of Beta cell 10 (1 bit)
 
 	memcpy(msg.data, &bitstream_data, BETA_STAT_B_SIZE);
 
