@@ -151,6 +151,10 @@ void vDebugMode(void *pv_params)
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
 				get_num_cells(&bmsdata->chip_data[chip]);
+			// dont send the 11th cell of beta as it goes in a beta stat msg
+			if (!bmsdata->chip_data[chip].alpha) {
+				num_cells -= 1;
+			}
 			for (int cell = 0; cell < num_cells; cell += 2) {
 				send_cell_data_message(
 					bmsdata->chip_data[chip].alpha,
@@ -221,7 +225,7 @@ void vDebugMode(void *pv_params)
 						       bmsdata->chips[chip]
 							       .aux.a_codes[10]),
 					(bmsdata->chips[chip].statc.cs_flt >>
-					 9) & 1);
+					 10) & 1);
 				send_beta_status_c_message(
 					chip, &bmsdata->chips[chip].statc);
 			} else {

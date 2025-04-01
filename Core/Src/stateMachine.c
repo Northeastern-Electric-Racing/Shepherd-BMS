@@ -104,7 +104,7 @@ void handle_charging(acc_data_t *bmsdata)
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
-				5, true);
+				CHARGING_CURRENT, true);
 			start_timer(&charger_message_timer, 1000);
 		}
 	} else {
@@ -127,7 +127,8 @@ void charger_message_recieved(acc_data_t *bmsdata)
 {
 	// this is irreversible, a LV power cycle occurs before re-connection to car
 	bmsdata->is_charger_connected = true;
-	request_transition(bmsdata, CHARGING_STATE);
+	if (current_state != FAULTED_STATE)
+		request_transition(bmsdata, CHARGING_STATE);
 }
 
 void init_faulted(acc_data_t *bmsdata)
