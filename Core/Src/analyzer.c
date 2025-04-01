@@ -319,14 +319,14 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 	}
 
 	if (min_cell_voltage < 3.0f && min_cell_voltage > 2.5f) {
-		volt_derate_factor =
+		cell_volt_derate_factor =
 			1.0f - ((3.0f - min_cell_voltage) / 0.5f) *
 				       (1.0f - (MIN_DCL /
 						(float)(MAX_PACK_DISCHG_CURR)));
 	}
 
-	float scaled_dcl =
-		MAX_PACK_DISCHG_CURR * temp_derate_factor * volt_derate_factor;
+	float scaled_dcl = MAX_PACK_DISCHG_CURR * temp_derate_factor *
+			   cell_volt_derate_factor;
 
 	if (scaled_dcl < MIN_DCL) {
 		scaled_dcl = MIN_DCL;
