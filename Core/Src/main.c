@@ -77,7 +77,6 @@ TIM_HandleTypeDef htim5;
 TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart4;
-DMA_HandleTypeDef hdma_uart4_tx;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
@@ -145,14 +144,9 @@ int _write(int file, char* ptr, int len) {
   return len;
 }
 
-#ifdef DEBUG_STATS
-
 const void print_bms_stats(acc_data_t *acc_data)
 {
-	static nertimer_t debug_stat_timer;
-	static const uint16_t PRINT_STAT_WAIT = 1000; //ms
 
-	if(!is_timer_expired(&debug_stat_timer) && debug_stat_timer.active) return;
   #ifdef DEBUG_OTHER
   //TODO get this from eeprom once implemented
   // question - should we read from eeprom here, or do that on loop and store locally?
@@ -278,20 +272,6 @@ const void print_bms_stats(acc_data_t *acc_data)
     }
   #endif
 
-  start_timer(&debug_stat_timer, PRINT_STAT_WAIT);
-}
-
-
-#endif
-
-/**
- * @brief Callback for UART
- * @param phuart: UART_HandleTypeDef
- * @return None
- */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *phuart)
-{
-  HAL_UART_DMAStop(&huart4);
 }
 
 /* USER CODE END 0 */
@@ -348,22 +328,13 @@ int main(void)
   MX_IWDG_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
- //for (int i = 0; i < 58; i++) 
- //{
- //       HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_SET);
- //       HAL_Delay(58-i);
- //       HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, GPIO_PIN_RESET);
- //       HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_SET);
- //       HAL_Delay(58-i);
- //       HAL_GPIO_WritePin(Debug_LED_GPIO_Port, Debug_LED_Pin, GPIO_PIN_RESET);
- //      
-  //}
-   
-
+  
   HAL_Delay(500);
 	init_both_can(&hcan1, &hcan2);
   segment_init(acc_data);
   compute_init();
+  // the BMS faults upon boot, the shutdown loop must clear out before drive
+  compute_set_fault(true);
   printf("Init passed\n");
   /* USER CODE END 2 */
 
@@ -1130,12 +1101,8 @@ static void MX_DMA_Init(void)
 
   /* DMA controller clock enable */
   __HAL_RCC_DMA2_CLK_ENABLE();
-  __HAL_RCC_DMA1_CLK_ENABLE();
 
   /* DMA interrupt init */
-  /* DMA1_Stream4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
   /* DMA2_Stream0_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream0_IRQn);
@@ -1307,16 +1274,13 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
-    send_bms_status_message(bmsdata->avg_temp, current_state,
-					segment_is_balancing(bmsdata->chips));
-    send_fault_status_message(bmsdata->fault_code_crit, 
-      bmsdata->fault_code_noncrit);
-
     send_git_version_message();
   
     HAL_IWDG_Refresh(&hiwdg);
 
+    toggle_debug_led();
     osDelay(1000);
+
   }
   /* USER CODE END 5 */
 }
