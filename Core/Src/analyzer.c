@@ -378,3 +378,21 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 		}
 	}
 }
+
+void calc_state_of_charge(acc_data_t *bmsdata)
+{
+	double volts = (double)bmsdata->min_ocv.val;
+
+	double soc = (-55.919476 * pow(16.1336555, volts)) +
+		     (55.9296372 * pow(16.1330198, volts)) - 6.3330011;
+
+	if (soc > 100) {
+		soc = 100;
+	}
+
+	else if (soc < 0) {
+		soc = 0;
+	}
+
+	bmsdata->soc = (float)soc;
+}

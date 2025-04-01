@@ -61,4 +61,11 @@ void calc_cont_dcl(acc_data_t *bmsdata);
  */
 void calc_cont_ccl(acc_data_t *bmsdata);
 
+/**
+ * @brief Calcuate state of charge by using a formula based on datasheet graph
+ * 
+ * @param bmsdata Pointer to BMS data struct.
+ */
+void calc_state_of_charge(acc_data_t *bmsdata);
+
 #endif
