@@ -76,6 +76,7 @@ void vAnalyzer(void *pv_params)
 		// these are dependent on above calculations
 		calc_cont_dcl(bmsdata);
 		calc_cont_ccl(bmsdata);
+		calc_state_of_charge(bmsdata);
 
 		// send out telemetry data sourced from the above functions
 		send_acc_status_message(bmsdata->pack_voltage,
