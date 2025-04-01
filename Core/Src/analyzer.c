@@ -418,13 +418,10 @@ void calc_dcl(acc_data_t *bmsdata)
 		if (bmsdata->max_temp.val >= 55) {
 			current_limit = 15;
 		} else {
-			current_limit = MAX_DISCHG_CURR *
-					(1 - (bmsdata->max_temp.val - 49) * 6);
+			current_limit = MAX_DISCHG_CURR -
+					(bmsdata->max_temp.val - 49) * 6;
 		}
-	} // if less than 2 laps remaining reduce current to 20A & prevent dropping voltage too low // TODO fix with coulomb counting
-	else if (bmsdata->max_ocv.val <= 2.8) {
-		current_limit = 20;
-	}
+	} // TODO if less than 2 laps remaining reduce current to 20A & prevent dropping voltage too low (fix with coulomb counting?)
 
 	/* protection against being init to a high value */
 	if (bmsdata->discharge_limit > MAX_DISCHG_CURR) {
