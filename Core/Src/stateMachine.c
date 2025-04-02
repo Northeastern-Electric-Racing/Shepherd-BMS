@@ -190,9 +190,6 @@ void sm_fault_return(acc_data_t *bmsdata)
 	static fault_eval_t *fault_table = NULL;
 	static acc_data_t *fault_data = NULL;
 
-	static uint32_t fault_status_crit = 0;
-	static uint32_t fault_status_noncrit = 0;
-
 	if (!fault_data)
 		fault_data = bmsdata;
 
@@ -239,21 +236,18 @@ void sm_fault_return(acc_data_t *bmsdata)
 		uint32_t item_code = fault_table[i].code;
 		if (sm_fault_eval(&fault_table[i])) {
 			if (fault_table[i].is_critical) {
-				fault_status_crit |= item_code;
+				bmsdata->fault_code_crit |= item_code;
 			} else {
-				fault_status_noncrit |= item_code;
+				bmsdata->fault_code_noncrit |= item_code;
 			}
 		} else {
 			// Clear bit for non-critical faults
 			if (!fault_table[i].is_critical) {
-				fault_status_noncrit &= ~item_code;
+				bmsdata->fault_code_noncrit &= ~item_code;
 			}
 		}
 		i++;
 	}
-
-	bmsdata->fault_code_crit = fault_status_crit;
-	bmsdata->fault_code_noncrit = fault_status_noncrit;
 }
 
 bool sm_fault_eval(fault_eval_t *item)
