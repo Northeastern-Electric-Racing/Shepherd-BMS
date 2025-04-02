@@ -181,14 +181,14 @@ void send_fault_status_message(uint32_t fault_code_crit,
 		uint32_t fault_noncrit;
 	} fault_status_msg_data;
 
+	fault_status_msg_data.fault_crit = fault_code_crit;
+	fault_status_msg_data.fault_noncrit = fault_code_noncrit;
+
 	/* convert to big endian */
 	endian_swap(&fault_status_msg_data.fault_crit,
 		    sizeof(fault_status_msg_data.fault_crit));
 	endian_swap(&fault_status_msg_data.fault_noncrit,
 		    sizeof(fault_status_msg_data.fault_noncrit));
-
-	fault_status_msg_data.fault_crit = fault_code_crit;
-	fault_status_msg_data.fault_noncrit = fault_code_noncrit;
 
 	can_msg_t fault_msg = { .id = FAULT_STATUS_CANID,
 				.len = FAULT_STATUS_SIZE,

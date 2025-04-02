@@ -25,14 +25,6 @@ const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	{ true, false, false, true } /* FAULTED */
 };
 
-typedef union _bms_fault_t {
-	uint64_t all;
-	struct {
-		uint32_t fault_code_crit;
-		uint32_t fault_code_noncrit;
-	} fields;
-} bms_fault_t;
-
 /* private function prototypes */
 void init_boot(acc_data_t *bmsdata);
 void init_ready(acc_data_t *bmsdata);
@@ -163,11 +155,7 @@ void handle_faulted(acc_data_t *bmsdata)
 void sm_handle_state(acc_data_t *bmsdata)
 {
 	// always check for faults no matter the current state
-	bms_fault_t faults = { .all = 0 };
-	faults.all = sm_fault_return(bmsdata);
-
-	bmsdata->fault_code_crit = faults.fields.fault_code_crit;
-	bmsdata->fault_code_noncrit = faults.fields.fault_code_noncrit;
+	sm_fault_return(bmsdata);
 
 	if (bmsdata->fault_code_crit != FAULTS_CLEAR) {
 		request_transition(bmsdata, FAULTED_STATE);
@@ -187,7 +175,7 @@ void request_transition(acc_data_t *bmsdata, BMSState_t next_state)
 	current_state = next_state;
 }
 
-uint64_t sm_fault_return(acc_data_t *bmsdata)
+void sm_fault_return(acc_data_t *bmsdata)
 {
 	/* FAULT CHECK (Check for fuckies) */
 
@@ -264,11 +252,8 @@ uint64_t sm_fault_return(acc_data_t *bmsdata)
 		i++;
 	}
 
-	bms_fault_t return_faults = { .all = 0 };
-	return_faults.fields.fault_code_crit = fault_status_crit;
-	return_faults.fields.fault_code_noncrit = fault_status_noncrit;
-
-	return return_faults.all;
+	bmsdata->fault_code_crit = fault_status_crit;
+	bmsdata->fault_code_noncrit = fault_status_noncrit;
 }
 
 bool sm_fault_eval(fault_eval_t *item)
