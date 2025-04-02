@@ -37,15 +37,28 @@ float compute_get_pack_current();
 void compute_set_fault(bool fault_state);
 
 /**
- * @brief blinks debug LED.
+ * @brief blinks LED 1.
  */
-void toggle_debug_led();
+void toggle_debug_led_1();
 
 /**
- * @brief turns LED on or off, for adc polling.A
+ * @brief turns LED 2 on or off,
  * 
  * @param mode
  */
-void set_poll_led(int mode);
+void set_debug_led_2(int mode);
+
+/**
+ * @brief Get the shutdown state
+ * 
+ * @param shutdown a boolean for whether shutdown is on
+ */
+void get_shutdown_state(bool *shutdown);
+
+/**
+ * @brief Pets the external watchdog
+ * 
+ */
+void pet_watchdog();
 
 #endif // COMPUTE_H

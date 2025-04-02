@@ -241,9 +241,9 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 
 uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 {
-	set_poll_led(1);
+	set_debug_led_2(1);
 	uint32_t result = adBmsPollAdc(poll_type);
-	set_poll_led(0);
+	set_debug_led_2(0);
 	return result;
 }
 

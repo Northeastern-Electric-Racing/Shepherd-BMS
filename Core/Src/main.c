@@ -100,12 +100,12 @@ static void MX_SPI2_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_UART4_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_TIM5_Init(void);
+static void MX_TIM1_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -317,12 +317,12 @@ int main(void)
   MX_SPI3_Init();
   MX_UART4_Init();
   MX_I2C1_Init();
-  MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM8_Init();
   MX_ADC1_Init();
   MX_IWDG_Init();
   MX_TIM5_Init();
+  MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   
   HAL_Delay(500);
@@ -906,7 +906,6 @@ static void MX_TIM8_Init(void)
 
   /* USER CODE END TIM8_Init 0 */
 
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
   TIM_OC_InitTypeDef sConfigOC = {0};
   TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
@@ -921,15 +920,6 @@ static void MX_TIM8_Init(void)
   htim8.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim8.Init.RepetitionCounter = 0;
   htim8.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim8, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
   if (HAL_TIM_PWM_Init(&htim8) != HAL_OK)
   {
     Error_Handler();
@@ -1090,21 +1080,6 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
-void watchdog_init(void)
-{
-  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
-  //HAL_Delay(1); // shouldn't be needed but here in case
-}
-
-void watchdog_pet(void)
-{
-
-  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_SET);
-  //HAL_Delay(1);
-  HAL_GPIO_WritePin(Watchdog_Out_GPIO_Port, Watchdog_Out_Pin, GPIO_PIN_RESET);
-
-}
-
 struct __attribute__((__packed__)) git_version_data {
 		uint8_t git_major_version;
 		uint8_t git_minor_version;
@@ -1171,7 +1146,7 @@ void StartDefaultTask(void *argument)
   
     HAL_IWDG_Refresh(&hiwdg);
 
-    toggle_debug_led();
+    toggle_debug_led_1();
     osDelay(1000);
 
   }
