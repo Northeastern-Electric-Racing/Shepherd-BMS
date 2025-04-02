@@ -392,9 +392,13 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 	if (bmsdata->delt_voltage <= MAX_DELTA_V)
 		return false;
 
-	// do not balance either during the countup
+	// Do not balance during the countup.
 	if (is_timer_active(&charger_settle_countup) &&
 	    !is_timer_expired(&charger_settle_countup))
+		return false;
+
+	// Do not balance if the shutdown circuit is open.
+	if (is_shutdown_circuit_open())
 		return false;
 
 	return true;

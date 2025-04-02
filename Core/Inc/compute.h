@@ -16,6 +16,9 @@
 #define MC_BAUD		     1000000U
 #define MAX_ADC_RESOLUTION   4095 // 12 bit ADC
 
+#define PORT_SHUTDOWN_3V3 GPIOA
+#define PIN_SHUTDOWN_3V3  2 // Pin PA2
+
 /**
  * @brief Init all necessary peripherals on compute, minus CAN, see can_handler
  * 
@@ -47,5 +50,12 @@ void toggle_debug_led();
  * @param mode
  */
 void set_poll_led(int mode);
+
+/**
+ * @brief Checks if the shutdown circuit is open
+ * 
+ * @return true if the circuit is open, false is the circuit is closed
+ */
+bool is_shutdown_circuit_open();
 
 #endif // COMPUTE_H

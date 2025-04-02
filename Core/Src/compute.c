@@ -52,3 +52,10 @@ void set_poll_led(int mode)
 {
 	HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, mode);
 }
+
+bool is_shutdown_circuit_open()
+{
+	// If the pin is high, the shutdown circuit is closed. So, return false.
+	// If the pin is low, the shutdown circuit is open. So, return true.
+	return !HAL_GPIO_ReadPin(PORT_SHUTDOWN_3V3, PIN_SHUTDOWN_3V3);
+}
