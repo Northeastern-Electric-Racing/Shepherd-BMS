@@ -398,7 +398,7 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 		return false;
 
 	// Do not balance if the shutdown circuit is open.
-	if (is_shutdown_circuit_open())
+	if (read_shutdown())
 		return false;
 
 	return true;
