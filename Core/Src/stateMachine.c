@@ -104,7 +104,7 @@ void handle_charging(acc_data_t *bmsdata)
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
 				 NUM_CHIPS),
-				5, true);
+				CHARGING_CURRENT, true);
 			start_timer(&charger_message_timer, 1000);
 		}
 	} else {
@@ -127,7 +127,8 @@ void charger_message_recieved(acc_data_t *bmsdata)
 {
 	// this is irreversible, a LV power cycle occurs before re-connection to car
 	bmsdata->is_charger_connected = true;
-	request_transition(bmsdata, CHARGING_STATE);
+	if (current_state != FAULTED_STATE)
+		request_transition(bmsdata, CHARGING_STATE);
 }
 
 void init_faulted(acc_data_t *bmsdata)
@@ -391,12 +392,13 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 	if (bmsdata->delt_voltage <= MAX_DELTA_V)
 		return false;
 
-	// do not balance either during the countup
+	// Do not balance during the countup.
 	if (is_timer_active(&charger_settle_countup) &&
 	    !is_timer_expired(&charger_settle_countup))
 		return false;
 
-	return true;
+	// Do not balance if the shutdown circuit is open.
+	return !read_shutdown();
 }
 
 // balances cells using algorithm in charger.c

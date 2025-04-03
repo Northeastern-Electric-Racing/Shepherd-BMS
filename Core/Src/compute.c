@@ -53,13 +53,15 @@ void set_debug_led_2(int mode)
 	HAL_GPIO_WritePin(DEBUG_LED_2_GPIO_Port, DEBUG_LED_2_Pin, mode);
 }
 
-void get_shutdown_state(bool *shutdown)
-{
-	*shutdown = !HAL_GPIO_ReadPin(SHUTDOWN_GPIO_Port, SHUTDOWN_Pin);
-}
-
 void pet_watchdog()
 {
 	HAL_GPIO_WritePin(WATCHDOG_GPIO_Port, WATCHDOG_Pin, true);
 	HAL_GPIO_WritePin(WATCHDOG_GPIO_Port, WATCHDOG_Pin, false);
+}
+
+bool read_shutdown()
+{
+	// If the pin is high, the shutdown circuit is closed. So, return false.
+	// If the pin is low, the shutdown circuit is open. So, return true.
+	return !HAL_GPIO_ReadPin(SHUTDOWN_GPIO_Port, SHUTDOWN_Pin);
 }

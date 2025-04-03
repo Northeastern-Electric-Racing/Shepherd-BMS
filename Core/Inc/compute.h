@@ -49,16 +49,16 @@ void toggle_debug_led_1();
 void set_debug_led_2(int mode);
 
 /**
- * @brief Get the shutdown state
- * 
- * @param shutdown a boolean for whether shutdown is on
- */
-void get_shutdown_state(bool *shutdown);
-
-/**
  * @brief Pets the external watchdog
  * 
  */
 void pet_watchdog();
+
+/**
+ * @brief Checks if the shutdown circuit is open.
+ * 
+ * @return If the shutdown circuit is open, return true. If it is closed, return false.
+ */
+bool read_shutdown();
 
 #endif // COMPUTE_H
