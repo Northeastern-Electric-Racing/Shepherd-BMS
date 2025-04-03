@@ -232,31 +232,31 @@ void sm_fault_return(acc_data_t *bmsdata)
 		fault_table[7].data_1 = fault_data->max_chiptemp.val;
 	}
 
+	//printf("MIN VOLTS: %f", fault_data->min_voltage.val);
+	fault_stat_t status;
 	for (int i = 0; i < NUM_FAULTS; i++) {
 		uint32_t item_code = fault_table[i].code;
-		if (sm_fault_eval(&fault_table[i])) {
+		status = sm_fault_eval(&fault_table[i]);
+		if (status == FAULT_STAT_FAULTED) {
 			if (fault_table[i].is_critical) {
 				bmsdata->fault_code_crit |= item_code;
 			} else {
 				bmsdata->fault_code_noncrit |= item_code;
 			}
-		} else {
+		} else if (status == FAULT_STAT_CLEARED) {
 			// Clear bit for non-critical faults
 			if (!fault_table[i].is_critical) {
 				bmsdata->fault_code_noncrit &= ~item_code;
+			} else {
+				bmsdata->fault_code_crit &= ~item_code;
 			}
 		}
 		i++;
 	}
 }
 
-bool sm_fault_eval(fault_eval_t *item)
+fault_stat_t sm_fault_eval(fault_eval_t *item)
 {
-	enum {
-		FAULT_STAT_TIMER_START = 1,
-		FAULT_STAT_FAULTED = 2,
-	};
-
 	bool condition1;
 	bool condition2;
 
@@ -289,6 +289,7 @@ bool sm_fault_eval(fault_eval_t *item)
 	bool fault_present = ((condition1 && condition2) ||
 			      (condition1 && (item->optype_2 == NOP)));
 	if ((!(is_timer_active(&item->timer))) && !fault_present) {
+		printf("PASSED\n");
 		return 0;
 	}
 
@@ -297,17 +298,19 @@ bool sm_fault_eval(fault_eval_t *item)
 			printf("\t\t\t*******Fault cleared: %s\r\n", item->id);
 			cancel_timer(&item->timer);
 			send_fault_timer_message(0, item->code, item->data_1);
-			return 0;
+			return FAULT_STAT_CLEARED;
 		}
 
 		if (is_timer_expired(&item->timer) && fault_present) {
 			printf("\t\t\t*******Faulted: %s\r\n", item->id);
 			send_fault_timer_message(2, item->code, item->data_1);
-			return item->code;
+			return FAULT_STAT_FAULTED;
 		}
 
 		else
-			return 0;
+			printf("PASSED\n");
+
+		return 0;
 
 	}
 

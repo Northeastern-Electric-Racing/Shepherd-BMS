@@ -11,6 +11,11 @@ extern uint16_t crc_error_check;
 
 #define NUM_FAULTS 8
 
+typedef enum {
+	FAULT_STAT_FAULTED = 1,
+	FAULT_STAT_CLEARED = 2,
+} fault_stat_t;
+
 /**
  * @brief Called when we receive a message from the charger
  * 
@@ -52,7 +57,7 @@ void sm_fault_return(acc_data_t *accData);
  * @param fault_item
  * @return fault_status
  */
-bool sm_fault_eval(fault_eval_t *fault_item);
+fault_stat_t sm_fault_eval(fault_eval_t *fault_item);
 
 /**
  * @brief handles the state machine, calls the appropriate handler function and
