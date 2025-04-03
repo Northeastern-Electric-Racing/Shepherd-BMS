@@ -57,5 +57,5 @@ bool read_shutdown()
 {
 	// If the pin is high, the shutdown circuit is closed. So, return false.
 	// If the pin is low, the shutdown circuit is open. So, return true.
-	return !HAL_GPIO_ReadPin(PORT_SHUTDOWN_3V3, PIN_SHUTDOWN_3V3);
+	return !HAL_GPIO_ReadPin(SHUTDOWN_3V3_GPIO_Port, SHUTDOWN_3V3_Pin);
 }
