@@ -48,4 +48,11 @@ void toggle_debug_led();
  */
 void set_poll_led(int mode);
 
+/**
+ * @brief Checks if the shutdown circuit is open.
+ * 
+ * @return If the shutdown circuit is open, return true. If it is closed, return false.
+ */
+bool read_shutdown();
+
 #endif // COMPUTE_H

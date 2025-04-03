@@ -1156,11 +1156,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : Interlock_Read_Pin */
-  GPIO_InitStruct.Pin = Interlock_Read_Pin;
+  /*Configure GPIO pin : SHUTDOWN_3V3_Pin */
+  GPIO_InitStruct.Pin = SHUTDOWN_3V3_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(Interlock_Read_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(SHUTDOWN_3V3_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Fault_Output_Pin SPI_1_CS_Pin SPI_3_CS_Pin */
   GPIO_InitStruct.Pin = Fault_Output_Pin|SPI_1_CS_Pin|SPI_3_CS_Pin;
