@@ -488,8 +488,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	// printf("VOLT %d: %f  b%d\n", cell_a, voltage_a, discharging_a);
 	// printf("VOLT %d: %f  b%d\n", cell_b, voltage_b, discharging_b);
 
-	/* Multiply data by scaling factor before converuting to int */
-	temperature *= 10;
+	/* Multiply data by scaling factor before converting to int */
 	voltage_a *= 1000;
 	voltage_b *= 1000;
 
@@ -497,7 +496,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	uint8_t bitstream_data[7];
 	bitstream_init(&cell_data_message, bitstream_data, 7); // Create 7-byte bitstream
 
-	bitstream_add(&cell_data_message, temperature, 10); 			// Cell temperature (10 bits)
+	bitstream_add(&cell_data_message, encode_signed_float(temperature, -20.0, 80.0, 10), 10); 			// Cell temperature (10 bits)
 	bitstream_add(&cell_data_message, voltage_a, 13);   			// Voltage A (13 bits)
 	bitstream_add(&cell_data_message, voltage_b, 13);   			// Voltage B (13 bits)
 	bitstream_add(&cell_data_message, chip_ID, 4);   // Chip ID (4 bits)
@@ -533,7 +532,6 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 
 	cell_temperature *= 10;
 	voltage *= 1000;
-	segment_temperature *= 10;
 	die_temperature *= 100;
 	vpv *= 100;
 
@@ -549,7 +547,7 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 		      1); // Discharging (1 bit)
 	bitstream_add(&beta_status_a_message, chip,
 		      4); // Chip ID (4 bits)
-	bitstream_add(&beta_status_a_message, segment_temperature,
+	bitstream_add(&beta_status_a_message, encode_signed_float(segment_temperature, -20.0, 80.0, 10),
 		      10); // Segment temperature (10 bits)
 	bitstream_add(&beta_status_a_message, die_temperature,
 		      13); // Die temperature (13 bits)
@@ -651,7 +649,6 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	// printf("VPV %f\n", vpv);
 	// printf("VMV %f\n", vmv);
 
-	segment_temp *= 10;
 
 	die_temperature *= 100;
 	vpv *= 100;
@@ -662,7 +659,7 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	uint8_t bitstream_data[8];
 	bitstream_init(&alpha_status_a_message, bitstream_data, 8);	// Create 8-byte bitstream
 
-	bitstream_add(&alpha_status_a_message, segment_temp, 10);		// Segment Temp (10 bits)
+	bitstream_add(&alpha_status_a_message, encode_signed_float(segment_temp, -20.0, 80.0, 10), 10);		// Segment Temp (10 bits)
 	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
 	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)

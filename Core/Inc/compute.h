@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <math.h>
 
 #include "stm32f4xx.h"
 
@@ -72,32 +71,5 @@ float compute_get_pack_current();
  * @param fault_state
  */
 void compute_set_fault(int fault_state);
-
-/**
- * @brief Given a float, its minimum bound, upperbound, its precision,
- *  and the cap for the numbers of bits, calculates its signed version.
- * 
- * @param num
- * @param min
- * @param max
- * @param precision
- * @param num_bits
- */
-uint32_t encode_signed_float(float num, float min, float max, float precision,
-			     size_t num_bits);
-
-/**
-* @brief Given an unsigned integer, a minimum bound for the result and the maximum bound,
-*  a resulting precision, and the cap for the number of bits, 
-* decodes the number back into its float version.
-* 
-* @param num
-* @param min
-* @param max
-* @param precision
-* @param num_bits
-*/
-float decode_unsigned_int(uint32_t num, float min, float max, float precision,
-			  size_t num_bits);
 
 #endif // COMPUTE_H
