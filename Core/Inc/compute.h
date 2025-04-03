@@ -17,7 +17,7 @@
 #define MAX_ADC_RESOLUTION   4095 // 12 bit ADC
 
 #define PORT_SHUTDOWN_3V3 GPIOA
-#define PIN_SHUTDOWN_3V3  2 // Pin PA2
+#define PIN_SHUTDOWN_3V3  GPIO_PIN_2 // Pin PA2
 
 /**
  * @brief Init all necessary peripherals on compute, minus CAN, see can_handler
