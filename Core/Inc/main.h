@@ -66,8 +66,8 @@ void Error_Handler(void);
 #define Communication_GPIOC0_GPIO_Port GPIOC
 #define SPI_2_CS_Pin GPIO_PIN_1
 #define SPI_2_CS_GPIO_Port GPIOC
-#define Interlock_Read_Pin GPIO_PIN_2
-#define Interlock_Read_GPIO_Port GPIOA
+#define SHUTDOWN_3V3_Pin GPIO_PIN_2
+#define SHUTDOWN_3V3_GPIO_Port GPIOA
 #define Fault_Output_Pin GPIO_PIN_3
 #define Fault_Output_GPIO_Port GPIOA
 #define SPI_1_CS_Pin GPIO_PIN_4
