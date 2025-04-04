@@ -245,10 +245,10 @@ void sm_fault_return(acc_data_t *bmsdata)
 			}
 		} else if (status == FAULT_STAT_CLEARED) {
 			// Clear bit for non-critical faults
-			if (!fault_table[i].is_critical) {
-				bmsdata->fault_code_noncrit &= ~item_code;
-			} else {
+			if (fault_table[i].is_critical) {
 				bmsdata->fault_code_crit &= ~item_code;
+			} else {
+				bmsdata->fault_code_noncrit &= ~item_code;
 			}
 		}
 		i++;
@@ -288,8 +288,8 @@ fault_stat_t sm_fault_eval(fault_eval_t *item)
 
 	bool fault_present = ((condition1 && condition2) ||
 			      (condition1 && (item->optype_2 == NOP)));
+
 	if ((!(is_timer_active(&item->timer))) && !fault_present) {
-		printf("PASSED\n");
 		return 0;
 	}
 
@@ -306,9 +306,6 @@ fault_stat_t sm_fault_eval(fault_eval_t *item)
 			send_fault_timer_message(2, item->code, item->data_1);
 			return FAULT_STAT_FAULTED;
 		}
-
-		else
-			printf("PASSED\n");
 
 		return 0;
 
