@@ -195,6 +195,7 @@ const void print_bms_stats(acc_data_t *acc_data)
   }
   #endif
 
+  #define DEBUG_RAW_VOLTAGES_FORMATTED
   #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
     for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {

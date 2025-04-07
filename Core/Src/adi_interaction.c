@@ -290,7 +290,13 @@ void write_clear_flags(cell_asic chips[NUM_CHIPS])
 
 void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
 {
-	read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
+	//read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
+	read_adbms_data(chips, RDFCA, F_volt, A);
+	read_adbms_data(chips, RDFCB, F_volt, B);
+	read_adbms_data(chips, RDFCC, F_volt, C);
+	read_adbms_data(chips, RDFCD, F_volt, D);
+	read_adbms_data(chips, RDFCE, F_volt, E);
+	//read_adbms_data(chips, RDFCF, F_volt, F);
 }
 
 void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
@@ -407,6 +413,7 @@ void start_c_adc_conv()
 {
 	adbms_wake_isospi();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
+	//adBmsPollAdc_indicator(PLCADC);
 }
 
 // --- END ADC POLL ---
