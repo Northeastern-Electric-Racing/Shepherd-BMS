@@ -476,7 +476,6 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	// printf("VOLT %d: %f  b%d\n", cell_b, voltage_b, discharging_b);
 
 	/* Multiply data by scaling factor before converuting to int */
-	temperature *= 10;
 	voltage_a *= 1000;
 	voltage_b *= 1000;
 
@@ -484,7 +483,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	uint8_t bitstream_data[7];
 	bitstream_init(&cell_data_message, bitstream_data, 7); // Create 7-byte bitstream
 
-	bitstream_add(&cell_data_message, temperature, 10); 			// Cell temperature (10 bits)
+	int8_t byte_segment_temp = ((int8_t) temperature);
 	bitstream_add(&cell_data_message, voltage_a, 13);   			// Voltage A (13 bits)
 	bitstream_add(&cell_data_message, voltage_b, 13);   			// Voltage B (13 bits)
 	bitstream_add(&cell_data_message, chip_ID, 4);   // Chip ID (4 bits)
@@ -496,7 +495,8 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	bitstream_add(&cell_data_message, cvs_b, 1); 			// C v S of B (1 bit)
 	bitstream_add(&cell_data_message, 0, 4);             			// Extra (4 bits)
 
-	memcpy(msg.data, &bitstream_data, CELL_MSG_SIZE);
+	memcpy(msg.data[1], &bitstream_data, CELL_MSG_SIZE - 1);
+	msg.data[0] = byte_segment_temp;
 
 	handle_bitstream_overflow(&cell_data_message, msg.id);
 
@@ -526,27 +526,35 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 	die_temperature *= 100;
 	vpv *= 100;
 
-	bitstream_t beta_status_a_message;
-	uint8_t bitstream_data[8];
-	bitstream_init(&beta_status_a_message, bitstream_data,
-		       8); // Create 8-byte bitstream
+	bitstream_t first_beta_status_a_message;
+	uint8_t first_bitstream_data[4];
+	bitstream_init(&first_beta_status_a_message, first_bitstream_data,
+		       4); // Create 4-byte bitstream
 
-	bitstream_add(&beta_status_a_message, cell_temperature,
+	bitstream_add(&first_beta_status_a_message, cell_temperature,
 		      10); // Cell temperature (10 bits)
-	bitstream_add(&beta_status_a_message, voltage, 13); // Voltage (13 bits)
-	bitstream_add(&beta_status_a_message, discharging,
+	bitstream_add(&first_beta_status_a_message, voltage, 13); // Voltage (13 bits)
+	bitstream_add(&first_beta_status_a_message, discharging,
 		      1); // Discharging (1 bit)
-	bitstream_add(&beta_status_a_message, chip,
+	bitstream_add(&first_beta_status_a_message, chip,
 		      4); // Chip ID (4 bits)
-	bitstream_add(&beta_status_a_message, segment_temperature,
-		      10); // Segment temperature (10 bits)
-	bitstream_add(&beta_status_a_message, die_temperature,
+	int8_t byte_segment_temp = ((int8_t) segment_temperature);
+
+	bitstream_t second_beta_status_a_message;
+	uint8_t second_bitstream_data[4];
+	bitstream_init(&second_beta_status_a_message, second_bitstream_data,
+		       4); // Create 4-byte bitstream
+
+	bitstream_add(&second_beta_status_a_message, die_temperature,
 		      13); // Die temperature (13 bits)
-	bitstream_add(&beta_status_a_message, vpv, 13); // Vpv (12 bits)
+	bitstream_add(&second_beta_status_a_message, vpv, 13); // Vpv (12 bits)
 
-	memcpy(msg.data, &bitstream_data, BETA_STAT_A_SIZE);
+	memcpy(msg.data, &first_bitstream_data, sizeof(first_bitstream_data));
+	msg.data[sizeof(first_bitstream_data)] = byte_segment_temp;
+	memcpy(msg.data, &second_bitstream_data, BETA_STAT_A_SIZE - sizeof(first_bitstream_data) - 1);
 
-	handle_bitstream_overflow(&beta_status_a_message, msg.id);
+	handle_bitstream_overflow(&first_beta_status_a_message, msg.id);
+	handle_bitstream_overflow(&second_beta_status_a_message, msg.id);
 
 	queue_can_msg(msg);
 }
@@ -641,8 +649,6 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	// printf("VPV %f\n", vpv);
 	// printf("VMV %f\n", vmv);
 
-	segment_temp *= 10;
-
 	die_temperature *= 100;
 	vpv *= 100;
 	vmv *= 1000;
@@ -652,7 +658,7 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	uint8_t bitstream_data[8];
 	bitstream_init(&alpha_status_a_message, bitstream_data, 8);	// Create 8-byte bitstream
 
-	bitstream_add(&alpha_status_a_message, segment_temp, 10);		// Segment Temp (10 bits)
+	int8_t byte_segment_temp = ((int8_t) segment_temp);
 	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
 	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)
@@ -670,7 +676,8 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	bitstream_add(&alpha_status_a_message, flt_reg->tmodchk, 1);	// TMODCHK (1 bit)
 	bitstream_add(&alpha_status_a_message, flt_reg->oscchk, 1);	 	// OSCCHK (1 bit)
 	
-	memcpy(msg.data, &bitstream_data, ALPHA_STAT_A_SIZE);
+	memcpy(msg.data[1], &bitstream_data, ALPHA_STAT_A_SIZE - 1);
+	msg.data[0] = byte_segment_temp;
 
 	handle_bitstream_overflow(&alpha_status_a_message, msg.id);
 
