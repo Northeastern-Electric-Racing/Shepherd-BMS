@@ -495,7 +495,7 @@ void send_cell_data_message(bool alpha, float temperature, float voltage_a,
 	bitstream_add(&cell_data_message, cvs_b, 1); 			// C v S of B (1 bit)
 	bitstream_add(&cell_data_message, 0, 4);             			// Extra (4 bits)
 
-	memcpy(msg.data[1], &bitstream_data, CELL_MSG_SIZE - 1);
+	memcpy(&msg.data[1], &bitstream_data, CELL_MSG_SIZE - 1);
 	msg.data[0] = byte_segment_temp;
 
 	handle_bitstream_overflow(&cell_data_message, msg.id);
@@ -551,7 +551,8 @@ void send_beta_status_a_message(float cell_temperature, float voltage,
 
 	memcpy(msg.data, &first_bitstream_data, sizeof(first_bitstream_data));
 	msg.data[sizeof(first_bitstream_data)] = byte_segment_temp;
-	memcpy(msg.data, &second_bitstream_data, BETA_STAT_A_SIZE - sizeof(first_bitstream_data) - 1);
+	memcpy(&msg.data[sizeof(first_bitstream_data) + 1], &second_bitstream_data, 
+	BETA_STAT_A_SIZE - sizeof(first_bitstream_data) - 1);
 
 	handle_bitstream_overflow(&first_beta_status_a_message, msg.id);
 	handle_bitstream_overflow(&second_beta_status_a_message, msg.id);
@@ -676,7 +677,7 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	bitstream_add(&alpha_status_a_message, flt_reg->tmodchk, 1);	// TMODCHK (1 bit)
 	bitstream_add(&alpha_status_a_message, flt_reg->oscchk, 1);	 	// OSCCHK (1 bit)
 	
-	memcpy(msg.data[1], &bitstream_data, ALPHA_STAT_A_SIZE - 1);
+	memcpy(&msg.data[1], &bitstream_data, ALPHA_STAT_A_SIZE - 1);
 	msg.data[0] = byte_segment_temp;
 
 	handle_bitstream_overflow(&alpha_status_a_message, msg.id);
