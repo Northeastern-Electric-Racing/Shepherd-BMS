@@ -180,7 +180,10 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
 	//get_s_adc_voltages(bmsdata->chips);
+
+	read_s_voltage_registers(bmsdata->chips);
 }
+
 
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
 {

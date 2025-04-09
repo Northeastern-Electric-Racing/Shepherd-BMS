@@ -306,6 +306,8 @@ void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
  */
 void start_c_adc_conv();
 
+void read_s_voltage_registers(cell_asic chips[NUM_CHIPS]);
+
 // --- END ADC POLL ---
 
 #endif

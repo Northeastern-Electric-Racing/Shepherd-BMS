@@ -299,6 +299,15 @@ void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
 	//read_adbms_data(chips, RDFCF, F_volt, F);
 }
 
+void read_s_voltage_registers(cell_asic chips[NUM_CHIPS])
+{	
+	read_adbms_data(chips, RDSVA, S_volt, A);
+	read_adbms_data(chips, RDSVB, S_volt, B);
+	read_adbms_data(chips, RDSVC, S_volt, C);
+	read_adbms_data(chips, RDSVD, S_volt, D);
+	read_adbms_data(chips, RDSVE, S_volt, E);
+}
+
 void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 {
 	// TODO only poll correct GPIOs
