@@ -127,26 +127,6 @@ void set_iir_corner_freq(cell_asic *chip, IIR_FPA freq);
 void set_comm_break(cell_asic *chip, COMM_BK is_break);
 
 /**
- * @brief Enable/disable discharging through the mute discharge bit.
- * 
- * Config A
- * 
- * @param chip Pointer to chip config
- * @param disable_discharge True to disable discharge, false to enable discharge.
- */
-void set_mute_state(cell_asic *chip, bool disable_discharge);
-
-/**
- * @brief Set whether or not this chip is taking a snapshot. The chip will not begin reading new values unless the snapshot bit is cleared.
- * 
- * Config A
- * 
- * @param chip Pointer to chip config
- * @param take_snapshot whether to take a snapshot
- */
-void set_snapshot(cell_asic *chip, SNAPSHOT take_snapshot);
-
-/**
  * @brief Enable/disable the discharge timer monitor.
  * 
  * Config B
@@ -188,6 +168,31 @@ void set_discharge_timeout(cell_asic *chip, DCTO timeout);
 void soft_reset_chips(cell_asic chips[NUM_CHIPS]);
 
 /**
+ * @brief Mute the chips so they never burn
+ * 
+ * @param chips 
+ */
+void mute_chips(cell_asic chips[NUM_CHIPS]);
+/**
+ * @brief Unmute the chips, allowing them to burn if DCC or PWM is set
+ * 
+ * @param chips 
+ */
+void unmute_chips(cell_asic chips[NUM_CHIPS]);
+/**
+ * @brief Freeze the result registers, but the chip still collects data in the background
+ * 
+ * @param chips 
+ */
+void snap_chips(cell_asic chips[NUM_CHIPS]);
+/**
+ * @brief Unfreeze result registers allowing new data to be displayed
+ * 
+ * @param chips 
+ */
+void unsnap_chips(cell_asic chips[NUM_CHIPS]);
+
+/**
  * @brief Write config registers. Wakes chips before writing.
  * 
  * @param chips Array of chips to write config registers of.
@@ -206,11 +211,18 @@ void write_clear_flags(cell_asic chips[NUM_CHIPS]);
 // --- BEGIN READ COMMANDS ---
 
 /**
- * @brief Read all filtered voltage results.  IIR must be on and ADC must be continous
+ * @brief Read all filtered voltage results A-E.  IIR must be on and ADC must be continous
  * 
- * @param chips The chips to read voltages from
+ * @param chips The chips to read voltages into
  */
 void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS]);
+
+/**
+ * @brief Read all S voltage results A-E.  ADC must be continous.
+ * 
+ * @param chips The chips to read the voltages into
+ */
+void read_s_voltage_registers(cell_asic chips[NUM_CHIPS]);
 
 /**
  * @brief Read every register connected to the AUX ADC.
@@ -305,8 +317,6 @@ void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
  * 
  */
 void start_c_adc_conv();
-
-void read_s_voltage_registers(cell_asic chips[NUM_CHIPS]);
 
 // --- END ADC POLL ---
 

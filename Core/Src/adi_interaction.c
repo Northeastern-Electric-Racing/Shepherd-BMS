@@ -125,16 +125,6 @@ void set_comm_break(cell_asic *chip, COMM_BK is_break)
 	chip->tx_cfga.comm_bk = is_break;
 }
 
-void set_mute_state(cell_asic *chip, bool disable_discharge)
-{
-	chip->tx_cfga.mute_st = disable_discharge;
-}
-
-void set_snapshot(cell_asic *chip, SNAPSHOT take_snapshot)
-{
-	chip->tx_cfga.snap = take_snapshot;
-}
-
 void set_discharge_timer_monitor(cell_asic *chip, DTMEN enabled)
 {
 	chip->tx_cfgb.dtmen = enabled;
@@ -255,6 +245,25 @@ void soft_reset_chips(cell_asic chips[NUM_CHIPS])
 	adbms_wake_core();
 }
 
+void mute_chips(cell_asic chips[NUM_CHIPS])
+{
+	spiSendCmd(MUTE);
+}
+void unmute_chips(cell_asic chips[NUM_CHIPS])
+{
+	spiSendCmd(UNMUTE);
+}
+
+void snap_chips(cell_asic chips[NUM_CHIPS])
+{
+	spiSendCmd(SNAP);
+}
+
+void unsnap_chips(cell_asic chips[NUM_CHIPS])
+{
+	spiSendCmd(UNSNAP);
+}
+
 void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
 	write_adbms_data(chips, WRCFGA, Config, A);
@@ -300,7 +309,7 @@ void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
 }
 
 void read_s_voltage_registers(cell_asic chips[NUM_CHIPS])
-{	
+{
 	read_adbms_data(chips, RDSVA, S_volt, A);
 	read_adbms_data(chips, RDSVB, S_volt, B);
 	read_adbms_data(chips, RDSVC, S_volt, C);

@@ -4,9 +4,23 @@
 #include "datastructs.h"
 
 /**
- * @brief Initializes the segments
+ * @brief Initialize chips with default values.
+ * 
  */
 void segment_init(acc_data_t *bmsdata);
+
+/**
+ * @brief Freeze result registers
+ * 
+ * @param bmsdata 
+ */
+void segment_snap(acc_data_t *bmsdata);
+/**
+ * @brief Unfreeze result registers
+ * 
+ * @param bmsdata 
+ */
+void segment_unsnap(acc_data_t *bmsdata);
 
 /**
  * @brief Pulls all cell data from the segments and returns all cell data
@@ -21,14 +35,19 @@ void segment_retrieve_data(acc_data_t *bmsdata);
 void segment_retrieve_debug_data(acc_data_t *bmsdata);
 
 /**
- * @brief Disables balancing for all cells.
+ * @brief Disables balancing for all cells.  Will also clear balancing setting.
  *
- * @param chips Array of ADBMS6830 data structs.
  */
 void segment_disable_balancing(acc_data_t *bmsdata);
 
 /**
- * @brief Configure which cells should discharge, and send configuration to ICs.
+ * @brief Enable balancing (still need to configure it)
+ * 
+ */
+void segment_enable_balancing(acc_data_t *bmsdata);
+
+/**
+ * @brief Configure which cells should discharge, and send configuration to ICs.  Does not enable the actual balancing
  * 
  * @param bmsdata Pointer to acc data struct.
  * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.

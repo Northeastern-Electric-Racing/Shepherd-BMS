@@ -39,14 +39,8 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	set_gpio_pull(chip, GPO8, GPO_SET); // this is a on board therm
 
 	// set outputs, 9=iso led 10=bal LED. false=lit up
-	set_gpio_pull(chip, GPO9, GPO_CLR);
-	set_gpio_pull(chip, GPO10, GPO_CLR);
-
-	// Registers are unfrozen
-	set_snapshot(chip, SNAP_OFF);
-
-	// Charging is deactivated
-	set_mute_state(chip, true);
+	set_gpio_pull(chip, GPO9, GPO_SET);
+	set_gpio_pull(chip, GPO10, GPO_SET);
 
 	// Not an endpoint in the daisy chain
 	set_comm_break(chip, COMM_BK_OFF);
@@ -62,6 +56,9 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	// Discharge timer monitor off
 	set_discharge_timer_monitor(chip, DTMEN_OFF);
 
+	// set this to allow sleep mode
+	set_discharge_timeout(chip, 0);
+
 	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
 	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
 
@@ -69,10 +66,6 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	clear_cell_discharge(chip);
 }
 
-/**
- * @brief Initialize chips with default values.
- * 
- */
 void segment_init(acc_data_t *bmsdata)
 {
 	printf("Initializing Segments...");
@@ -83,8 +76,19 @@ void segment_init(acc_data_t *bmsdata)
 	}
 	write_config_regs(bmsdata->chips);
 
+	// disable balancing on init
+	mute_chips(bmsdata->chips);
+
 	start_c_adc_conv();
 }
+
+void segment_snap(acc_data_t *bmsdata) {
+	snap_chips(bmsdata->chips);
+}
+void segment_unsnap(acc_data_t *bmsdata) {
+	unsnap_chips(bmsdata->chips);
+}
+
 
 void segment_adc_comparison(acc_data_t *bmsdata)
 {
@@ -180,10 +184,7 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
 	//get_s_adc_voltages(bmsdata->chips);
-
-	read_s_voltage_registers(bmsdata->chips);
 }
-
 
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
 {
@@ -196,6 +197,8 @@ void segment_retrieve_debug_data(acc_data_t *bmsdata)
 	//segment_adc_comparison(bmsdata);
 	// check our fault flags
 	segment_monitor_flts(bmsdata->chips);
+
+	read_s_voltage_registers(bmsdata->chips);
 }
 
 void segment_restart(acc_data_t *bmsdata)
@@ -219,10 +222,15 @@ void segment_disable_balancing(acc_data_t *bmsdata)
 {
 	// Initializes all array elements to zero
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		set_mute_state(&bmsdata->chips[chip], true);
-	}
 	segment_configure_balancing(bmsdata, discharge_config);
+
+	// force balancing muted
+	mute_chips(bmsdata->chips);
+}
+
+void segment_enable_balancing(acc_data_t *bmsdata)
+{ // TODO verify balancing safe
+	//	unmute_chips(bmsdata->chips);
 }
 
 void segment_configure_balancing(
@@ -234,8 +242,6 @@ void segment_configure_balancing(
 		for (int cell = 0; cell < num_cells; cell++) {
 			set_cell_discharge(&bmsdata->chips[chip], cell,
 					   discharge_config[chip][cell]);
-			if (discharge_config[chip][cell] > 0)
-				set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
 	write_config_regs(bmsdata->chips);

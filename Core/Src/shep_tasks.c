@@ -32,12 +32,21 @@ void vGetSegmentData(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	int i = 0;
+
+	segment_init(bmsdata);
+
 	for (;;) {
+
+		// snap before getting data
+		segment_snap(bmsdata);
+
 		segment_retrieve_data(bmsdata);
 
 		if (DEBUG_MODE_ENABLED) {
 			segment_retrieve_debug_data(bmsdata);
 		}
+		// unsnap after getting data
+		segment_unsnap(bmsdata);
 
 		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
 		if (current_state == READY_STATE) {

@@ -42,8 +42,8 @@ extern BMSState_t current_state;
 //#define DEBUG_CHARGING
 // #define DEBUG_STATS
 //#define DEBUG_VOLTAGES
- #define DEBUG_RAW_VOLTAGES
-//#define DEBUG_RAW_VOLTAGES_FORMATTED
+//#define DEBUG_RAW_VOLTAGES
+#define DEBUG_RAW_VOLTAGES_FORMATTED
 // #define DEBUG_OCV
 // #define DEUBG_THERMS
 // #define DEBUG_OTHER
@@ -193,26 +193,28 @@ const void print_bms_stats(acc_data_t *acc_data)
     }
     printf("\n");
   }
-
-  printf("Raw S Volatges:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%d\t", acc_data->chips[c].scell.sc_codes[num_cells]);
-    }
-    printf("\n");
-  }
   #endif
-  #define DEBUG_RAW_VOLTAGES_FORMATTED
+
   #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
+  // make sure `read_f_voltage_registers` is being called
+  printf("F Voltages:\n");
     for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
     uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
     for(uint8_t cell = 0; cell < num_cells; cell++)
     {
-        printf("%.3f\t", acc_data->chip_data[c].cell_voltages[cell]);
+        printf("%.5f\t", getVoltage(acc_data->chips[c].fcell.fc_codes[cell]));
+    }
+    printf("\n");
+  }
+  // make sure `read_s_voltage_registers` is being called
+  printf("S Voltages:\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
     }
     printf("\n");
   }
@@ -342,7 +344,6 @@ int main(void)
   
   HAL_Delay(500);
 	init_both_can(&hcan1, &hcan2);
-  segment_init(acc_data);
   compute_init();
   // the BMS faults upon boot, the shutdown loop must clear out before drive
   compute_set_fault(true);
