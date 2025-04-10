@@ -267,20 +267,6 @@ void unsnap_chips(cell_asic chips[NUM_CHIPS])
 	adbms_wake_isospi();
 	spiSendCmd(MUTE);
 }
-void unmute_chips(cell_asic chips[NUM_CHIPS])
-{
-	spiSendCmd(UNMUTE);
-}
-
-void snap_chips(cell_asic chips[NUM_CHIPS])
-{
-	spiSendCmd(SNAP);
-}
-
-void unsnap_chips(cell_asic chips[NUM_CHIPS])
-{
-	spiSendCmd(UNSNAP);
-}
 
 void write_config_regs(cell_asic chips[NUM_CHIPS])
 {
@@ -324,15 +310,22 @@ void read_c_voltage_registers(cell_asic chips[NUM_CHIPS])
 	read_adbms_data(chips, RDCVE, Cell, E);
 }
 
+void read_average_voltage_registers(cell_asic chips[NUM_CHIPS])
+{
+	read_adbms_data(chips, RDACA, AvgCell, A);
+	read_adbms_data(chips, RDACB, AvgCell, B);
+	read_adbms_data(chips, RDACC, AvgCell, C);
+	read_adbms_data(chips, RDACD, AvgCell, D);
+	read_adbms_data(chips, RDACE, AvgCell, E);
+}
+
 void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
 {
-	//read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
 	read_adbms_data(chips, RDFCA, F_volt, A);
 	read_adbms_data(chips, RDFCB, F_volt, B);
 	read_adbms_data(chips, RDFCC, F_volt, C);
 	read_adbms_data(chips, RDFCD, F_volt, D);
 	read_adbms_data(chips, RDFCE, F_volt, E);
-	//read_adbms_data(chips, RDFCF, F_volt, F);
 }
 
 void read_s_voltage_registers(cell_asic chips[NUM_CHIPS])
@@ -405,43 +398,35 @@ void read_serial_id(cell_asic chips[NUM_CHIPS])
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	// Take single shot measurement
 	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
-	//read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
-}
 
-void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
-{
-	write_config_regs(chips);
-	adbms_wake_isospi();
-	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
-	adBmsPollAdc_indicator(PLSADC);
-
-	adbms_wake_isospi();
-	read_adbms_data(chips, RDSALL, Rdsall, ALL_GRP);
-	// read_adbms_data(chip, RDSVA, S_volt, A);
-	// read_adbms_data(chip, RDSVB, S_volt, B);
-	// read_adbms_data(chip, RDSVC, S_volt, C);
-	// read_adbms_data(chip, RDSVD, S_volt, D);
-	// read_adbms_data(chip, RDSVE, S_volt, E);
-	// read_adbms_data(chip, RDSVF, S_volt, F);
+	read_c_voltage_registers(chips);
 }
 
 void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
-	adbms_wake_isospi();
-	read_adbms_data(chips, RDACALL, Rdacall, ALL_GRP);
+	read_average_voltage_registers(chips);
 }
 
-void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS])
+// useless, as a filter needs to be continous
+// void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS])
+// {
+// 	adbms_wake_isospi();
+// 	read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
+// }
+
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
+	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc_indicator(PLSADC);
+
+	read_s_voltage_registers(chips);
 }
 
 void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
@@ -459,7 +444,6 @@ void start_c_adc_conv()
 {
 	adbms_wake_isospi();
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
-	//adBmsPollAdc_indicator(PLCADC);
 }
 
 // --- END ADC POLL ---

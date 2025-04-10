@@ -199,7 +199,6 @@ void segment_retrieve_active_data(acc_data_t *bmsdata)
 
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
-	//get_s_adc_voltages(bmsdata->chips);
 }
 
 // ensure stuff used is in the correctfunction

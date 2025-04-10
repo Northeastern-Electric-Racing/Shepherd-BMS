@@ -9,6 +9,7 @@
 // the OCV timer
 nertimer_t ocvTimer;
 
+extern BMSState_t current_state;
 
 /**
  * @brief Map cells to therms (ra codes).  Note beta has only 6 therms.

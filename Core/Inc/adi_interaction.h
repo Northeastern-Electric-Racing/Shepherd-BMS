@@ -278,35 +278,28 @@ void read_serial_id(cell_asic chips[NUM_CHIPS]);
 // --- BEGIN ADC POLL ---
 
 /**
- * @brief Get voltage readings from the C-ADCs. Takes a single shot measurement.
+ * @brief Trigger, poll, and fetch voltage readings from the C-ADCs.
  * 
  * @param chips Array of chips to get voltage readings from.
  */
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS]);
 
 /**
- * @brief Get voltages from the S-ADCs. Makes a single shot measurement.
- * 
- * @param chip Array of chips to get voltage readings from.
- */
-void get_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
-
-/**
- * @brief Get the avgeraged cell voltages.
+ * @brief Trigger, poll, and fetch the avgeraged cell voltages.
  * 
  * @param chip Array of chips to get voltage readings of.
  */
 void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS]);
 
 /**
- * @brief Get the filtered cell volrages.
+ * @brief Trigger, poll, and fetch voltages from the S-ADCs.
  * 
- * @param chip Array of chips to get voltage readings of.
+ * @param chip Array of chips to get voltage readings from.
  */
-void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS]);
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
 
 /**
- * @brief Get the c and s adc voltages. Does this with RDCSALL command.
+ * @brief Trigger, poll, and fetch the c and s adc voltages, using instaneous redundancy.
  * 
  * @param chips Array of chips to get voltage readings of.
  */
