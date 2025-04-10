@@ -9,11 +9,16 @@
  * @brief Initialize a chip with our default values.
  * 
  * @param chip Pointer to chip to initialize.
- * @param is_alpha if the chip is alpha
  */
-void init_chip(cell_asic *chip, bool is_alpha)
+void init_chip(cell_asic *chip)
 {
-	chip->tx_cfga.gpo = 0;
+	chip->tx_cfga.gpo = 0;	
+
+	// init config registers 
+	memset(chip->configa.rx_data, 0, sizeof(chip->configa.rx_data));
+	memset(chip->configa.tx_data, 0, sizeof(chip->configa.rx_data));
+	memset(chip->configb.rx_data, 0, sizeof(chip->configb.rx_data));
+	memset(chip->configb.tx_data, 0, sizeof(chip->configb.tx_data));
 
 	set_REFON(chip, PWR_UP);
 
@@ -71,9 +76,10 @@ void segment_init(acc_data_t *bmsdata)
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
-		init_chip(&bmsdata->chips[chip],
-			  bmsdata->chip_data[chip].alpha);
+		
+		init_chip(&bmsdata->chips[chip]);
 	}
+
 	write_config_regs(bmsdata->chips);
 
 	// disable balancing on init
