@@ -247,6 +247,24 @@ void soft_reset_chips(cell_asic chips[NUM_CHIPS])
 
 void mute_chips(cell_asic chips[NUM_CHIPS])
 {
+	adbms_wake_isospi();
+	spiSendCmd(MUTE);
+}
+void unmute_chips(cell_asic chips[NUM_CHIPS])
+{
+	adbms_wake_isospi();
+	spiSendCmd(UNMUTE);
+}
+
+void snap_chips(cell_asic chips[NUM_CHIPS])
+{
+	adbms_wake_isospi();
+	spiSendCmd(SNAP);
+}
+
+void unsnap_chips(cell_asic chips[NUM_CHIPS])
+{
+	adbms_wake_isospi();
 	spiSendCmd(MUTE);
 }
 void unmute_chips(cell_asic chips[NUM_CHIPS])
@@ -296,6 +314,15 @@ void write_clear_flags(cell_asic chips[NUM_CHIPS])
 // --- END WRITE COMMANDS
 
 // --- BEGIN READ COMMANDS ---
+
+void read_c_voltage_registers(cell_asic chips[NUM_CHIPS])
+{
+	read_adbms_data(chips, RDCVA, Cell, A);
+	read_adbms_data(chips, RDCVB, Cell, B);
+	read_adbms_data(chips, RDCVC, Cell, C);
+	read_adbms_data(chips, RDCVD, Cell, D);
+	read_adbms_data(chips, RDCVE, Cell, E);
+}
 
 void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
 {
@@ -381,7 +408,7 @@ void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 	// Take single shot measurement
 	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
-	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
+	//read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
 }
 
 void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
@@ -420,11 +447,12 @@ void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS])
 void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
-	adBmsPollAdc_indicator(PLCADC);
+	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc_indicator(PLSADC);
 
 	adbms_wake_isospi();
-	read_adbms_data(chips, RDCSALL, Rdcsall, ALL_GRP);
+	read_c_voltage_registers(chips);
+	read_s_voltage_registers(chips);
 }
 
 void start_c_adc_conv()

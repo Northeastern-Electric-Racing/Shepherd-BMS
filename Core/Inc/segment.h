@@ -8,6 +8,18 @@
  * 
  */
 void segment_init(acc_data_t *bmsdata);
+/**
+ * @brief Stop discharge quickly
+ * 
+ * @param bmsdata 
+ */
+void segment_mute(acc_data_t *bmsdata);
+/**
+ * @brief Start discharge again (inherits config)
+ * 
+ * @param bmsdata 
+ */
+void segment_unmute(acc_data_t *bmsdata);
 
 /**
  * @brief Freeze result registers
@@ -23,10 +35,15 @@ void segment_snap(acc_data_t *bmsdata);
 void segment_unsnap(acc_data_t *bmsdata);
 
 /**
- * @brief Pulls all cell data from the segments and returns all cell data
+ * @brief Pulls all cell data from the segments and returns all cell data.  For drive mode.
  *
  */
-void segment_retrieve_data(acc_data_t *bmsdata);
+void segment_retrieve_active_data(acc_data_t *bmsdata);
+/**
+ * @brief Pulls all cell data from the segments and returns all cell data.  For charge mode.
+ *
+ */
+void segment_retrieve_charging_data(acc_data_t *bmsdata);
 
 /**
  * @brief Fetch extra data for segment

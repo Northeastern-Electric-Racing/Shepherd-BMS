@@ -196,7 +196,28 @@ const void print_bms_stats(acc_data_t *acc_data)
   #endif
 
   #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
-  // make sure `read_f_voltage_registers` is being called
+  printf("Mathed Voltages:\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+{
+  uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+  for(uint8_t cell = 0; cell < num_cells; cell++)
+  {
+      printf("%.5f\t", getVoltage(acc_data->chip_data[c].cell_voltages[cell]));
+  }
+  printf("\n");
+}
+  // make sure `read_c_voltage_registers` is being called
+  printf("C Voltages:\n");
+    for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
+    }
+    printf("\n");
+  }
+    // make sure `read_f_voltage_registers` is being called
   printf("F Voltages:\n");
     for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {

@@ -36,24 +36,35 @@ void vGetSegmentData(void *pv_params)
 	segment_init(bmsdata);
 
 	for (;;) {
+		if (current_state == CHARGING_STATE) {
+			segment_mute(bmsdata);
+		} else { // snap before getting data
+			segment_snap(bmsdata);
+		}
 
-		// snap before getting data
-		segment_snap(bmsdata);
-
-		segment_retrieve_data(bmsdata);
+		if (current_state == CHARGING_STATE)
+			segment_retrieve_charging_data(bmsdata);
+		else
+			segment_retrieve_active_data(bmsdata);
 
 		if (DEBUG_MODE_ENABLED) {
 			segment_retrieve_debug_data(bmsdata);
 		}
-		// unsnap after getting data
-		segment_unsnap(bmsdata);
 
 		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
-		if (current_state == READY_STATE) {
-			if (++i % (45 * SAMPLE_RATE) == 0) {
-				printf(" ***********  REBOOTING SEGMENT\n\n");
-				segment_restart(bmsdata);
-			}
+		// if (current_state == READY_STATE) {
+		// 	if (++i % (45 * SAMPLE_RATE) == 0) {
+		// 		printf(" ***********  REBOOTING SEGMENT\n\n");
+		// 		segment_restart(bmsdata);
+		// 	}
+		// }
+
+		segment_disable_balancing(bmsdata);
+		if (current_state == CHARGING_STATE) {
+			segment_unmute(bmsdata);
+		} else {
+			// unsnap after getting data
+			segment_unsnap(bmsdata);
 		}
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);

@@ -12,9 +12,9 @@
  */
 void init_chip(cell_asic *chip)
 {
-	chip->tx_cfga.gpo = 0;	
+	chip->tx_cfga.gpo = 0;
 
-	// init config registers 
+	// init config registers
 	memset(chip->configa.rx_data, 0, sizeof(chip->configa.rx_data));
 	memset(chip->configa.tx_data, 0, sizeof(chip->configa.rx_data));
 	memset(chip->configb.rx_data, 0, sizeof(chip->configb.rx_data));
@@ -76,7 +76,7 @@ void segment_init(acc_data_t *bmsdata)
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
-		
+
 		init_chip(&bmsdata->chips[chip]);
 	}
 
@@ -88,13 +88,22 @@ void segment_init(acc_data_t *bmsdata)
 	start_c_adc_conv();
 }
 
-void segment_snap(acc_data_t *bmsdata) {
+void segment_mute(acc_data_t *bmsdata)
+{
+	mute_chips(bmsdata->chips);
+}
+void segment_unmute(acc_data_t *bmsdata)
+{
+	unmute_chips(bmsdata->chips);
+}
+void segment_snap(acc_data_t *bmsdata)
+{
 	snap_chips(bmsdata->chips);
 }
-void segment_unsnap(acc_data_t *bmsdata) {
+void segment_unsnap(acc_data_t *bmsdata)
+{
 	unsnap_chips(bmsdata->chips);
 }
-
 
 void segment_adc_comparison(acc_data_t *bmsdata)
 {
@@ -182,7 +191,8 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 }
 
 // ensure stuff used is in the correctfunction
-void segment_retrieve_data(acc_data_t *bmsdata)
+void segment_retrieve_active_data(acc_data_t *bmsdata)
+
 {
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
@@ -190,6 +200,17 @@ void segment_retrieve_data(acc_data_t *bmsdata)
 	// read from ADC convs
 	read_filtered_voltage_registers(bmsdata->chips);
 	//get_s_adc_voltages(bmsdata->chips);
+}
+
+// ensure stuff used is in the correctfunction
+void segment_retrieve_charging_data(acc_data_t *bmsdata)
+
+{
+	// read all therms using AUX 2
+	adc_and_read_aux2_registers(bmsdata->chips);
+
+	// read from ADC convs
+	get_c_and_s_adc_voltages(bmsdata->chips);
 }
 
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
