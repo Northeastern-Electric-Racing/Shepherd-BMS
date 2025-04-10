@@ -52,6 +52,73 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 	}
 }
 
+/**
+ * @brief Splits the IC array into Line A and Line B arrays based on isoSPI line.
+ *
+ * @param tIC          Total number of ICs.
+ * @param ic           Pointer to original IC array.
+ * @param lineA        Pointer to Line A array to fill.
+ * @param lineA_count  Pointer to Line A chip count.
+ * @param lineB        Pointer to Line B array to fill.
+ * @param lineB_count  Pointer to Line B chip count.
+ */
+static void split_lines(uint8_t tIC, cell_asic *ic, cell_asic *lineA,
+			int *lineA_count, cell_asic *lineB, int *lineB_count)
+{
+	*lineA_count = 0;
+	*lineB_count = 0;
+
+	for (int cic = 0; cic < tIC; cic++) {
+		if (ic[cic].isospi_line == ISOSPI_LINE_A) {
+			memcpy(&lineA[*lineA_count], &ic[cic],
+			       sizeof(cell_asic));
+			(*lineA_count)++;
+		} else if (ic[cic].isospi_line == ISOSPI_LINE_B) {
+			memcpy(&lineB[*lineB_count], &ic[cic],
+			       sizeof(cell_asic));
+			(*lineB_count)++;
+		}
+	}
+}
+
+/**
+ * @brief Reverses the order of chips in the array (used for Line B SPI shift).
+ *
+ * @param chips  Pointer to chip array.
+ * @param count  Number of chips.
+ */
+static void reverse_chips(cell_asic *chips, int count)
+{
+	for (int cic = 0; cic < count / 2; cic++) {
+		cell_asic temp = chips[cic];
+		chips[cic] = chips[count - 1 - cic];
+		chips[count - 1 - cic] = temp;
+	}
+}
+
+/**
+ * @brief Copies the processed chip data back into the main IC array.
+ *
+ * @param tIC           Total number of ICs.
+ * @param ic            Pointer to original IC array.
+ * @param processed     Pointer to processed chip array.
+ * @param processed_cnt Number of processed chips.
+ * @param line          isoSPI line (A or B).
+ * @param reverse       0 for normal order, 1 for reverse order.
+ */
+static void copy_back(uint8_t tIC, cell_asic *ic, cell_asic *processed,
+		      int processed_cnt, isospi_line_t line, int reverse)
+{
+	int lic = reverse ? processed_cnt - 1 : 0;
+
+	for (int cic = 0; cic < tIC; cic++) {
+		if (ic[cic].isospi_line == line) {
+			memcpy(&ic[cic], &processed[lic], sizeof(cell_asic));
+			lic += reverse ? -1 : 1;
+		}
+	}
+}
+
 // --- BEGIN SET HELPERS ---
 
 void set_REFON(cell_asic *chip, REFON state)
@@ -193,6 +260,37 @@ void adbms_wake_isospi()
 }
 
 /**
+ *******************************************************************************
+ * Function: adbms_line_wake_isospi
+ * @brief Wakes up BMS ICs on the selected isoSPI line.
+ *
+ * @details This function toggles the chip sselect line (CS) low and high 
+ *          with a short delay to wake up all ICs on the specified isoSPI line.
+ *
+ * @param [in] line     isoSPI line to wake (Line A or Line B)
+ * @param [in] tIC      Total number of ICs to wake
+ *
+ * @return None
+ *******************************************************************************
+ */
+static void adbms_line_wake_isospi(isospi_line_t line, uint8_t tIC)
+{
+	if (line == ISOSPI_LINE_A) {
+		for (uint8_t ic = 0; ic < tIC; ic++) {
+			adLineBmsCsLow(ISOSPI_LINE_A);
+			adLineBmsCsHigh(ISOSPI_LINE_A);
+			delay_us(20);
+		}
+	} else {
+		for (uint8_t ic = 0; ic < tIC; ic++) {
+			adLineBmsCsLow(ISOSPI_LINE_B);
+			adLineBmsCsHigh(ISOSPI_LINE_B);
+			delay_us(20);
+		}
+	}
+}
+
+/**
  * @brief Wake the chip of every ADBMS6830 IC.  Blocking wait about 1ms * NUM_CHIPS
  * 
  */
@@ -218,7 +316,62 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 {
 	adbms_wake_isospi();
 
-	adBmsWriteData(NUM_CHIPS, chips, command, type, group);
+	adBmsWriteData(ISOSPI_LINE_A, NUM_CHIPS, chips, command, type, group);
+}
+
+/**
+ *******************************************************************************
+ * Function: adbms_bidirectional_write
+ * @brief NER: Writes data to BMS ICs over isoSPI Line A and Line B.
+ *
+ * @details This function splits ICs by their isoSPI line and writes separately
+ *          to each line to maintain communication when ICs are divided across
+ *          two isoSPI lines.
+ *
+ * Parameters:
+ * @param [in]   tIC       Total number of ICs
+ * @param [in]   ic        Pointer to cell_asic structure array
+ * @param [in]   cmd_arg   Command bytes
+ * @param [in]   type      Enum type of resistor
+ * @param [in]   group     Enum type of resistor group
+ *
+ * @return None
+ *******************************************************************************
+ */
+static void adbms_bidirectional_write(uint8_t tIC, cell_asic *ic,
+				      uint8_t cmd_arg[2], TYPE type, GRP group)
+{
+	cell_asic *lineA_chips = (cell_asic *)calloc(tIC, sizeof(cell_asic));
+	cell_asic *lineB_chips = (cell_asic *)calloc(tIC, sizeof(cell_asic));
+
+	if (lineA_chips == NULL || lineB_chips == NULL) {
+		printf("Failed to allocate write_buffer array memory\n");
+		exit(0);
+	}
+
+	int lineA_count = 0;
+	int lineB_count = 0;
+
+	split_lines(tIC, ic, lineA_chips, &lineA_count, lineB_chips,
+		    &lineB_count);
+
+	if (lineA_count > 0) {
+		adBmsWakeIsoSPILine(ISOSPI_LINE_A, lineA_count);
+		adBmsWriteData(ISOSPI_LINE_A, lineA_count, lineA_chips, cmd_arg,
+			       type, group);
+		copy_back(tIC, ic, lineA_chips, lineA_count, ISOSPI_LINE_A, 0);
+	}
+
+	if (lineB_count > 0) {
+		adBmsWakeIsoSPILine(ISOSPI_LINE_B, lineB_count);
+		reverse_chips(lineB_chips, lineB_count);
+		adBmsWriteData(ISOSPI_LINE_B, lineB_count, lineB_chips, cmd_arg,
+			       type, group);
+		copy_back(tIC, ic, lineB_chips, lineB_count, ISOSPI_LINE_B, 1);
+	}
+
+	free(lineA_chips);
+	free(lineB_chips);
 }
 
 /**
@@ -234,15 +387,69 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 {
 	adbms_wake_isospi();
 
-	adBmsReadData(NUM_CHIPS, chips, command, type, group);
+	adBmsReadData(ISOSPI_LINE_A, NUM_CHIPS, chips, command, type, group);
 
 	count_pec_errors(chips);
+}
+
+/**
+ *******************************************************************************
+ * Function: adbms_bidirectional_read
+ * @brief NER: Reads data from BMS ICs over isoSPI Line A and Line B.
+ *
+ * @details This function reads separately from each isoSPI line, handling ICs
+ *          divided across two lines and combining their results correctly.
+ *
+ * Parameters:
+ * @param [in]    tIC       Total number of ICs
+ * @param [inout] ic        Pointer to cell_asic structure array
+ * @param [in]    cmd_arg   Command bytes
+ * @param [in]    type      Enum type of resistor
+ * @param [in]    group     Enum type of resistor group
+ *
+ * @return None
+ *******************************************************************************
+ */
+static void adbms_bidirectional_read(uint8_t tIC, cell_asic *ic,
+				     uint8_t cmd_arg[2], TYPE type, GRP group)
+{
+	cell_asic *lineA_chips = (cell_asic *)calloc(tIC, sizeof(cell_asic));
+	cell_asic *lineB_chips = (cell_asic *)calloc(tIC, sizeof(cell_asic));
+
+	if (lineA_chips == NULL || lineB_chips == NULL) {
+		printf("Failed to allocate read_buffer array memory\n");
+		exit(0);
+	}
+
+	int lineA_count = 0;
+	int lineB_count = 0;
+
+	split_lines(tIC, ic, lineA_chips, &lineA_count, lineB_chips,
+		    &lineB_count);
+
+	if (lineA_count > 0) {
+		adBmsWakeIsoSPILine(ISOSPI_LINE_A, lineA_count);
+		adBmsReadData(ISOSPI_LINE_A, lineA_count, lineA_chips, cmd_arg,
+			      type, group);
+		copy_back(tIC, ic, lineA_chips, lineA_count, ISOSPI_LINE_A, 0);
+	}
+
+	if (lineB_count > 0) {
+		adBmsWakeIsoSPILine(ISOSPI_LINE_B, lineB_count);
+		reverse_chips(lineB_chips, lineB_count);
+		adBmsReadData(ISOSPI_LINE_B, lineB_count, lineB_chips, cmd_arg,
+			      type, group);
+		copy_back(tIC, ic, lineB_chips, lineB_count, ISOSPI_LINE_B, 1);
+	}
+
+	free(lineA_chips);
+	free(lineB_chips);
 }
 
 uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 {
 	set_poll_led(1);
-	uint32_t result = adBmsPollAdc(poll_type);
+	uint32_t result = adBmsPollAdc(ISOSPI_LINE_A, poll_type);
 	set_poll_led(0);
 	return result;
 }
@@ -297,7 +504,7 @@ void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 {
 	// TODO only poll correct GPIOs
 	adbms_wake_isospi();
-	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
+	adBms6830_Adax(ISOSPI_LINE_A, AUX_OW_OFF, PUP_DOWN, AUX_ALL);
 	adBmsPollAdc_indicator(PLAUX1);
 
 	read_adbms_data(chips, RDAUXA, Aux, A);
@@ -309,7 +516,7 @@ void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adax2(AUX_ALL);
+	adBms6830_Adax2(ISOSPI_LINE_A, AUX_ALL);
 	adBmsPollAdc_indicator(PLAUX2);
 
 	read_adbms_data(chips, RDRAXA, RAux, A);
@@ -355,7 +562,8 @@ void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
 	// Take single shot measurement
-	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(ISOSPI_LINE_A, RD_OFF, SINGLE, DCP_OFF, RSTF_OFF,
+		       OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 	read_adbms_data(chips, RDCVALL, Rdcvall, ALL_GRP);
 }
@@ -364,7 +572,7 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	write_config_regs(chips);
 	adbms_wake_isospi();
-	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adsv(ISOSPI_LINE_A, SINGLE, DCP_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLSADC);
 
 	adbms_wake_isospi();
@@ -380,7 +588,8 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(ISOSPI_LINE_A, RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF,
+		       OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
 	adbms_wake_isospi();
@@ -396,7 +605,8 @@ void get_filtered_cell_voltages(cell_asic chips[NUM_CHIPS])
 void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(ISOSPI_LINE_A, RD_ON, CONTINUOUS, DCP_OFF, RSTF_OFF,
+		       OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
 	adbms_wake_isospi();
@@ -406,7 +616,8 @@ void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 void start_c_adc_conv()
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
+	adBms6830_Adcv(ISOSPI_LINE_A, RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON,
+		       OW_OFF_ALL_CH);
 }
 
 // --- END ADC POLL ---

@@ -14,6 +14,7 @@
 void init_chip(cell_asic *chip, bool is_alpha)
 {
 	chip->tx_cfga.gpo = 0;
+	chip->isospi_line = ISOSPI_LINE_A;
 
 	set_REFON(chip, PWR_UP);
 
