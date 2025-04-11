@@ -178,13 +178,12 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 				bmsdata->chip_data[chip].cell_voltages[cell] =
 					getVoltage(bmsdata->chips[chip]
 							   .cell.c_codes[cell]);
-					}
-			else {
+			} else {
 				bmsdata->chip_data[chip].cell_voltages[cell] =
 					getVoltage(
 						bmsdata->chips[chip]
 							.fcell.fc_codes[cell]);
-					}
+			}
 		}
 	}
 }
