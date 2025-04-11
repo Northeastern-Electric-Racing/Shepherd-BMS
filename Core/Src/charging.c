@@ -63,4 +63,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 
 	/* Configure balancing */
 	segment_configure_balancing(bmsdata, balanceConfig);
+
+	// enable balancing
+	segment_enable_balancing(bmsdata);
 }
