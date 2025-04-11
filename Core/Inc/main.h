@@ -72,8 +72,8 @@ void Error_Handler(void);
 #define SHUTDOWN_GPIO_Port GPIOA
 #define I_SENSE_0_Pin GPIO_PIN_3
 #define I_SENSE_0_GPIO_Port GPIOA
-#define SPI_1_CS_Pin GPIO_PIN_4
-#define SPI_1_CS_GPIO_Port GPIOA
+#define SPI1_CS_Pin GPIO_PIN_4
+#define SPI1_CS_GPIO_Port GPIOA
 #define DEBUG_LED_2_Pin GPIO_PIN_4
 #define DEBUG_LED_2_GPIO_Port GPIOC
 #define I_SENSE_2_Pin GPIO_PIN_5
