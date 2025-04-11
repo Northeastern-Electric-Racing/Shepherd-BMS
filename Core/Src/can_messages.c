@@ -348,8 +348,6 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 		int8_t segment3_average_temp;
 		int8_t segment4_average_temp;
 		int8_t segment5_average_temp;
-		int8_t segment6_average_temp;
-
 	} segment_temp_msg_data;
 
 	segment_temp_msg_data.segment1_average_temp =
@@ -362,8 +360,6 @@ void send_segment_temp_message(acc_data_t *bmsdata)
 		bmsdata->segment_average_temps[3];
 	segment_temp_msg_data.segment5_average_temp =
 		bmsdata->segment_average_temps[4];
-	segment_temp_msg_data.segment6_average_temp =
-		bmsdata->segment_average_temps[5];
 
 	can_msg_t msg = { .id = SEGMENT_TEMP_CANID,
 			  .len = SEGMENT_TEMP_SIZE,
