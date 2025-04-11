@@ -9,11 +9,16 @@
  * @brief Initialize a chip with our default values.
  * 
  * @param chip Pointer to chip to initialize.
- * @param is_alpha if the chip is alpha
  */
-void init_chip(cell_asic *chip, bool is_alpha)
+void init_chip(cell_asic *chip)
 {
 	chip->tx_cfga.gpo = 0;
+
+	// init config registers
+	memset(chip->configa.rx_data, 0, sizeof(chip->configa.rx_data));
+	memset(chip->configa.tx_data, 0, sizeof(chip->configa.rx_data));
+	memset(chip->configb.rx_data, 0, sizeof(chip->configb.rx_data));
+	memset(chip->configb.tx_data, 0, sizeof(chip->configb.tx_data));
 
 	set_REFON(chip, PWR_UP);
 
@@ -39,14 +44,8 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	set_gpio_pull(chip, GPO8, GPO_SET); // this is a on board therm
 
 	// set outputs, 9=iso led 10=bal LED. false=lit up
-	set_gpio_pull(chip, GPO9, GPO_CLR);
-	set_gpio_pull(chip, GPO10, GPO_CLR);
-
-	// Registers are unfrozen
-	set_snapshot(chip, SNAP_OFF);
-
-	// Charging is deactivated
-	set_mute_state(chip, true);
+	set_gpio_pull(chip, GPO9, GPO_SET);
+	set_gpio_pull(chip, GPO10, GPO_SET);
 
 	// Not an endpoint in the daisy chain
 	set_comm_break(chip, COMM_BK_OFF);
@@ -62,6 +61,9 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	// Discharge timer monitor off
 	set_discharge_timer_monitor(chip, DTMEN_OFF);
 
+	// set this to allow sleep mode
+	set_discharge_timeout(chip, 0);
+
 	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
 	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
 
@@ -69,21 +71,38 @@ void init_chip(cell_asic *chip, bool is_alpha)
 	clear_cell_discharge(chip);
 }
 
-/**
- * @brief Initialize chips with default values.
- * 
- */
 void segment_init(acc_data_t *bmsdata)
 {
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
-		init_chip(&bmsdata->chips[chip],
-			  bmsdata->chip_data[chip].alpha);
+
+		init_chip(&bmsdata->chips[chip]);
 	}
+
 	write_config_regs(bmsdata->chips);
 
+	// disable balancing on init
+	mute_chips(bmsdata->chips);
+
 	start_c_adc_conv();
+}
+
+void segment_mute(acc_data_t *bmsdata)
+{
+	mute_chips(bmsdata->chips);
+}
+void segment_unmute(acc_data_t *bmsdata)
+{
+	unmute_chips(bmsdata->chips);
+}
+void segment_snap(acc_data_t *bmsdata)
+{
+	snap_chips(bmsdata->chips);
+}
+void segment_unsnap(acc_data_t *bmsdata)
+{
+	unsnap_chips(bmsdata->chips);
 }
 
 void segment_adc_comparison(acc_data_t *bmsdata)
@@ -119,6 +138,7 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		printf("CHIP %d :", chip);
 		if (chips[chip].statc.cs_flt > 0) {
 			printf("C VS S MISMATCH on cells ");
 			for (int i = 0; i < 16; i++) {
@@ -171,13 +191,25 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 }
 
 // ensure stuff used is in the correctfunction
-void segment_retrieve_data(acc_data_t *bmsdata)
-{
-	// read from ADC convs
-	read_filtered_voltage_registers(bmsdata->chips);
+void segment_retrieve_active_data(acc_data_t *bmsdata)
 
+{
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
+
+	// read from ADC convs
+	read_filtered_voltage_registers(bmsdata->chips);
+}
+
+// ensure stuff used is in the correctfunction
+void segment_retrieve_charging_data(acc_data_t *bmsdata)
+
+{
+	// read all therms using AUX 2
+	adc_and_read_aux2_registers(bmsdata->chips);
+
+	// read from ADC convs
+	get_c_and_s_adc_voltages(bmsdata->chips);
 }
 
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
@@ -191,6 +223,8 @@ void segment_retrieve_debug_data(acc_data_t *bmsdata)
 	//segment_adc_comparison(bmsdata);
 	// check our fault flags
 	segment_monitor_flts(bmsdata->chips);
+
+	read_s_voltage_registers(bmsdata->chips);
 }
 
 void segment_restart(acc_data_t *bmsdata)
@@ -214,10 +248,15 @@ void segment_disable_balancing(acc_data_t *bmsdata)
 {
 	// Initializes all array elements to zero
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		set_mute_state(&bmsdata->chips[chip], true);
-	}
 	segment_configure_balancing(bmsdata, discharge_config);
+
+	// force balancing muted
+	mute_chips(bmsdata->chips);
+}
+
+void segment_enable_balancing(acc_data_t *bmsdata)
+{ // TODO verify balancing safe
+	//	unmute_chips(bmsdata->chips);
 }
 
 void segment_configure_balancing(
@@ -229,8 +268,6 @@ void segment_configure_balancing(
 		for (int cell = 0; cell < num_cells; cell++) {
 			set_cell_discharge(&bmsdata->chips[chip], cell,
 					   discharge_config[chip][cell]);
-			if (discharge_config[chip][cell] > 0)
-				set_mute_state(&bmsdata->chips[chip], false);
 		}
 	}
 	write_config_regs(bmsdata->chips);

@@ -9,6 +9,8 @@
 // the OCV timer
 nertimer_t ocvTimer;
 
+extern BMSState_t current_state;
+
 /**
  * @brief Map cells to therms (ra codes).  Note beta has only 6 therms.
  * 
@@ -172,9 +174,16 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
-			bmsdata->chip_data[chip].cell_voltages[cell] =
-				getVoltage(bmsdata->chips[chip]
-						   .fcell.fc_codes[cell]);
+			if (current_state == CHARGING_STATE) {
+				bmsdata->chip_data[chip].cell_voltages[cell] =
+					getVoltage(bmsdata->chips[chip]
+							   .cell.c_codes[cell]);
+			} else {
+				bmsdata->chip_data[chip].cell_voltages[cell] =
+					getVoltage(
+						bmsdata->chips[chip]
+							.fcell.fc_codes[cell]);
+			}
 		}
 	}
 }
