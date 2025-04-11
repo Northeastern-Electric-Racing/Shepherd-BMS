@@ -2,7 +2,7 @@
 #define BMS_CONFIG_H
 
 #define DEBUG_MODE_ENABLED true
-//#define DEBUG_STATS
+#define DEBUG_STATS
 
 // Hardware definition
 #define NUM_SEGMENTS	1
@@ -74,6 +74,6 @@
 #define MAX_CHIPTEMP_TIME   5000
 
 // system wide base ADBMS sample rate
-#define SAMPLE_RATE 2 /* Hz */
+#define SAMPLE_RATE 3 /* Hz */
 
 #endif
