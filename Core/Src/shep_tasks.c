@@ -168,7 +168,7 @@ void vDebugMode(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	// try to even everything out for a 1 Hz refresh rate
-	uint16_t time_per_chip = 2000 / NUM_CHIPS;
+	uint16_t time_per_chip = 1500 / NUM_CHIPS;
 
 	while (69 < 420) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {

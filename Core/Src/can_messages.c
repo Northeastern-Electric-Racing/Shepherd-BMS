@@ -46,9 +46,9 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
-			// 10*desired voltage
+		// 10*desired voltage
 		uint16_t charger_current; // Note the charge current sent over should be
-			// 10*desired current
+		// 10*desired current
 		uint8_t charger_control;
 		uint8_t reserved_1;
 		uint16_t reserved_23;
@@ -143,7 +143,7 @@ void send_acc_status_message(float pack_voltage, float pack_current, float soc)
 		uint8_t pack_health;
 	} acc_status_msg_data;
 
-	acc_status_msg_data.packVolt = pack_voltage;
+	acc_status_msg_data.packVolt = pack_voltage * 10;
 	acc_status_msg_data.pack_current =
 		(int16_t)(pack_current *
 			  10); // converted to signed int and scaled by 10
@@ -275,25 +275,25 @@ void send_cell_voltage_message(crit_cellval_t max_voltage,
 void send_segment_volt_message(acc_data_t *bmsdata)
 {
 	bitstream_t segment_volt_msg_data;
-	uint8_t bitstream_data[9];
+	uint8_t bitstream_data[8];
 	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
 
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
-		      12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[0] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[1] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[2] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[3] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[4] * 1000, 12);
 
 	can_msg_t msg;
 	msg.id = SEGMENT_VOLT_CANID;
 	msg.len = SEGMENT_VOLT_SIZE;
 
-	memcpy(msg.data, &segment_volt_msg_data, 8);
+	memcpy(msg.data, &bitstream_data, 8);
 
 	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
 	queue_can_msg(msg);
