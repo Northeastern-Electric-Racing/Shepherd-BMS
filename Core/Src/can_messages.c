@@ -6,11 +6,6 @@
 #include "can_handler.h"
 #include "bitstream.h"
 
-static unsigned short reverse_short(unsigned short val)
-{
-	return reverse_bits(val) >> 4;
-}
-
 /// @brief A helper which sends appropriate error to stdout and CAN if a bistream overflows
 /// @param bitstream_res The bitstream to check for overflow
 /// @param can_id The CAN ID this bistream data is intended for
@@ -646,13 +641,15 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	vpv *= 100;
 	vmv *= 1000;
 
+	chip /= 2;
+
 
 	bitstream_t alpha_status_a_message;
 	uint8_t bitstream_data[8];
 	bitstream_init(&alpha_status_a_message, bitstream_data, 8);	// Create 8-byte bitstream
 
 	bitstream_add(&alpha_status_a_message, segment_temp, 10);		// Segment Temp (10 bits)
-	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_a_message, chip, 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
 	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)
 	// TODO : VMV could be negative, how is that gonna work?
@@ -692,12 +689,14 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 	v_analog *= 1000;
 	v_digital *= 1000;
 
+	chip /= 2;
+
 	bitstream_t alpha_status_b_message;
 	uint8_t bitstream_data[8];
 	bitstream_init(&alpha_status_b_message, bitstream_data, 8);	// Create 8-byte bitstream
 
 	bitstream_add(&alpha_status_b_message, v_res, 13);				// Vres (13 bits)
-	bitstream_add(&alpha_status_b_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_b_message, chip, 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_b_message, vref2, 13);				// Vref2 (13 bits)
 	bitstream_add(&alpha_status_b_message, v_analog, 13);			// Vanalog (13 bits)
 	bitstream_add(&alpha_status_b_message, v_digital, 13);			// Vdigital (13 bits)

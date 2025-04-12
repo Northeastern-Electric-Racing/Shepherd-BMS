@@ -174,6 +174,7 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
+			int current_state = 0;
 			if (current_state == CHARGING_STATE) {
 				bmsdata->chip_data[chip].cell_voltages[cell] =
 					getVoltage(bmsdata->chips[chip]

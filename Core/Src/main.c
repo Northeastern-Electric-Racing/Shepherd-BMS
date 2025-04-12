@@ -207,38 +207,38 @@ const void print_bms_stats(acc_data_t *acc_data)
   printf("\n");
 }
   // make sure `read_c_voltage_registers` is being called
-  printf("C Voltages:\n");
-    for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
-    }
-    printf("\n");
-  }
-    // make sure `read_f_voltage_registers` is being called
-  printf("F Voltages:\n");
-    for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.5f\t", getVoltage(acc_data->chips[c].fcell.fc_codes[cell]));
-    }
-    printf("\n");
-  }
-  // make sure `read_s_voltage_registers` is being called
-  printf("S Voltages:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
-    }
-    printf("\n");
-  }
+  // printf("C Voltages:\n");
+  //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+  //   for(uint8_t cell = 0; cell < num_cells; cell++)
+  //   {
+  //       printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
+  //   }
+  //   printf("\n");
+  // }
+  //   // make sure `read_f_voltage_registers` is being called
+  // printf("F Voltages:\n");
+  //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+  //   for(uint8_t cell = 0; cell < num_cells; cell++)
+  //   {
+  //       printf("%.5f\t", getVoltage(acc_data->chips[c].fcell.fc_codes[cell]));
+  //   }
+  //   printf("\n");
+  // }
+  // // make sure `read_s_voltage_registers` is being called
+  // printf("S Voltages:\n");
+  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+  //   for(uint8_t cell = 0; cell < num_cells; cell++)
+  //   {
+  //       printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
+  //   }
+  //   printf("\n");
+  // }
   #endif
 
   #ifdef DEBUG_OCV
@@ -460,18 +460,15 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI
-                              |RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_BYPASS;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = 15;
-  RCC_OscInitStruct.PLL.PLLN = 144;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = 5;
+  RCC_OscInitStruct.PLL.PLLM = 4;
+  RCC_OscInitStruct.PLL.PLLN = 96;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV6;
+  RCC_OscInitStruct.PLL.PLLQ = 4;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
     Error_Handler();
@@ -481,12 +478,12 @@ void SystemClock_Config(void)
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
+  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -568,7 +565,7 @@ static void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 2;
+  hcan1.Init.Prescaler = 4;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
   hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan1.Init.TimeSeg1 = CAN_BS1_13TQ;
@@ -605,7 +602,7 @@ static void MX_CAN2_Init(void)
 
   /* USER CODE END CAN2_Init 1 */
   hcan2.Instance = CAN2;
-  hcan2.Init.Prescaler = 2;
+  hcan2.Init.Prescaler = 4;
   hcan2.Init.Mode = CAN_MODE_NORMAL;
   hcan2.Init.SyncJumpWidth = CAN_SJW_1TQ;
   hcan2.Init.TimeSeg1 = CAN_BS1_13TQ;
@@ -711,7 +708,7 @@ static void MX_SPI1_Init(void)
   hspi1.Init.CLKPolarity = SPI_POLARITY_HIGH;
   hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;
   hspi1.Init.NSS = SPI_NSS_SOFT;
-  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
+  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi1.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -749,7 +746,7 @@ static void MX_SPI2_Init(void)
   hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi2.Init.NSS = SPI_NSS_SOFT;
-  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
   hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -787,7 +784,7 @@ static void MX_SPI3_Init(void)
   hspi3.Init.CLKPolarity = SPI_POLARITY_LOW;
   hspi3.Init.CLKPhase = SPI_PHASE_1EDGE;
   hspi3.Init.NSS = SPI_NSS_SOFT;
-  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8;
+  hspi3.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_16;
   hspi3.Init.FirstBit = SPI_FIRSTBIT_MSB;
   hspi3.Init.TIMode = SPI_TIMODE_DISABLE;
   hspi3.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
