@@ -37,8 +37,9 @@ void vGetSegmentData(void *pv_params)
 
 	for (;;) {
 		// must delay after init for some reason
+		// TODO
 		osDelay(1000);
-		
+
 		if (current_state == CHARGING_STATE) {
 			segment_mute(bmsdata);
 		} else { // snap before getting data
