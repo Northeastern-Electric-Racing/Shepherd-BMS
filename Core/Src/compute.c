@@ -19,7 +19,7 @@ void compute_init()
 
 void compute_set_fault(bool fault_state)
 {
-	HAL_GPIO_WritePin(GPIOA, Fault_Output_Pin, !fault_state);
+	HAL_GPIO_WritePin(FAULT_MCU_GPIO_Port, FAULT_MCU_Pin, !fault_state);
 }
 
 float compute_get_pack_current()
@@ -43,19 +43,25 @@ float compute_get_pack_current()
 	return amps;
 }
 
-void toggle_debug_led()
+void toggle_debug_led_1()
 {
-	HAL_GPIO_TogglePin(Debug_LED_GPIO_Port, Debug_LED_Pin);
+	HAL_GPIO_TogglePin(DEBUG_LED_1_GPIO_Port, DEBUG_LED_2_GPIO_Port);
 }
 
-void set_poll_led(int mode)
+void set_debug_led_2(int mode)
 {
-	HAL_GPIO_WritePin(Debug_LEDB11_GPIO_Port, Debug_LEDB11_Pin, mode);
+	HAL_GPIO_WritePin(DEBUG_LED_2_GPIO_Port, DEBUG_LED_2_Pin, mode);
+}
+
+void pet_watchdog()
+{
+	HAL_GPIO_WritePin(WATCHDOG_GPIO_Port, WATCHDOG_Pin, true);
+	HAL_GPIO_WritePin(WATCHDOG_GPIO_Port, WATCHDOG_Pin, false);
 }
 
 bool read_shutdown()
 {
 	// If the pin is high, the shutdown circuit is closed. So, return false.
 	// If the pin is low, the shutdown circuit is open. So, return true.
-	return !HAL_GPIO_ReadPin(SHUTDOWN_3V3_GPIO_Port, SHUTDOWN_3V3_Pin);
+	return !HAL_GPIO_ReadPin(SHUTDOWN_GPIO_Port, SHUTDOWN_Pin);
 }
