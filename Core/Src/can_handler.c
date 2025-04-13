@@ -210,8 +210,6 @@ void vCanDispatch(void *pv_params)
 	else
 		line = can1;
 
-	line = can1;
-
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
 				  osWaitForever);
