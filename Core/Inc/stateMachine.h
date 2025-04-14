@@ -11,6 +11,11 @@ extern uint16_t crc_error_check;
 
 #define NUM_FAULTS 8
 
+typedef enum {
+	FAULT_STAT_FAULTED = 1,
+	FAULT_STAT_CLEARED = 2,
+} fault_stat_t;
+
 /**
  * @brief Called when we receive a message from the charger
  * 
@@ -42,9 +47,8 @@ bool sm_charging_check(acc_data_t *bmsdata);
  * @note Should be bitwise OR'ed with the current fault status
  *
  * @param accData
- * @return uint64_t to be cast to a bms_fault_t
  */
-uint64_t sm_fault_return(acc_data_t *accData);
+void sm_fault_return(acc_data_t *accData);
 
 /**
  * @brief Used in parellel to faultReturn(), calculates each fault to append the
@@ -53,7 +57,7 @@ uint64_t sm_fault_return(acc_data_t *accData);
  * @param fault_item
  * @return fault_status
  */
-bool sm_fault_eval(fault_eval_t *fault_item);
+fault_stat_t sm_fault_eval(fault_eval_t *fault_item);
 
 /**
  * @brief handles the state machine, calls the appropriate handler function and
