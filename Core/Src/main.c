@@ -262,6 +262,16 @@ const void print_bms_stats(acc_data_t *acc_data)
     }
     printf("\n");
   }
+  printf("THERM TEMPS: \n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.1f\t", acc_data->chip_data[c].cell_temp[cell]);
+    }
+    printf("\n");
+  }
   #endif
 
   #ifdef DEBUG_OTHER

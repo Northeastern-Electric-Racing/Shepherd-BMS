@@ -42,8 +42,8 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 		// printf("10 %d\n\n\n", chips[chip].cccrc.sid_pec);
 
 		if (pec_error_count > 0) {
-			//printf("PEC Error: Chip %u, Count: %u\n", chip,
-			//       pec_error_count);
+			printf("PEC Error: Chip %u, Count: %u\n", chip,
+			      pec_error_count);
 
 			send_pec_error_message(chip, pec_error_count);
 		}
@@ -241,7 +241,8 @@ uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 
 void soft_reset_chips(cell_asic chips[NUM_CHIPS])
 {
-	write_adbms_data(chips, SRST, Comm, NONE);
+	adbms_wake_isospi();
+	spiSendCmd(SRST);
 	adbms_wake_core();
 }
 
