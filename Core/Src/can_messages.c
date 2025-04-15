@@ -195,7 +195,7 @@ void send_fault_status_message(uint32_t fault_code_crit,
 	queue_can_msg(fault_msg);
 }
 
-void send_bms_status_message(float avg_temp, int bms_state, bool balance)
+void send_bms_status_message(float avg_temp, float temp_internal, int bms_state, bool balance)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t state;
@@ -206,7 +206,7 @@ void send_bms_status_message(float avg_temp, int bms_state, bool balance)
 
 	bms_status_msg_data.temp_avg = (int8_t)(avg_temp);
 	bms_status_msg_data.state = (uint8_t)(bms_state);
-	bms_status_msg_data.temp_internal = (uint8_t)(0);
+	bms_status_msg_data.temp_internal = (uint8_t)(temp_internal);
 	bms_status_msg_data.balance = (uint8_t)(balance);
 
 	can_msg_t msg = { .id = BMS_STATUS_CANID,

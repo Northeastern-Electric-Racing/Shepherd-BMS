@@ -115,6 +115,9 @@ typedef struct {
 	float segment_average_temps[NUM_SEGMENTS];
 	float segment_average_volts[NUM_SEGMENTS];
 
+	// the board temperature
+	float internal_temp;
+
 	/**
 	 * @brief Note that this is a 32 bit integer, so there are 32 max possible fault codes
 	 */

@@ -126,6 +126,8 @@ void vCurrentMonitor(void *pv_params)
 	for (;;) {
 		// this info is sent in with the state machine debugging code
 		bmsdata->pack_current = compute_get_pack_current();
+		float humidity;
+		compute_measure_temp(&bmsdata->internal_temp, &humidity);
 		osDelay(100);
 	}
 }
@@ -148,7 +150,8 @@ void vStateMachine(void *pv_params)
 		if (is_timer_expired(&telem_timer)) {
 			// these are unimportant telemetry messages so they can be sent infrequently
 			send_bms_status_message(
-				bmsdata->avg_temp, current_state,
+				bmsdata->avg_temp, bmsdata->internal_temp,
+				current_state,
 				segment_is_balancing(bmsdata->chips));
 			send_fault_status_message(bmsdata->fault_code_crit,
 						  bmsdata->fault_code_noncrit);

@@ -23,6 +23,15 @@
 void compute_init();
 
 /**
+ * @brief Measure the onboard temperature
+ * 
+ * @param temp the temperature
+ * @param humidity the humidity
+ * @return int8_t the error status
+ */
+int8_t compute_measure_temp(float *temp, float *humidity);
+
+/**
  * @brief Returns the pack current sensor reading
  *
  * @return float

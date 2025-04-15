@@ -53,12 +53,14 @@ void send_fault_status_message(uint32_t fault_code_crit,
  * @brief sends BMS status message
  *
  * @param avg_temp
+ * @param internal_temp
  * @param bms_state
  * @param balance
  *
  * @return Returns a fault if we are not able to send
  */
-void send_bms_status_message(float avg_temp, int bms_state, bool balance);
+void send_bms_status_message(float avg_temp, float internal_temp, int bms_state,
+			     bool balance);
 
 /**
  * @brief sends shutdown control message
