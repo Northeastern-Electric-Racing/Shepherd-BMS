@@ -43,7 +43,7 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 
 		if (pec_error_count > 0) {
 			printf("PEC Error: Chip %u, Count: %u\n", chip,
-			      pec_error_count);
+			       pec_error_count);
 
 			send_pec_error_message(chip, pec_error_count);
 		}
