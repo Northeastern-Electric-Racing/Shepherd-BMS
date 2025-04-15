@@ -195,7 +195,8 @@ void send_fault_status_message(uint32_t fault_code_crit,
 	queue_can_msg(fault_msg);
 }
 
-void send_bms_status_message(float avg_temp, float temp_internal, int bms_state, bool balance)
+void send_bms_status_message(float avg_temp, float temp_internal, int bms_state,
+			     bool balance)
 {
 	struct __attribute__((__packed__)) {
 		uint8_t state;
