@@ -377,10 +377,7 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 		return false;
 
 	// Do not balance if the shutdown circuit is open.
-	if (read_shutdown())
-		return false;
-
-	return true;
+	return !read_shutdown();
 }
 
 // balances cells using algorithm in charger.c

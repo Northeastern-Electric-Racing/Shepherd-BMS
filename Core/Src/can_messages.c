@@ -6,11 +6,6 @@
 #include "can_handler.h"
 #include "bitstream.h"
 
-static unsigned short reverse_short(unsigned short val)
-{
-	return reverse_bits(val) >> 4;
-}
-
 /// @brief A helper which sends appropriate error to stdout and CAN if a bistream overflows
 /// @param bitstream_res The bitstream to check for overflow
 /// @param can_id The CAN ID this bistream data is intended for
@@ -51,9 +46,9 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 {
 	struct __attribute__((__packed__)) {
 		uint16_t charger_voltage; // Note the charger voltage sent over should be
-			// 10*desired voltage
+		// 10*desired voltage
 		uint16_t charger_current; // Note the charge current sent over should be
-			// 10*desired current
+		// 10*desired current
 		uint8_t charger_control;
 		uint8_t reserved_1;
 		uint16_t reserved_23;
@@ -148,7 +143,7 @@ void send_acc_status_message(float pack_voltage, float pack_current, float soc)
 		uint8_t pack_health;
 	} acc_status_msg_data;
 
-	acc_status_msg_data.packVolt = pack_voltage;
+	acc_status_msg_data.packVolt = pack_voltage * 10;
 	acc_status_msg_data.pack_current =
 		(int16_t)(pack_current *
 			  10); // converted to signed int and scaled by 10
@@ -280,25 +275,25 @@ void send_cell_voltage_message(crit_cellval_t max_voltage,
 void send_segment_volt_message(acc_data_t *bmsdata)
 {
 	bitstream_t segment_volt_msg_data;
-	uint8_t bitstream_data[9];
+	uint8_t bitstream_data[8];
 	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
 
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[0],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[1],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[2],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[3],
-		      12);
-	bitstream_add(&segment_volt_msg_data, bmsdata->segment_average_volts[4],
-		      12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[0] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[1] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[2] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[3] * 1000, 12);
+	bitstream_add(&segment_volt_msg_data,
+		      bmsdata->segment_average_volts[4] * 1000, 12);
 
 	can_msg_t msg;
 	msg.id = SEGMENT_VOLT_CANID;
 	msg.len = SEGMENT_VOLT_SIZE;
 
-	memcpy(msg.data, &segment_volt_msg_data, 8);
+	memcpy(msg.data, &bitstream_data, 8);
 
 	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
 	queue_can_msg(msg);
@@ -646,13 +641,15 @@ void send_alpha_status_a_message(float segment_temp, uint8_t chip,
 	vpv *= 100;
 	vmv *= 1000;
 
+	chip /= 2;
+
 
 	bitstream_t alpha_status_a_message;
 	uint8_t bitstream_data[8];
 	bitstream_init(&alpha_status_a_message, bitstream_data, 8);	// Create 8-byte bitstream
 
 	bitstream_add(&alpha_status_a_message, segment_temp, 10);		// Segment Temp (10 bits)
-	bitstream_add(&alpha_status_a_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_a_message, chip, 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_a_message, die_temperature, 13);	// Die Temp (13 bits)
 	bitstream_add(&alpha_status_a_message, vpv, 13);				// Vpv (13 bits)
 	// TODO : VMV could be negative, how is that gonna work?
@@ -692,12 +689,14 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
 	v_analog *= 1000;
 	v_digital *= 1000;
 
+	chip /= 2;
+
 	bitstream_t alpha_status_b_message;
 	uint8_t bitstream_data[8];
 	bitstream_init(&alpha_status_b_message, bitstream_data, 8);	// Create 8-byte bitstream
 
 	bitstream_add(&alpha_status_b_message, v_res, 13);				// Vres (13 bits)
-	bitstream_add(&alpha_status_b_message, reverse_short(chip), 4);	// Chip ID (4 bits)
+	bitstream_add(&alpha_status_b_message, chip, 4);	// Chip ID (4 bits)
 	bitstream_add(&alpha_status_b_message, vref2, 13);				// Vref2 (13 bits)
 	bitstream_add(&alpha_status_b_message, v_analog, 13);			// Vanalog (13 bits)
 	bitstream_add(&alpha_status_b_message, v_digital, 13);			// Vdigital (13 bits)

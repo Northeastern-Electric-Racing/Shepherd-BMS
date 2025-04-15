@@ -148,7 +148,7 @@ void calc_pack_temps(acc_data_t *bmsdata)
 			total_seg_temp += bmsdata->chip_data[c].cell_temp[cell];
 		}
 		/* only for NERO */
-		if (c % 2 == 0) {
+		if (c % 2 == 1) {
 			bmsdata->segment_average_temps[c / 2] =
 				total_seg_temp /
 				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
@@ -257,14 +257,12 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 
 			total_seg_volt +=
 				bmsdata->chip_data[c].cell_voltages[cell];
-
-			if (c % 2 == 0) {
-				bmsdata->segment_average_volts[c / 2] =
-					total_seg_volt /
-					((float)(NUM_CELLS_ALPHA +
-						 NUM_CELLS_BETA));
-				total_seg_volt = 0;
-			}
+		}
+		if (c % 2 == 1) {
+			bmsdata->segment_average_volts[c / 2] =
+				total_seg_volt /
+				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
+			total_seg_volt = 0;
 		}
 	}
 

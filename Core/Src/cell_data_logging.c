@@ -12,7 +12,7 @@
 #include <assert.h>
 
 // Used to get microsecond timestamps.
-extern TIM_HandleTypeDef htim2;
+extern TIM_HandleTypeDef htim1;
 
 /**
  * @brief Retrieves the current timestamp in microseconds from TIM2.
@@ -20,7 +20,7 @@ extern TIM_HandleTypeDef htim2;
  */
 static inline uint32_t get_us_timestamp(void)
 {
-	return __HAL_TIM_GET_COUNTER(&htim2);
+	return __HAL_TIM_GET_COUNTER(&htim1);
 }
 
 /**

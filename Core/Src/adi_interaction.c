@@ -231,9 +231,9 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 
 uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 {
-	set_poll_led(1);
+	set_debug_led_2(1);
 	uint32_t result = adBmsPollAdc(poll_type);
-	set_poll_led(0);
+	set_debug_led_2(0);
 	return result;
 }
 
@@ -241,7 +241,8 @@ uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 
 void soft_reset_chips(cell_asic chips[NUM_CHIPS])
 {
-	write_adbms_data(chips, SRST, Comm, NONE);
+	adbms_wake_isospi();
+	spiSendCmd(SRST);
 	adbms_wake_core();
 }
 

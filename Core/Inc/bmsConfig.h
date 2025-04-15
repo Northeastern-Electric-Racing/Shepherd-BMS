@@ -5,8 +5,8 @@
 #define DEBUG_STATS
 
 // Hardware definition
-#define NUM_SEGMENTS	1
-#define NUM_CHIPS	2 //NUM_SEGMENTS * 2
+#define NUM_SEGMENTS	5
+#define NUM_CHIPS	NUM_SEGMENTS * 2
 #define NUM_CELLS_ALPHA 14
 #define NUM_CELLS_BETA	11
 #define NUM_CELLS_SEG	NUM_CELLS_ALPHA + NUM_CELLS_BETA
@@ -74,6 +74,6 @@
 #define MAX_CHIPTEMP_TIME   5000
 
 // system wide base ADBMS sample rate
-#define SAMPLE_RATE 3 /* Hz */
+#define SAMPLE_RATE 2 /* Hz */
 
 #endif
