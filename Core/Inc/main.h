@@ -80,8 +80,6 @@ void Error_Handler(void);
 #define I_SENSE_2_GPIO_Port GPIOC
 #define I_SENSE_3_Pin GPIO_PIN_0
 #define I_SENSE_3_GPIO_Port GPIOB
-#define I_SENSE_1_Pin GPIO_PIN_1
-#define I_SENSE_1_GPIO_Port GPIOB
 #define FAULT_MCU_Pin GPIO_PIN_2
 #define FAULT_MCU_GPIO_Port GPIOB
 #define DEBUG_LED_1_Pin GPIO_PIN_11
