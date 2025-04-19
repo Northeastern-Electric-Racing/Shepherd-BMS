@@ -143,8 +143,9 @@ void handle_faulted(acc_data_t *bmsdata)
 
 	// not all is well, re-assert shutdown, turn our DCL and CCL to zero, turn off charging
 	compute_set_fault(true);
-	send_mc_charge_message(0);
-	send_mc_discharge_message(0);
+	// TODO fault fail
+	// send_mc_charge_message(0);
+	// send_mc_discharge_message(0);
 	if (bmsdata->is_charger_connected) {
 		send_charging_message(0, 0, false);
 	}

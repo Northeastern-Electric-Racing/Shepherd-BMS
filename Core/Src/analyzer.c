@@ -18,6 +18,34 @@ extern BMSState_t current_state;
 const int THERM_MAP[NUM_CELLS_ALPHA] = { 0, 0, 1, 1, 2, 2, 3,
 					 3, 4, 4, 5, 5, 6, 6 };
 
+// clang-format off
+const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    { 
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 1, 0, 0, 0, 1},
+{0, 0, 0, 1, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0},
+{0, 0, 0, 0, 0, 0, 0}
+};
+
+const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+};
+// clang-format on
+
 uint8_t get_num_cells(chipdata_t *chip_data)
 {
 	if (chip_data->alpha) {
@@ -73,11 +101,17 @@ void calc_cell_temps(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 
 		for (int cell = 0; cell < num_cells; cell++) {
-			int16_t x = bmsdata->chips[chip]
-					    .raux.ra_codes[THERM_MAP[cell]];
+			if (THERM_FAIL_MAP[chip][THERM_MAP[cell]]) {
+				bmsdata->chip_data[chip].cell_temp[cell] =
+					bmsdata->segment_average_temps[chip % 2];
+			} else {
+				int16_t x =
+					bmsdata->chips[chip]
+						.raux.ra_codes[THERM_MAP[cell]];
 
-			bmsdata->chip_data[chip].cell_temp[cell] =
-				calc_cell_temp(getVoltage(x));
+				bmsdata->chip_data[chip].cell_temp[cell] =
+					calc_cell_temp(getVoltage(x));
+			}
 		}
 
 		// Calculate onboard therm temps and chip temp
@@ -174,7 +208,10 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
-			if (current_state == CHARGING_STATE) {
+			if (VOLTS_FAIL_MAP[chip][cell]) {
+				bmsdata->chip_data[chip].cell_voltages[cell] =
+					bmsdata->segment_average_volts[chip / 2];
+			} else if (current_state == CHARGING_STATE) {
 				bmsdata->chip_data[chip].cell_voltages[cell] =
 					getVoltage(bmsdata->chips[chip]
 							   .cell.c_codes[cell]);
