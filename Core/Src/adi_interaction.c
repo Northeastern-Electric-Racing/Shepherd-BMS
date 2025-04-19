@@ -254,7 +254,7 @@ void mute_chips(cell_asic chips[NUM_CHIPS])
 void unmute_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(UNMUTE);
+	// TODO spiSendCmd(UNMUTE);
 }
 
 void snap_chips(cell_asic chips[NUM_CHIPS])

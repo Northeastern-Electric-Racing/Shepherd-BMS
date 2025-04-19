@@ -42,7 +42,7 @@ void vGetSegmentData(void *pv_params)
 		if (current_state == CHARGING_STATE) {
 			segment_mute(bmsdata);
 		} else { // snap before getting data
-			segment_snap(bmsdata);
+			//segment_snap(bmsdata);
 		}
 
 		if (current_state == CHARGING_STATE)
@@ -67,7 +67,7 @@ void vGetSegmentData(void *pv_params)
 			segment_unmute(bmsdata);
 		} else {
 			// unsnap after getting data
-			segment_unsnap(bmsdata);
+			//segment_unsnap(bmsdata);
 		}
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
@@ -171,7 +171,7 @@ void vDebugMode(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	// try to even everything out for a 1 Hz refresh rate
-	uint16_t time_per_chip = 1500 / NUM_CHIPS;
+	uint16_t time_per_chip = 750 / NUM_CHIPS;
 
 	while (69 < 420) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
@@ -211,7 +211,7 @@ void vDebugMode(void *pv_params)
 					 (cell + 1)) &
 						1);
 				// split half the time amongst the cells (over 2)
-				osDelay(time_per_chip / 2 / num_cells / 2);
+				osDelay(10);
 			}
 
 			// Send chip status messages
@@ -236,7 +236,7 @@ void vDebugMode(void *pv_params)
 							       .aux
 							       .a_codes[11]));
 				// wait for 1/4 the chip time
-				osDelay(time_per_chip / 4);
+				osDelay(30);
 				send_beta_status_b_message(
 					getVoltage(bmsdata->chips[chip]
 							   .stata.vref2),
@@ -271,7 +271,7 @@ void vDebugMode(void *pv_params)
 							 .aux.a_codes[10])),
 					&bmsdata->chips[chip].statc);
 				// wait for 1/4 the chip time
-				osDelay(time_per_chip / 4);
+				osDelay(30);
 				send_alpha_status_b_message(
 					getVoltage(
 						bmsdata->chips[chip].statb.vr4k),
@@ -285,7 +285,7 @@ void vDebugMode(void *pv_params)
 					&bmsdata->chips[chip].statc);
 			}
 			// wait for 1/4 the chip time
-			osDelay(time_per_chip / 4);
+			osDelay(30);
 		}
 	}
 }

@@ -38,7 +38,7 @@ static inline uint8_t sht30_i2c_blocking_read(uint8_t *data, uint16_t command,
 				      command & 0xffu };
 	// write command to sht30 before reading
 	sht30_i2c_write(command_buffer, dev_address, sizeof(command_buffer));
-	HAL_Delay(1); // 1 ms delay to ensure sht30 returns to idle state
+	HAL_Delay(1); // 1 ms11 delay to ensure sht30 returns to idle state
 	return HAL_I2C_Master_Receive(&hi2c1, dev_address, data, length,
 				      HAL_MAX_DELAY);
 }

@@ -1181,12 +1181,14 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
+    pet_watchdog();
+
     send_git_version_message();
   
     HAL_IWDG_Refresh(&hiwdg);
 
     toggle_debug_led_1();
-    osDelay(1000);
+    osDelay(500);
 
   }
   /* USER CODE END 5 */
