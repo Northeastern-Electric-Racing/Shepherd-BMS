@@ -42,6 +42,7 @@ static uint16_t can1_id_list_standard[4] = {
 
 static uint32_t can1_id_list_extended[2] = {
 	//CANID_X,
+	CHARGERBOX_CANID
 };
 
 static uint16_t can2_id_list_standard[4] = {
@@ -206,7 +207,7 @@ void vCanDispatch(void *pv_params)
 
 	can_t *line;
 	if (bmsdata->is_charger_connected)
-		line = can2;
+		line = can1;
 	else
 		line = can1;
 

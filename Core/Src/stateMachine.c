@@ -95,7 +95,7 @@ void handle_charging(acc_data_t *bmsdata)
 			send_charging_message(
 				(MAX_CHARGE_VOLT *
 				 (NUM_CELLS_ALPHA + NUM_CELLS_BETA) *
-				 NUM_CHIPS),
+				 NUM_SEGMENTS),
 				CHARGING_CURRENT, true);
 			start_timer(&charger_message_timer, 1000);
 		}
