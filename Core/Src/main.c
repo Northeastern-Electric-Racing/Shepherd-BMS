@@ -1076,7 +1076,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, I_SENSE_0_Pin|SPI1_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin|EXT_GPIO_0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, FAULT_MCU_Pin|DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin
+                          |EXT_GPIO_0_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : EXT_GPIO_1_Pin EXT_GPIO_5_Pin EXT_GPIO_4_Pin SPI3_CS_Pin
                            SPI2_CS_Pin DEBUG_LED_2_Pin */
@@ -1100,14 +1101,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : FAULT_MCU_Pin */
-  GPIO_InitStruct.Pin = FAULT_MCU_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(FAULT_MCU_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : DEBUG_LED_1_Pin WATCHDOG_Pin EXT_GPIO_2_Pin EXT_GPIO_0_Pin */
-  GPIO_InitStruct.Pin = DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin|EXT_GPIO_0_Pin;
+  /*Configure GPIO pins : FAULT_MCU_Pin DEBUG_LED_1_Pin WATCHDOG_Pin EXT_GPIO_2_Pin
+                           EXT_GPIO_0_Pin */
+  GPIO_InitStruct.Pin = FAULT_MCU_Pin|DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin
+                          |EXT_GPIO_0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
