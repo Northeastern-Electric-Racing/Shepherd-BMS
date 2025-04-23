@@ -39,8 +39,10 @@ void vGetSegmentData(void *pv_params)
 	osDelay(500);
 
 	for (;;) {
+		int current_state = CHARGING_STATE;
 		if (current_state == CHARGING_STATE) {
 			segment_mute(bmsdata);
+			osDelay(50);
 		} else { // snap before getting data
 			//segment_snap(bmsdata);
 		}
@@ -62,13 +64,17 @@ void vGetSegmentData(void *pv_params)
 		// 	}
 		// }
 
-		segment_disable_balancing(bmsdata);
+		//segment_disable_balancing(bmsdata);
+
 		if (current_state == CHARGING_STATE) {
 			segment_unmute(bmsdata);
 		} else {
 			// unsnap after getting data
 			//segment_unsnap(bmsdata);
 		}
+
+		segment_enable_balancing(bmsdata);
+		segment_manual_balancing(bmsdata);
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);

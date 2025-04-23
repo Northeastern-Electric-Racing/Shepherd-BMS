@@ -63,6 +63,8 @@ void segment_disable_balancing(acc_data_t *bmsdata);
  */
 void segment_enable_balancing(acc_data_t *bmsdata);
 
+void segment_manual_balancing(acc_data_t *bmsdata);
+
 /**
  * @brief Configure which cells should discharge, and send configuration to ICs.  Does not enable the actual balancing
  * 

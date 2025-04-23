@@ -140,13 +140,13 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		printf("CHIP %d :", chip);
 		if (chips[chip].statc.cs_flt > 0) {
-			printf("C VS S MISMATCH on cells ");
+			//printf("C VS S MISMATCH on cells ");
 			for (int i = 0; i < 16; i++) {
 				if (NER_GET_BIT(chips[chip].statc.cs_flt, i)) {
-					printf("%d, ", i);
+				//	printf("%d, ", i);
 				}
 			}
-			printf("\n");
+			//printf("\n");
 		}
 		if (chips[chip].statc.va_ov) {
 			printf("A OV FLT c%d\n", chip);
@@ -256,7 +256,24 @@ void segment_disable_balancing(acc_data_t *bmsdata)
 
 void segment_enable_balancing(acc_data_t *bmsdata)
 { // TODO verify balancing safe
-	//	unmute_chips(bmsdata->chips);
+	unmute_chips(bmsdata->chips);
+}
+
+void segment_manual_balancing(acc_data_t *bmsdata)
+{
+	bool discharge_confg[NUM_CHIPS][NUM_CELLS_ALPHA] = {
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+		{ 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1 },
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 }
+	};
+	segment_configure_balancing(bmsdata, discharge_confg);
 }
 
 void segment_configure_balancing(
