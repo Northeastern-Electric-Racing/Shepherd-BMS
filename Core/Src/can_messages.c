@@ -41,7 +41,7 @@ static const bool handle_bitstream_overflow(bitstream_t *bitstream_res,
 	return 0;
 }
 
-int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
+int send_charging_message(float voltage_to_set, float current_to_set,
 			  bool is_charging_enabled)
 {
 	struct __attribute__((__packed__)) {
@@ -54,8 +54,8 @@ int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
 		uint16_t reserved_23;
 	} charger_msg_data;
 
-	charger_msg_data.charger_voltage = voltage_to_set * 10;
-	charger_msg_data.charger_current = current_to_set * 10;
+	charger_msg_data.charger_voltage = (uint16_t)(voltage_to_set * 10);
+	charger_msg_data.charger_current = (uint16_t)(current_to_set * 10);
 
 	if (is_charging_enabled) {
 		charger_msg_data.charger_control = 0x00; // 0：Start charging.

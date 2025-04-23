@@ -205,11 +205,7 @@ void vCanDispatch(void *pv_params)
 
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
-	can_t *line;
-	if (bmsdata->is_charger_connected)
-		line = can1;
-	else
-		line = can1;
+	can_t *line = can1;
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
