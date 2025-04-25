@@ -203,6 +203,17 @@ const void print_bms_stats(acc_data_t *acc_data)
   }
   printf("\n");
 }
+printf("OCV:\n");
+for(uint8_t c = 0; c < NUM_CHIPS; c++)
+{
+uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+for(uint8_t cell = 0; cell < num_cells; cell++)
+{
+    printf("%.5f\t", acc_data->chip_data[c].open_cell_voltage[cell]);
+}
+printf("\n");
+}
+
   // make sure `read_c_voltage_registers` is being called
   // printf("C Voltages:\n");
   //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
@@ -226,16 +237,16 @@ const void print_bms_stats(acc_data_t *acc_data)
   //   printf("\n");
   // }
   // // make sure `read_s_voltage_registers` is being called
-  // printf("S Voltages:\n");
-  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-  //   for(uint8_t cell = 0; cell < num_cells; cell++)
-  //   {
-  //       printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
-  //   }
-  //   printf("\n");
-  // }
+  printf("S Voltages:\n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
+    }
+    printf("\n");
+  }
   #endif
 
   #ifdef DEBUG_OCV
@@ -339,6 +350,7 @@ int main(void)
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
   acc_data->is_charger_connected = false;
   acc_data->is_charging_enabled = false;
+  acc_data->pack_current = 0;
   acc_data->fault_code_crit = FAULTS_CLEAR;
   acc_data->fault_code_noncrit = FAULTS_CLEAR;
   
@@ -1183,6 +1195,8 @@ void StartDefaultTask(void *argument)
     send_git_version_message();
   
     HAL_IWDG_Refresh(&hiwdg);
+
+    printf("SHUTDOWN: %d\n", read_shutdown());
 
     toggle_debug_led_1();
     osDelay(500);

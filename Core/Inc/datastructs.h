@@ -113,6 +113,7 @@ typedef struct {
 	float soc;
 
 	float segment_average_temps[NUM_SEGMENTS];
+	/* OCV average voltages */
 	float segment_average_volts[NUM_SEGMENTS];
 
 	// the board temperature

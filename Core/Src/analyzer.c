@@ -19,18 +19,30 @@ const int THERM_MAP[NUM_CELLS_ALPHA] = { 0, 0, 1, 1, 2, 2, 3,
 					 3, 4, 4, 5, 5, 6, 6 };
 
 // clang-format off
+// const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    { 
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 1, 0, 0, 0, 1},
+// {0, 0, 0, 1, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0},
+// {0, 0, 0, 0, 0, 0, 0}
+// };
 const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    { 
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 1, 0, 0, 0, 1},
-{0, 0, 0, 1, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0},
-{0, 0, 0, 0, 0, 0, 0}
-};
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 0, 0, 0, 0, 0}
+	};
 
 const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -41,9 +53,21 @@ const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
     {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
+// const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+// };
 // clang-format on
 
 uint8_t get_num_cells(chipdata_t *chip_data)
@@ -209,8 +233,17 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
 			if (VOLTS_FAIL_MAP[chip][cell]) {
-				bmsdata->chip_data[chip].cell_voltages[cell] =
-					bmsdata->segment_average_volts[chip / 2];
+				static bool is_first = true;
+				if (is_first) {
+					bmsdata->chip_data[chip]
+						.cell_voltages[cell] = 3.5;
+					is_first = false;
+				} else {
+					bmsdata->chip_data[chip]
+						.cell_voltages[cell] =
+						bmsdata->segment_average_volts
+							[chip / 2];
+				}
 			} else if (current_state == CHARGING_STATE) {
 				bmsdata->chip_data[chip].cell_voltages[cell] =
 					getVoltage(bmsdata->chips[chip]
@@ -293,7 +326,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 				bmsdata->chip_data[c].open_cell_voltage[cell];
 
 			total_seg_volt +=
-				bmsdata->chip_data[c].cell_voltages[cell];
+				bmsdata->chip_data[c].open_cell_voltage[cell];
 		}
 		if (c % 2 == 1) {
 			bmsdata->segment_average_volts[c / 2] =
@@ -342,7 +375,7 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 {
 	float max_temp = bmsdata->max_temp.val;
 	float min_temp = bmsdata->min_temp.val;
-	float min_cell_voltage = bmsdata->min_voltage.val;
+	float min_cell_voltage = bmsdata->min_ocv.val;
 
 	float temp_derate_factor = 0.0f;
 	float cell_volt_derate_factor = 0.0f;
@@ -396,7 +429,7 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 {
 	float max_temp = bmsdata->max_temp.val;
 	float min_temp = bmsdata->min_temp.val;
-	float max_cell_voltage = bmsdata->max_voltage.val;
+	float max_cell_voltage = bmsdata->max_ocv.val;
 
 	float temp_cold_factor = 0.0f;
 	float temp_hot_factor = 0.0f;
@@ -441,6 +474,33 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
 {
+	static bool is_first_reading = true;
+	/* if there is no previous data point, set inital open cell voltage to current reading */
+	if (is_first_reading) {
+		// sanity check the last cell that the reading is good, oftentimes the first readings are bad
+		float last_cell =
+			bmsdata->chip_data[NUM_CHIPS - 1].cell_voltages
+				[get_num_cells(
+					 &bmsdata->chip_data[NUM_CHIPS - 1]) -
+				 1];
+		if (last_cell > 1 && last_cell < 5) {
+			is_first_reading = false;
+			start_timer(&ocvTimer, 750);
+		}
+
+		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
+			// Number of cells in the chip
+			uint8_t num_cells =
+				get_num_cells(&bmsdata->chip_data[chip]);
+			for (uint8_t cell = 0; cell < num_cells; cell++) {
+				bmsdata->chip_data[chip]
+					.open_cell_voltage[cell] =
+					bmsdata->chip_data[chip]
+						.cell_voltages[cell];
+			}
+		}
+		return;
+	}
 	// If we are within the current threshold for open voltage measurments (1.5 mA)
 	if (bmsdata->pack_current < OCV_CURR_THRESH &&
 	    bmsdata->pack_current > -1 * OCV_CURR_THRESH) {
@@ -453,19 +513,15 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 					&bmsdata->chip_data[chip]);
 				for (uint8_t cell = 0; cell < num_cells;
 				     cell++) {
-					// This is the actual OCV value in the cell
-					uint16_t ocv_value =
-						bmsdata->chip_data[chip]
-							.cell_voltages[cell];
-
 					// Set current OCV value
 					bmsdata->chip_data[chip]
 						.open_cell_voltage[cell] =
-						ocv_value;
+						bmsdata->chip_data[chip]
+							.cell_voltages[cell];
 				}
 			}
 		} else {
-			start_timer(&ocvTimer, 1000);
+			start_timer(&ocvTimer, 750);
 		}
 	}
 }

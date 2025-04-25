@@ -241,35 +241,23 @@ void send_shutdown_ctrl_message(uint8_t mpe_state)
 void send_cell_voltage_message(crit_cellval_t max_voltage,
 			       crit_cellval_t min_voltage, float avg_voltage)
 {
-	struct __attribute__((__packed__)) {
-		uint16_t high_cell_voltage;
-		uint8_t high_cell_id;
-		uint16_t low_cell_voltage;
-		uint8_t low_cell_id;
-		uint16_t volt_avg;
-	} cell_data_msg_data;
-
-	cell_data_msg_data.high_cell_voltage = max_voltage.val;
-	cell_data_msg_data.high_cell_id = (max_voltage.chipIndex << 4) |
-					  max_voltage.cellNum;
-	cell_data_msg_data.low_cell_voltage = min_voltage.val;
-	cell_data_msg_data.low_cell_id = (min_voltage.chipIndex << 4) |
-					 min_voltage.cellNum;
-	cell_data_msg_data.volt_avg = avg_voltage;
-
-	/* convert to big endian */
-	endian_swap(&cell_data_msg_data.high_cell_voltage,
-		    sizeof(cell_data_msg_data.high_cell_voltage));
-	endian_swap(&cell_data_msg_data.low_cell_voltage,
-		    sizeof(cell_data_msg_data.low_cell_voltage));
-	endian_swap(&cell_data_msg_data.volt_avg,
-		    sizeof(cell_data_msg_data.volt_avg));
+	bitstream_t cell_voltage_msg;
+	uint8_t bitstream_data[8];
+	bitstream_init(&cell_voltage_msg, bitstream_data,
+		       8); // Create 7-byte bitstream
+	bitstream_add(&cell_voltage_msg, max_voltage.val / 10000, 16);
+	bitstream_add(&cell_voltage_msg, max_voltage.chipIndex, 4);
+	bitstream_add(&cell_voltage_msg, max_voltage.cellNum, 4);
+	bitstream_add(&cell_voltage_msg, min_voltage.val / 10000, 16);
+	bitstream_add(&cell_voltage_msg, min_voltage.chipIndex, 4);
+	bitstream_add(&cell_voltage_msg, min_voltage.cellNum, 4);
+	bitstream_add(&cell_voltage_msg, avg_voltage / 10000, 16);
 
 	can_msg_t msg = { .id = CELL_DATA_CANID,
 			  .len = CELL_DATA_SIZE,
 			  .data = { 0 } };
 
-	memcpy(msg.data, &cell_data_msg_data, sizeof(cell_data_msg_data));
+	memcpy(msg.data, &bitstream_data, sizeof(bitstream_data));
 
 	queue_can_msg(msg);
 }
@@ -303,35 +291,23 @@ void send_segment_volt_message(acc_data_t *bmsdata)
 void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
 			    float avg_temp)
 {
-	struct __attribute__((__packed__)) {
-		uint16_t max_cell_temp;
-		uint8_t max_cell_id;
-		uint16_t min_cell_temp;
-		uint8_t min_cell_id;
-		uint16_t average_temp;
-	} cell_temp_msg_data;
-
-	cell_temp_msg_data.max_cell_temp = max_temp.val;
-	cell_temp_msg_data.max_cell_id = (max_temp.chipIndex << 4) |
-					 (max_temp.cellNum - 17);
-	cell_temp_msg_data.min_cell_temp = min_temp.val;
-	cell_temp_msg_data.min_cell_id = (min_temp.chipIndex << 4) |
-					 (min_temp.cellNum - 17);
-	cell_temp_msg_data.average_temp = avg_temp;
-
-	/* convert to big endian */
-	endian_swap(&cell_temp_msg_data.max_cell_temp,
-		    sizeof(cell_temp_msg_data.max_cell_temp));
-	endian_swap(&cell_temp_msg_data.min_cell_temp,
-		    sizeof(cell_temp_msg_data.min_cell_temp));
-	endian_swap(&cell_temp_msg_data.average_temp,
-		    sizeof(cell_temp_msg_data.average_temp));
+	bitstream_t cell_voltage_msg;
+	uint8_t bitstream_data[8];
+	bitstream_init(&cell_voltage_msg, bitstream_data,
+		       8); // Create 7-byte bitstream
+	bitstream_add(&cell_voltage_msg, max_temp.val / 100, 16);
+	bitstream_add(&cell_voltage_msg, max_temp.chipIndex, 4);
+	bitstream_add(&cell_voltage_msg, max_temp.cellNum, 4);
+	bitstream_add(&cell_voltage_msg, min_temp.val / 100, 16);
+	bitstream_add(&cell_voltage_msg, min_temp.chipIndex, 4);
+	bitstream_add(&cell_voltage_msg, min_temp.cellNum, 4);
+	bitstream_add(&cell_voltage_msg, avg_temp / 100, 16);
 
 	can_msg_t msg = { .id = CELL_TEMP_CANID,
 			  .len = CELL_TEMP_SIZE,
 			  .data = { 0 } };
 
-	memcpy(msg.data, &cell_temp_msg_data, sizeof(cell_temp_msg_data));
+	memcpy(msg.data, &bitstream_data, sizeof(bitstream_data));
 
 	queue_can_msg(msg);
 }

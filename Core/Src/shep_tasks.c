@@ -97,8 +97,8 @@ void vAnalyzer(void *pv_params)
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
 		calc_cell_voltages(bmsdata);
-		calc_pack_voltage_stats(bmsdata);
 		calc_open_cell_voltage(bmsdata);
+		calc_pack_voltage_stats(bmsdata);
 		calc_cell_resistances(bmsdata);
 
 		// these are dependent on above calculations
@@ -107,11 +107,10 @@ void vAnalyzer(void *pv_params)
 		calc_state_of_charge(bmsdata);
 
 		// send out telemetry data sourced from the above functions
-		send_acc_status_message(bmsdata->pack_voltage,
+		send_acc_status_message(bmsdata->pack_ocv,
 					bmsdata->pack_current, bmsdata->soc);
-		send_cell_voltage_message(bmsdata->max_voltage,
-					  bmsdata->min_voltage,
-					  bmsdata->avg_voltage);
+		send_cell_voltage_message(bmsdata->max_ocv, bmsdata->min_ocv,
+					  bmsdata->avg_ocv);
 		send_segment_volt_message(bmsdata);
 		send_cell_temp_message(bmsdata->max_temp, bmsdata->min_temp,
 				       bmsdata->avg_temp);
@@ -130,7 +129,7 @@ void vCurrentMonitor(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		// this info is sent in with the state machine debugging code
-		bmsdata->pack_current = compute_get_pack_current();
+		//bmsdata->pack_current = compute_get_pack_current();
 		float humidity;
 		compute_measure_temp(&bmsdata->internal_temp, &humidity);
 		osDelay(100);

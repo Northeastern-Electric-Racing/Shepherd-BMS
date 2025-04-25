@@ -68,7 +68,7 @@ int8_t compute_measure_temp(float *temp, float *humidity)
 
 void compute_set_fault(bool fault_state)
 {
-	HAL_GPIO_WritePin(FAULT_MCU_GPIO_Port, FAULT_MCU_Pin, !fault_state);
+	HAL_GPIO_WritePin(FAULT_MCU_GPIO_Port, FAULT_MCU_Pin, fault_state);
 }
 
 float compute_get_pack_current()
