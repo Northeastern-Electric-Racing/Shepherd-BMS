@@ -245,13 +245,13 @@ void send_cell_voltage_message(crit_cellval_t max_voltage,
 	uint8_t bitstream_data[8];
 	bitstream_init(&cell_voltage_msg, bitstream_data,
 		       8); // Create 7-byte bitstream
-	bitstream_add(&cell_voltage_msg, max_voltage.val / 10000, 16);
+	bitstream_add(&cell_voltage_msg, max_voltage.val * 10000, 16);
 	bitstream_add(&cell_voltage_msg, max_voltage.chipIndex, 4);
 	bitstream_add(&cell_voltage_msg, max_voltage.cellNum, 4);
-	bitstream_add(&cell_voltage_msg, min_voltage.val / 10000, 16);
+	bitstream_add(&cell_voltage_msg, min_voltage.val * 10000, 16);
 	bitstream_add(&cell_voltage_msg, min_voltage.chipIndex, 4);
 	bitstream_add(&cell_voltage_msg, min_voltage.cellNum, 4);
-	bitstream_add(&cell_voltage_msg, avg_voltage / 10000, 16);
+	bitstream_add(&cell_voltage_msg, avg_voltage * 10000, 16);
 
 	can_msg_t msg = { .id = CELL_DATA_CANID,
 			  .len = CELL_DATA_SIZE,
@@ -295,13 +295,13 @@ void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
 	uint8_t bitstream_data[8];
 	bitstream_init(&cell_voltage_msg, bitstream_data,
 		       8); // Create 7-byte bitstream
-	bitstream_add(&cell_voltage_msg, max_temp.val / 100, 16);
+	bitstream_add(&cell_voltage_msg, max_temp.val * 100, 16);
 	bitstream_add(&cell_voltage_msg, max_temp.chipIndex, 4);
 	bitstream_add(&cell_voltage_msg, max_temp.cellNum, 4);
-	bitstream_add(&cell_voltage_msg, min_temp.val / 100, 16);
+	bitstream_add(&cell_voltage_msg, min_temp.val * 100, 16);
 	bitstream_add(&cell_voltage_msg, min_temp.chipIndex, 4);
 	bitstream_add(&cell_voltage_msg, min_temp.cellNum, 4);
-	bitstream_add(&cell_voltage_msg, avg_temp / 100, 16);
+	bitstream_add(&cell_voltage_msg, avg_temp * 100, 16);
 
 	can_msg_t msg = { .id = CELL_TEMP_CANID,
 			  .len = CELL_TEMP_SIZE,

@@ -421,8 +421,8 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 		scaled_dcl = MIN_DCL;
 	}
 
-	//bmsdata->cont_DCL = scaled_dcl;
-	bmsdata->cont_DCL = 135;
+	bmsdata->cont_DCL = scaled_dcl;
+	// bmsdata->cont_DCL = 135;
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)
@@ -467,9 +467,9 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 		cell_volt_derate_factor = 1.0f;
 	}
 
-	// bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_cold_factor *
-	// 		    temp_hot_factor * cell_volt_derate_factor;
-	bmsdata->cont_CCL = 15;
+	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_cold_factor *
+			    temp_hot_factor * cell_volt_derate_factor;
+	//bmsdata->cont_CCL = 15;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)

@@ -72,9 +72,6 @@ void vGetSegmentData(void *pv_params)
 			//segment_unsnap(bmsdata);
 		}
 
-		// segment_enable_balancing(bmsdata);
-		// segment_manual_balancing(bmsdata);
-
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
 	}
