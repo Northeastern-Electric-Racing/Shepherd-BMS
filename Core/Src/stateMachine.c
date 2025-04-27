@@ -259,7 +259,6 @@ void sm_fault_return(acc_data_t *bmsdata)
 				bmsdata->fault_code_noncrit &= ~item_code;
 			}
 		}
-		i++;
 	}
 }
 

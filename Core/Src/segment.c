@@ -209,7 +209,17 @@ void segment_retrieve_charging_data(acc_data_t *bmsdata)
 	adc_and_read_aux2_registers(bmsdata->chips);
 
 	// read from ADC convs
-	get_c_and_s_adc_voltages(bmsdata->chips);
+	get_c_adc_voltages(bmsdata->chips);
+
+	// poll stuff like vref, etc.
+	adc_and_read_aux_registers(bmsdata->chips);
+
+	// read the above into status registers
+	read_status_registers(bmsdata->chips);
+
+	//segment_adc_comparison(bmsdata);
+	// check our fault flags
+	segment_monitor_flts(bmsdata->chips);
 }
 
 void segment_retrieve_debug_data(acc_data_t *bmsdata)
@@ -261,19 +271,20 @@ void segment_enable_balancing(acc_data_t *bmsdata)
 
 void segment_manual_balancing(acc_data_t *bmsdata)
 {
-	bool discharge_confg[NUM_CHIPS][NUM_CELLS_ALPHA] = {
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-		{ 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 1 },
-		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0 }
-	};
-	segment_configure_balancing(bmsdata, discharge_confg);
+	// bool discharge_confg[NUM_CHIPS][NUM_CELLS_ALPHA] = {
+	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1 }, // 4
+	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 },
+	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, // 2
+	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 },
+	// 	{ 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },  // 1
+	// 	{ 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0 }, 
+	// 	{ 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1 }, // 5
+	// 	{ 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0 },
+	// 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+	// 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+	// };
+
+	//segment_configure_balancing(bmsdata, discharge_confg);
 }
 
 void segment_configure_balancing(
