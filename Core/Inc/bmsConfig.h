@@ -56,7 +56,7 @@
 #define OCV_CURR_THRESH 3 /* in A */
 
 // Charging settings
-#define CHARGING_CURRENT    0
+#define CHARGING_CURRENT    3.5
 #define CHARGE_SETL_TIMEOUT 60000 // 1 minute, may need adjustment
 #define CHARGE_SETL_TIMEUP  300000 // 5 minutes, may need adjustment
 
