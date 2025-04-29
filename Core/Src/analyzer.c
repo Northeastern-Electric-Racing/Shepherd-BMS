@@ -66,8 +66,8 @@ const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+    {1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 // clang-format on
 
@@ -520,11 +520,24 @@ void calc_open_cell_voltage(acc_data_t *bmsdata)
 					&bmsdata->chip_data[chip]);
 				for (uint8_t cell = 0; cell < num_cells;
 				     cell++) {
-					// Set current OCV value
-					bmsdata->chip_data[chip]
-						.open_cell_voltage[cell] =
+					// Set current OCV value, ensure value is true OCV
+					if (bmsdata->chip_data[chip]
+							    .cell_voltages[cell] <
+						    4.5 &&
+					    bmsdata->chip_data[chip]
+							    .cell_voltages[cell] >
+						    2) {
 						bmsdata->chip_data[chip]
-							.cell_voltages[cell];
+							.open_cell_voltage[cell] =
+							bmsdata->chip_data[chip]
+								.cell_voltages
+									[cell];
+					} else {
+						bmsdata->chip_data[chip]
+							.open_cell_voltage[cell] =
+							bmsdata->segment_average_volts
+								[chip / 2];
+					}
 				}
 			}
 		} else {
