@@ -51,10 +51,10 @@ const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    {
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-//     {1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+//     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 //     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 // };
 const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
@@ -136,6 +136,9 @@ void calc_cell_temps(acc_data_t *bmsdata)
 
 				bmsdata->chip_data[chip].cell_temp[cell] =
 					calc_cell_temp(getVoltage(x));
+				// if (cell == 2 && chip == 5)
+				// 	bmsdata->chip_data[chip]
+				// 		.cell_temp[cell] = 61.5;
 			}
 		}
 
@@ -254,6 +257,9 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 					getVoltage(
 						bmsdata->chips[chip]
 							.fcell.fc_codes[cell]);
+				// if (chip == 5 && cell == 2)
+				// 	bmsdata->chip_data[chip]
+				// 		.cell_voltages[cell] = 2.4;
 			}
 		}
 	}

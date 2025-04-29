@@ -150,8 +150,8 @@ void handle_faulted(acc_data_t *bmsdata)
 	// never balance when faulted
 	segment_disable_balancing(bmsdata);
 	// TODO fault fail
-	// send_mc_charge_message(0);
-	// send_mc_discharge_message(0);
+	send_mc_charge_message(0);
+	send_mc_discharge_message(0);
 	if (bmsdata->is_charger_connected) {
 		send_charging_message(0, 0, false);
 	}
@@ -233,8 +233,8 @@ void sm_fault_return(acc_data_t *bmsdata)
 		fault_table[1].lim_1 = fault_data->cont_CCL;
 		fault_table[2].data_1 = fault_data->min_ocv.val;
 		fault_table[3].data_1 = fault_data->max_ocv.val;
-		fault_table[4].data_1 = fault_data->max_ocv.val;
 		fault_table[4].data_2 = fault_data->is_charger_connected;
+		fault_table[4].data_1 = fault_data->max_ocv.val;
 		fault_table[5].data_1 = fault_data->max_temp.val;
 		fault_table[6].data_1 = fault_data->min_ocv.val;
 		fault_table[7].data_1 = fault_data->max_chiptemp.val;

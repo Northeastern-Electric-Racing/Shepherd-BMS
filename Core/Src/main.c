@@ -264,15 +264,15 @@ printf("\n");
 
 #define DEBUG_THERM_VOLTS
   #ifdef DEBUG_THERM_VOLTS
-  printf("THERM VOLTS: \n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    for(uint8_t gpio = 0; gpio < 10; gpio++)
-    {
-        printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
-    }
-    printf("\n");
-  }
+  // printf("THERM VOLTS: \n");
+  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   for(uint8_t gpio = 0; gpio < 10; gpio++)
+  //   {
+  //       printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
+  //   }
+  //   printf("\n");
+  // }
   printf("THERM TEMPS: \n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
@@ -382,6 +382,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   
   HAL_Delay(500);
+  // while (1) {
+
+  // }
 	init_both_can(&hcan1, &hcan2);
   compute_init();
   // the BMS faults upon boot, the shutdown loop must clear out before drive
