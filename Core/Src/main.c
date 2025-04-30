@@ -237,16 +237,16 @@ printf("\n");
   //   printf("\n");
   // }
   // // make sure `read_s_voltage_registers` is being called
-  printf("S Voltages:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
-    }
-    printf("\n");
-  }
+  // printf("S Voltages:\n");
+  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  // {
+  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+  //   for(uint8_t cell = 0; cell < num_cells; cell++)
+  //   {
+  //       printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
+  //   }
+  //   printf("\n");
+  // }
   #endif
 
   #ifdef DEBUG_OCV
@@ -264,15 +264,15 @@ printf("\n");
 
 #define DEBUG_THERM_VOLTS
   #ifdef DEBUG_THERM_VOLTS
-  // printf("THERM VOLTS: \n");
-  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   for(uint8_t gpio = 0; gpio < 10; gpio++)
-  //   {
-  //       printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
-  //   }
-  //   printf("\n");
-  // }
+  printf("THERM VOLTS: \n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    for(uint8_t gpio = 0; gpio < 10; gpio++)
+    {
+        printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
+    }
+    printf("\n");
+  }
   printf("THERM TEMPS: \n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   {
