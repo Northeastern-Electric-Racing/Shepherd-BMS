@@ -27,55 +27,60 @@ const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
 						.stack_size = 2048,
 						.priority = osPriorityNormal };
 
-void vGetSegmentData(void *pv_params)
-{
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
+	void vGetSegmentData(void *pv_params)
+	{
+		acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
-	int i = 0;
+		int i = 0;
 
-	segment_init(bmsdata);
+		segment_init(bmsdata);
 
-	// must delay after init for some reason
-	osDelay(500);
+		// must delay after init for some reason
+		osDelay(500);
 
-	for (;;) {
-		if (current_state == CHARGING_STATE) {
-			segment_mute(bmsdata);
-			osDelay(50);
-		} else { // snap before getting data
-			//segment_snap(bmsdata);
+		for (;;) {
+
+			// critical section so CAN does not block chip wake with ISR
+			taskENTER_CRITICAL();
+			if (current_state == CHARGING_STATE) {
+				segment_mute(bmsdata);
+				osDelay(50);
+			} else { // snap before getting data
+				//segment_snap(bmsdata);
+			}
+
+			if (current_state == CHARGING_STATE)
+				segment_retrieve_charging_data(bmsdata);
+			else
+				segment_retrieve_active_data(bmsdata);
+
+			if (DEBUG_MODE_ENABLED) {
+				segment_retrieve_debug_data(bmsdata);
+			}
+
+			// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
+			// if (current_state == READY_STATE) {
+			// 	if (++i % (45 * SAMPLE_RATE) == 0) {
+			// 		printf(" ***********  REBOOTING SEGMENT\n\n");
+			// 		segment_restart(bmsdata);
+			// 	}
+			// }
+
+			//segment_disable_balancing(bmsdata);
+
+			if (current_state == CHARGING_STATE) {
+				segment_unmute(bmsdata);
+			} else {
+				// unsnap after getting data
+				//segment_unsnap(bmsdata);
+			}
+
+			osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
+			taskEXIT_CRITICAL();
+
+			osDelay(1000 / SAMPLE_RATE);
 		}
-
-		if (current_state == CHARGING_STATE)
-			segment_retrieve_charging_data(bmsdata);
-		else
-			segment_retrieve_active_data(bmsdata);
-
-		if (DEBUG_MODE_ENABLED) {
-			segment_retrieve_debug_data(bmsdata);
-		}
-
-		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
-		// if (current_state == READY_STATE) {
-		// 	if (++i % (45 * SAMPLE_RATE) == 0) {
-		// 		printf(" ***********  REBOOTING SEGMENT\n\n");
-		// 		segment_restart(bmsdata);
-		// 	}
-		// }
-
-		//segment_disable_balancing(bmsdata);
-
-		if (current_state == CHARGING_STATE) {
-			segment_unmute(bmsdata);
-		} else {
-			// unsnap after getting data
-			//segment_unsnap(bmsdata);
-		}
-
-		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
-		osDelay(1000 / SAMPLE_RATE);
 	}
-}
 
 osThreadId_t analyzer_thread;
 const osThreadAttr_t analyzer_attrs = { .name = "Analyzer",
