@@ -399,7 +399,7 @@ void read_serial_id(cell_asic chips[NUM_CHIPS])
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
 	read_c_voltage_registers(chips);

@@ -127,8 +127,19 @@ void calc_cell_temps(acc_data_t *bmsdata)
 
 		for (int cell = 0; cell < num_cells; cell++) {
 			if (THERM_FAIL_MAP[chip][THERM_MAP[cell]]) {
-				bmsdata->chip_data[chip].cell_temp[cell] =
-					bmsdata->segment_average_temps[chip % 2];
+				static bool is_first = true;
+				if (is_first) {
+					bmsdata->chip_data[chip]
+						.cell_temp[cell] = 33.33;
+					is_first = false;
+				} else {
+					if (!isnan(bmsdata->segment_average_temps
+							   [chip / 2]))
+						bmsdata->chip_data[chip]
+							.cell_temp[cell] =
+							bmsdata->segment_average_temps
+								[chip / 2];
+				}
 			} else {
 				int16_t x =
 					bmsdata->chips[chip]
@@ -215,6 +226,9 @@ void calc_pack_temps(acc_data_t *bmsdata)
 				total_seg_temp /
 				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
 			total_seg_temp = 0;
+			// if (c == 5) {
+			// 	printf("%f", se)
+			// }
 		}
 
 		if (bmsdata->max_chiptemp.val <
@@ -428,8 +442,8 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 		scaled_dcl = MIN_DCL;
 	}
 
-	bmsdata->cont_DCL = scaled_dcl;
-	// bmsdata->cont_DCL = 135;
+	//bmsdata->cont_DCL = scaled_dcl;
+	bmsdata->cont_DCL = MAX_PACK_DISCHG_CURR;
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)
@@ -476,7 +490,7 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 
 	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_cold_factor *
 			    temp_hot_factor * cell_volt_derate_factor;
-	//bmsdata->cont_CCL = 15;
+	bmsdata->cont_CCL = MAX_PACK_CHG_CURR;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)

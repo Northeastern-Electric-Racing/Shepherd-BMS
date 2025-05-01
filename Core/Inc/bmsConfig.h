@@ -42,9 +42,10 @@
 // Pack Limits
 #define MAX_PACK_CHG_CURR \
 	30 /* Pack-level charge limit: (MAX_CHG_CURR - 3.5A margin) × 3 cells in parallel */
-#define MAX_PACK_DISCHG_CURR \
-	(MAX_DISCHG_CURR *   \
-	 3) /* Pack-level discharge limit: MAX_DISCHG_CURR × 3 cells in parallel */
+// #define MAX_PACK_DISCHG_CURR \
+// 	(MAX_DISCHG_CURR *   \
+// 	 3) /* Pack-level discharge limit: MAX_DISCHG_CURR × 3 cells in parallel */
+#define MAX_PACK_DISCHG_CURR 135
 #define MIN_DCL 30.0f
 
 // ADBMS6830 limits
@@ -53,25 +54,22 @@
 // Algorithm settings
 #define VOLT_SAG_MARGIN \
 	0.45 // Volts above the minimum cell voltage we would like to aim for
-#define OCV_CURR_THRESH 3 /* in A */
+#define OCV_CURR_THRESH 2 /* in A */
 
 // Charging settings
-#define CHARGING_CURRENT    3.5
-#define CHARGE_SETL_TIMEOUT 60000 // 1 minute, may need adjustment
-#define CHARGE_SETL_TIMEUP  300000 // 5 minutes, may need adjustment
+#define CHARGING_CURRENT    4.0
+#define CHARGE_SETL_TIMEOUT 30000 // 1 minute, may need adjustment
+#define CHARGE_SETL_TIMEUP  120000 // 5 minutes, may need adjustment
 
 //Fault times
 #define OVER_CURR_TIME \
-	5000 //todo adjust these based on testing and/or counter values
-#define PRE_OVER_CURR_TIME  1000
-#define OVER_CHG_CURR_TIME  1000
-#define UNDER_VOLT_TIME	    30000
-#define PRE_UNDER_VOLT_TIME 12000
-#define OVER_VOLT_TIME	    30000
+	55000 //todo adjust these based on testing and/or counter values
+#define OVER_CHG_CURR_TIME  55000
+#define UNDER_VOLT_TIME	    55000
+#define OVER_VOLT_TIME	    55000
 #define LOW_CELL_TIME	    55000
-#define HIGH_TEMP_TIME	    30000
-#define CURR_ERR_MARG	    1.1 // scaling factor, ie 1.1 = 10% error
-#define MAX_CHIPTEMP_TIME   5000
+#define HIGH_TEMP_TIME	    55000
+#define MAX_CHIPTEMP_TIME   55000
 
 // system wide base ADBMS sample rate
 #define SAMPLE_RATE 2 /* Hz */

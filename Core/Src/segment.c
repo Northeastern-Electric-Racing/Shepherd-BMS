@@ -138,12 +138,12 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		printf("CHIP %d :", chip);
+		//printf("CHIP %d :", chip);
 		if (chips[chip].statc.cs_flt > 0) {
 			//printf("C VS S MISMATCH on cells ");
 			for (int i = 0; i < 16; i++) {
 				if (NER_GET_BIT(chips[chip].statc.cs_flt, i)) {
-				//	printf("%d, ", i);
+					//	printf("%d, ", i);
 				}
 			}
 			//printf("\n");
@@ -208,11 +208,11 @@ void segment_retrieve_charging_data(acc_data_t *bmsdata)
 	// read all therms using AUX 2
 	adc_and_read_aux2_registers(bmsdata->chips);
 
-	// read from ADC convs
-	get_c_adc_voltages(bmsdata->chips);
-
 	// poll stuff like vref, etc.
 	adc_and_read_aux_registers(bmsdata->chips);
+
+	// read from ADC convs
+	get_c_adc_voltages(bmsdata->chips);
 
 	// read the above into status registers
 	read_status_registers(bmsdata->chips);
@@ -271,20 +271,22 @@ void segment_enable_balancing(acc_data_t *bmsdata)
 
 void segment_manual_balancing(acc_data_t *bmsdata)
 {
-	// bool discharge_confg[NUM_CHIPS][NUM_CELLS_ALPHA] = {
-	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1 }, // 4
-	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 },
-	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, // 2
-	// 	{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0 },
-	// 	{ 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },  // 1
-	// 	{ 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0 }, 
-	// 	{ 0, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1 }, // 5
-	// 	{ 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0 },
-	// 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-	// 	{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-	// };
+	// clang-format off
+	bool discharge_confg[NUM_CHIPS][NUM_CELLS_ALPHA] = {
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+	};
+	// clang-format on
 
-	//segment_configure_balancing(bmsdata, discharge_confg);
+	segment_configure_balancing(bmsdata, discharge_confg);
 }
 
 void segment_configure_balancing(

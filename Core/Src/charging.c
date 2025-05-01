@@ -37,11 +37,11 @@ void handle_balance_cells(acc_data_t *bmsdata)
 		return;
 	}
 
-	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA];
+	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 
 	/* Get cell voltage average and standard deviation */
 	float low = bmsdata->min_ocv.val;
-	float thresh = bmsdata->delt_ocv * 0.05;
+	float thresh = bmsdata->delt_ocv * 0.8;
 
 	/* Set the threshold for balancing to (mu - sigma * STD_FACTOR) */
 
@@ -49,7 +49,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
 			/* Check if cell voltage is above (average - standard deviation) */
-			if (bmsdata->chip_data[chip].cell_voltages[cell] >
+			if (bmsdata->chip_data[chip].open_cell_voltage[cell] >
 			    (low + thresh)) {
 				/* Balance cell */
 				balanceConfig[chip][cell] = true;

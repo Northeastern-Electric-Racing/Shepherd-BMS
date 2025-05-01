@@ -215,17 +215,17 @@ printf("\n");
 }
 
   // make sure `read_c_voltage_registers` is being called
-  // printf("C Voltages:\n");
-  //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-  //   for(uint8_t cell = 0; cell < num_cells; cell++)
-  //   {
-  //       printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
-  //   }
-  //   printf("\n");
-  // }
-  //   // make sure `read_f_voltage_registers` is being called
+  printf("C Voltages:\n");
+    for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
+    }
+    printf("\n");
+  }
+    // make sure `read_f_voltage_registers` is being called
   // printf("F Voltages:\n");
   //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   // {
@@ -353,6 +353,19 @@ int main(void)
   acc_data->pack_current = 0;
   acc_data->fault_code_crit = FAULTS_CLEAR;
   acc_data->fault_code_noncrit = FAULTS_CLEAR;
+  
+  acc_data->segment_average_temps[0] = 33.33;
+  acc_data->segment_average_temps[1] = 33.33;
+  acc_data->segment_average_temps[2] = 33.33;
+  acc_data->segment_average_temps[3] = 33.33;
+  acc_data->segment_average_temps[4] = 33.33;
+
+  acc_data->segment_average_volts[0] = 3.666;
+  acc_data->segment_average_volts[1] = 3.666;
+  acc_data->segment_average_volts[2] = 3.666;
+  acc_data->segment_average_volts[3] = 3.666;
+  acc_data->segment_average_volts[4] = 3.666;
+
   
   /* USER CODE END Init */
 

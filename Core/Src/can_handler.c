@@ -37,7 +37,7 @@ can_t *can2;
 
 static uint16_t can1_id_list_standard[4] = {
 	//CANID_X,
-	//DTI_CURRENT_CANID,
+	DTI_CURRENT_CANID,
 };
 
 static uint32_t can1_id_list_extended[2] = {
