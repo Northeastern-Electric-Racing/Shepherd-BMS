@@ -175,11 +175,13 @@ inline void delay_us(uint16_t us)
  */
 void adbms_wake_isospi()
 {
+	__disable_irq();
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
 		delay_us(20);
 	}
+	__enable_irq();
 }
 
 /**
@@ -188,11 +190,15 @@ void adbms_wake_isospi()
  */
 void adbms_wake_core()
 {
+	__disable_irq();
+
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
 		delay_us(1000);
 	}
+
+	__enable_irq();
 }
 
 /**
