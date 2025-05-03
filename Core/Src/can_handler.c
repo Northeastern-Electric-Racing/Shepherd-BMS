@@ -262,6 +262,8 @@ void vCanReceive(void *pv_params)
 
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
+	osDelay(500); // Dont receive can messages for first 500 ms, allow chips to boot
+
 	for (;;) {
 		osThreadFlagsWait(NEW_CAN_MSG_FLAG, osFlagsWaitAny,
 				  osWaitForever);
