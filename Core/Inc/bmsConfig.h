@@ -54,7 +54,7 @@
 // Algorithm settings
 #define VOLT_SAG_MARGIN \
 	0.45 // Volts above the minimum cell voltage we would like to aim for
-#define OCV_CURR_THRESH 2 /* in A */
+#define OCV_CURR_THRESH 0.5 /* in A */
 
 // Charging settings
 #define CHARGING_CURRENT    4.0
