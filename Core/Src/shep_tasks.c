@@ -41,24 +41,19 @@ void vGetSegmentData(void *pv_params)
 
 	for (;;) {
 		// critical section so CAN does not block chip wake with ISR
-		HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
-		int current_state_2 = current_state;
 
 		segment_mute(bmsdata);
 
-		if (current_state_2 == CHARGING_STATE) {
+		if (current_state == CHARGING_STATE) {
 			osDelay(75);
 		} else { // snap before getting data
 			//segment_snap(bmsdata);
 		}
 
-		if (current_state_2 == CHARGING_STATE) {
+		if (current_state == CHARGING_STATE) {
 			segment_retrieve_charging_data(bmsdata);
 		} else {
 			segment_retrieve_active_data(bmsdata);
-			if (DEBUG_MODE_ENABLED) {
-				segment_retrieve_debug_data(bmsdata);
-			}
 		}
 
 		if (DEBUG_MODE_ENABLED) {
@@ -82,15 +77,12 @@ void vGetSegmentData(void *pv_params)
 		// 	}
 		// }
 
-		// if (current_state_2 == CHARGING_STATE) {
-		// 	segment_unmute(bmsdata);
-		// } else {
-		// 	// unsnap after getting data
-		// 	//segment_unsnap(bmsdata);
-		// }
-
-		// critical section so CAN does not block chip wake with ISR
-		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+		if (current_state == CHARGING_STATE) {
+			segment_unmute(bmsdata);
+		} else {
+			// unsnap after getting data
+			//segment_unsnap(bmsdata);
+		}
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
