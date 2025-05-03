@@ -54,11 +54,12 @@ void vGetSegmentData(void *pv_params)
 			segment_retrieve_charging_data(bmsdata);
 		} else {
 			segment_retrieve_active_data(bmsdata);
+			if (DEBUG_MODE_ENABLED) {
+				segment_retrieve_debug_data(bmsdata);
+			}
 		}
 
-		if (DEBUG_MODE_ENABLED) {
-			segment_retrieve_debug_data(bmsdata);
-		}
+		
 
 		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
 		// if (current_state == READY_STATE) {
