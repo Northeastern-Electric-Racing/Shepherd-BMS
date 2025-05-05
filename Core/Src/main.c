@@ -1214,8 +1214,6 @@ void StartDefaultTask(void *argument)
   
     HAL_IWDG_Refresh(&hiwdg);
 
-    printf("SHUTDOWN: %d\n", read_shutdown());
-
     toggle_debug_led_1();
     osDelay(500);
 

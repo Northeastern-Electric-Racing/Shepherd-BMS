@@ -40,8 +40,6 @@ void vGetSegmentData(void *pv_params)
 	osDelay(500);
 
 	for (;;) {
-		// critical section so CAN does not block chip wake with ISR
-
 		segment_mute(bmsdata);
 
 		if (current_state == CHARGING_STATE) {
