@@ -128,7 +128,7 @@ void init_faulted(acc_data_t *bmsdata)
 {
 	// never balance when faulted
 	segment_disable_balancing(bmsdata);
-	// TODO fault fail
+
 	send_mc_charge_message(0);
 	send_mc_discharge_message(0);
 	// never charge when faulted
@@ -149,7 +149,7 @@ void handle_faulted(acc_data_t *bmsdata)
 	compute_set_fault(true);
 	// never balance when faulted
 	segment_disable_balancing(bmsdata);
-	// TODO fault fail
+
 	send_mc_charge_message(0);
 	send_mc_discharge_message(0);
 	if (bmsdata->is_charger_connected) {

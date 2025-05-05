@@ -42,10 +42,9 @@
 // Pack Limits
 #define MAX_PACK_CHG_CURR \
 	30 /* Pack-level charge limit: (MAX_CHG_CURR - 3.5A margin) × 3 cells in parallel */
-// #define MAX_PACK_DISCHG_CURR \
-// 	(MAX_DISCHG_CURR *   \
-// 	 3) /* Pack-level discharge limit: MAX_DISCHG_CURR × 3 cells in parallel */
-#define MAX_PACK_DISCHG_CURR 135
+#define MAX_PACK_DISCHG_CURR \
+	(MAX_DISCHG_CURR *   \
+	 3) /* Pack-level discharge limit: MAX_DISCHG_CURR × 3 cells in parallel */
 #define MIN_DCL 30.0f
 
 // ADBMS6830 limits
@@ -64,12 +63,12 @@
 //Fault times
 #define OVER_CURR_TIME \
 	55000 //todo adjust these based on testing and/or counter values
-#define OVER_CHG_CURR_TIME  55000
-#define UNDER_VOLT_TIME	    55000
-#define OVER_VOLT_TIME	    55000
-#define LOW_CELL_TIME	    55000
-#define HIGH_TEMP_TIME	    55000
-#define MAX_CHIPTEMP_TIME   55000
+#define OVER_CHG_CURR_TIME 55000
+#define UNDER_VOLT_TIME	   55000
+#define OVER_VOLT_TIME	   55000
+#define LOW_CELL_TIME	   55000
+#define HIGH_TEMP_TIME	   55000
+#define MAX_CHIPTEMP_TIME  55000
 
 // system wide base ADBMS sample rate
 #define SAMPLE_RATE 2 /* Hz */

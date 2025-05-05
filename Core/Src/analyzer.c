@@ -226,9 +226,6 @@ void calc_pack_temps(acc_data_t *bmsdata)
 				total_seg_temp /
 				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
 			total_seg_temp = 0;
-			// if (c == 5) {
-			// 	printf("%f", se)
-			// }
 		}
 
 		if (bmsdata->max_chiptemp.val <
@@ -442,8 +439,7 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 		scaled_dcl = MIN_DCL;
 	}
 
-	//bmsdata->cont_DCL = scaled_dcl;
-	bmsdata->cont_DCL = MAX_PACK_DISCHG_CURR;
+	bmsdata->cont_DCL = scaled_dcl;
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)
@@ -490,7 +486,6 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 
 	bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_cold_factor *
 			    temp_hot_factor * cell_volt_derate_factor;
-	bmsdata->cont_CCL = MAX_PACK_CHG_CURR;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)

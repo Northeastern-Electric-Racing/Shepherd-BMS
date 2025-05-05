@@ -36,7 +36,7 @@ void vGetSegmentData(void *pv_params)
 
 	segment_init(bmsdata);
 
-	// must delay after init for some reason
+	// must delay after init for some reason, or else ADC doesnt start up (-3.45 or something)
 	osDelay(500);
 
 	for (;;) {
@@ -45,12 +45,14 @@ void vGetSegmentData(void *pv_params)
 		segment_mute(bmsdata);
 
 		if (current_state == CHARGING_STATE) {
+			// must delay to let settle after balancing has halted, or else cells read high
 			osDelay(75);
 		} else { // snap before getting data
 			//segment_snap(bmsdata);
 		}
 
 		if (current_state == CHARGING_STATE) {
+			// in charging, debug data is required to get things like die temp
 			segment_retrieve_charging_data(bmsdata);
 		} else {
 			segment_retrieve_active_data(bmsdata);
@@ -58,8 +60,6 @@ void vGetSegmentData(void *pv_params)
 				segment_retrieve_debug_data(bmsdata);
 			}
 		}
-
-		
 
 		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
 		// if (current_state == READY_STATE) {
@@ -183,9 +183,6 @@ const osThreadAttr_t debug_mode_attrs = { .name = "Debug Mode Thread",
 void vDebugMode(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
-
-	// try to even everything out for a 1 Hz refresh rate
-	uint16_t time_per_chip = 750 / NUM_CHIPS;
 
 	while (69 < 420) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {

@@ -350,10 +350,12 @@ int main(void)
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
   acc_data->is_charger_connected = false;
   acc_data->is_charging_enabled = false;
+  // this effectively does that if current reading is broken, voltage=ocv
   acc_data->pack_current = 0;
   acc_data->fault_code_crit = FAULTS_CLEAR;
   acc_data->fault_code_noncrit = FAULTS_CLEAR;
   
+  // these are starting numbers so averaging is less likely to produce NaN
   acc_data->segment_average_temps[0] = 33.33;
   acc_data->segment_average_temps[1] = 33.33;
   acc_data->segment_average_temps[2] = 33.33;
