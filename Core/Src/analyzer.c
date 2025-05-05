@@ -260,6 +260,7 @@ void calc_cell_voltages(acc_data_t *bmsdata)
 							[chip / 2];
 				}
 			} else if (current_state == CHARGING_STATE) {
+				// in charging state, we read single shot c codes ONLY
 				bmsdata->chip_data[chip].cell_voltages[cell] =
 					getVoltage(bmsdata->chips[chip]
 							   .cell.c_codes[cell]);

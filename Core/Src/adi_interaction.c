@@ -170,7 +170,7 @@ inline void delay_us(uint16_t us)
 }
 
 /**
- * @brief Wake the isoSPI of every ADBMS6830 IC in the daisy chain. Blocking wait for around 30us * NUM_CHIPS.
+ * @brief Wake the isoSPI of every ADBMS6830 IC in the daisy chain. Blocking critical section wait for around 30us * NUM_CHIPS.
  * 
  */
 void adbms_wake_isospi()
@@ -185,7 +185,7 @@ void adbms_wake_isospi()
 }
 
 /**
- * @brief Wake the chip of every ADBMS6830 IC.  Blocking wait about 1ms * NUM_CHIPS
+ * @brief Wake the chip of every ADBMS6830 IC.  Blocking critical section wait about 1ms * NUM_CHIPS
  * 
  */
 void adbms_wake_core()
