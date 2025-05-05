@@ -11,7 +11,7 @@
  * @param is_charging_enabled whether charging is allowed
  *
  */
-int send_charging_message(uint16_t voltage_to_set, uint16_t current_to_set,
+int send_charging_message(float voltage_to_set, float current_to_set,
 			  bool is_charging_enabled);
 
 /**

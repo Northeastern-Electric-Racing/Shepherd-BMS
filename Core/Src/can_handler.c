@@ -37,11 +37,12 @@ can_t *can2;
 
 static uint16_t can1_id_list_standard[4] = {
 	//CANID_X,
-	0x002
+	DTI_CURRENT_CANID,
 };
 
 static uint32_t can1_id_list_extended[2] = {
 	//CANID_X,
+	CHARGERBOX_CANID
 };
 
 static uint16_t can2_id_list_standard[4] = {
@@ -119,13 +120,13 @@ void init_both_can(CAN_HandleTypeDef *hcan1, CAN_HandleTypeDef *hcan2)
 
 	can1->hcan = hcan1;
 	assert(!can_init(can1));
-	assert(!can_add_filter_standard(can1, can1_id_list_standard));
 	assert(!can_add_filter_extended(can1, can1_id_list_extended));
+	assert(!can_add_filter_standard(can1, can1_id_list_standard));
 
-	can2->hcan = hcan2;
-	assert(!can_init(can2));
-	assert(!can_add_filter_standard(can2, can2_id_list_standard));
-	assert(!can_add_filter_extended(can2, can2_id_list_extended));
+	// can2->hcan = hcan2;
+	// assert(!can_init(can2));
+	// assert(!can_add_filter_standard(can2, can2_id_list_standard));
+	// assert(!can_add_filter_extended(can2, can2_id_list_extended));
 
 	can_outbound_queue =
 		osMessageQueueNew(CAN_MSG_QUEUE_SIZE, sizeof(can_msg_t), NULL);
@@ -204,11 +205,7 @@ void vCanDispatch(void *pv_params)
 
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
-	can_t *line;
-	if (bmsdata->is_charger_connected)
-		line = can2;
-	else
-		line = can1;
+	can_t *line = can1;
 
 	for (;;) {
 		osThreadFlagsWait(CAN_DISPATCH_FLAG, osFlagsWaitAny,
@@ -235,6 +232,23 @@ void vCanDispatch(void *pv_params)
 	}
 }
 
+/**
+ * @brief Parses the DTI can message for pack current
+ * 
+ * @param msg 
+ * @return float 
+ */
+float parse_dti_current(can_msg_t msg)
+{
+	int16_t curr = msg.data[2] << 8 | msg.data[3];
+	return ((float)curr) / 10;
+}
+float parse_charger_current(can_msg_t msg)
+{
+	int16_t curr = msg.data[2] << 8 | msg.data[3];
+	return ((float)curr) / 10;
+}
+
 osThreadId_t can_receive_thread;
 const osThreadAttr_t can_receive_attributes = {
 	.name = "CanProcessing",
@@ -248,6 +262,8 @@ void vCanReceive(void *pv_params)
 
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
+	osDelay(500); // Dont receive can messages for first 500 ms, allow chips to boot
+
 	for (;;) {
 		osThreadFlagsWait(NEW_CAN_MSG_FLAG, osFlagsWaitAny,
 				  osWaitForever);
@@ -256,6 +272,11 @@ void vCanReceive(void *pv_params)
 			switch (msg.id) {
 			case CHARGERBOX_CANID:
 				charger_message_recieved(bmsdata);
+				bmsdata->pack_current =
+					parse_charger_current(msg);
+				break;
+			case DTI_CURRENT_CANID:
+				bmsdata->pack_current = parse_dti_current(msg);
 				break;
 			default:
 				break;

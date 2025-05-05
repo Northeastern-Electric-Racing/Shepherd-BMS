@@ -170,29 +170,35 @@ inline void delay_us(uint16_t us)
 }
 
 /**
- * @brief Wake the isoSPI of every ADBMS6830 IC in the daisy chain. Blocking wait for around 30us * NUM_CHIPS.
+ * @brief Wake the isoSPI of every ADBMS6830 IC in the daisy chain. Blocking critical section wait for around 30us * NUM_CHIPS.
  * 
  */
 void adbms_wake_isospi()
 {
+	__disable_irq();
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
 		delay_us(20);
 	}
+	__enable_irq();
 }
 
 /**
- * @brief Wake the chip of every ADBMS6830 IC.  Blocking wait about 1ms * NUM_CHIPS
+ * @brief Wake the chip of every ADBMS6830 IC.  Blocking critical section wait about 1ms * NUM_CHIPS
  * 
  */
 void adbms_wake_core()
 {
+	__disable_irq();
+
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
 		delay_us(1000);
 	}
+
+	__enable_irq();
 }
 
 /**
@@ -399,7 +405,7 @@ void read_serial_id(cell_asic chips[NUM_CHIPS])
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
+	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
 	read_c_voltage_registers(chips);

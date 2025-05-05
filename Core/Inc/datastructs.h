@@ -113,6 +113,7 @@ typedef struct {
 	float soc;
 
 	float segment_average_temps[NUM_SEGMENTS];
+	/* OCV average voltages */
 	float segment_average_volts[NUM_SEGMENTS];
 
 	// the board temperature
@@ -191,16 +192,16 @@ typedef struct {
 	char id[100];
 	nertimer_t timer;
 
-	int data_1;
+	float data_1;
 	fault_evalop_t optype_1;
-	int lim_1;
+	float lim_1;
 
 	int timeout;
 	int code;
 
 	fault_evalop_t optype_2;
-	int data_2;
-	int lim_2;
+	float data_2;
+	float lim_2;
 
 	bool is_critical;
 	// bool is_faulted; /* note: unused field */

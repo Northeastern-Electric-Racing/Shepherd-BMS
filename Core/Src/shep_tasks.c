@@ -14,6 +14,7 @@
 #include "can_messages.h"
 #include "c_utils.h"
 #include "compute.h"
+#include "charging.h"
 #include "segment.h"
 #include "serialPrintResult.h"
 #include "stateMachine.h"
@@ -35,23 +36,27 @@ void vGetSegmentData(void *pv_params)
 
 	segment_init(bmsdata);
 
-	// must delay after init for some reason
+	// must delay after init for some reason, or else ADC doesnt start up (-3.45 or something)
 	osDelay(500);
 
 	for (;;) {
+		segment_mute(bmsdata);
+
 		if (current_state == CHARGING_STATE) {
-			segment_mute(bmsdata);
+			// must delay to let settle after balancing has halted, or else cells read high
+			osDelay(75);
 		} else { // snap before getting data
-			segment_snap(bmsdata);
+			//segment_snap(bmsdata);
 		}
 
-		if (current_state == CHARGING_STATE)
+		if (current_state == CHARGING_STATE) {
+			// in charging, debug data is required to get things like die temp
 			segment_retrieve_charging_data(bmsdata);
-		else
+		} else {
 			segment_retrieve_active_data(bmsdata);
-
-		if (DEBUG_MODE_ENABLED) {
-			segment_retrieve_debug_data(bmsdata);
+			if (DEBUG_MODE_ENABLED) {
+				segment_retrieve_debug_data(bmsdata);
+			}
 		}
 
 		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
@@ -62,12 +67,20 @@ void vGetSegmentData(void *pv_params)
 		// 	}
 		// }
 
-		segment_disable_balancing(bmsdata);
+		// if (current_state_2 == CHARGING_STATE) {
+		// 	//segment_disable_balancing(bmsdata);
+		// 	if (current_state != FAULTED_STATE) {
+		// 		segment_manual_balancing(bmsdata);
+		// 		segment_enable_balancing(bmsdata);
+		// 		//handle_balance_cells(bmsdata);
+		// 	}
+		// }
+
 		if (current_state == CHARGING_STATE) {
 			segment_unmute(bmsdata);
 		} else {
 			// unsnap after getting data
-			segment_unsnap(bmsdata);
+			//segment_unsnap(bmsdata);
 		}
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
@@ -92,8 +105,8 @@ void vAnalyzer(void *pv_params)
 		calc_cell_temps(bmsdata);
 		calc_pack_temps(bmsdata);
 		calc_cell_voltages(bmsdata);
-		calc_pack_voltage_stats(bmsdata);
 		calc_open_cell_voltage(bmsdata);
+		calc_pack_voltage_stats(bmsdata);
 		calc_cell_resistances(bmsdata);
 
 		// these are dependent on above calculations
@@ -102,11 +115,10 @@ void vAnalyzer(void *pv_params)
 		calc_state_of_charge(bmsdata);
 
 		// send out telemetry data sourced from the above functions
-		send_acc_status_message(bmsdata->pack_voltage,
+		send_acc_status_message(bmsdata->pack_ocv,
 					bmsdata->pack_current, bmsdata->soc);
-		send_cell_voltage_message(bmsdata->max_voltage,
-					  bmsdata->min_voltage,
-					  bmsdata->avg_voltage);
+		send_cell_voltage_message(bmsdata->max_ocv, bmsdata->min_ocv,
+					  bmsdata->avg_ocv);
 		send_segment_volt_message(bmsdata);
 		send_cell_temp_message(bmsdata->max_temp, bmsdata->min_temp,
 				       bmsdata->avg_temp);
@@ -125,7 +137,7 @@ void vCurrentMonitor(void *pv_params)
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 	for (;;) {
 		// this info is sent in with the state machine debugging code
-		bmsdata->pack_current = compute_get_pack_current();
+		//bmsdata->pack_current = compute_get_pack_current();
 		float humidity;
 		compute_measure_temp(&bmsdata->internal_temp, &humidity);
 		osDelay(100);
@@ -170,9 +182,6 @@ void vDebugMode(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
-	// try to even everything out for a 1 Hz refresh rate
-	uint16_t time_per_chip = 1500 / NUM_CHIPS;
-
 	while (69 < 420) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
@@ -211,7 +220,7 @@ void vDebugMode(void *pv_params)
 					 (cell + 1)) &
 						1);
 				// split half the time amongst the cells (over 2)
-				osDelay(time_per_chip / 2 / num_cells / 2);
+				osDelay(10);
 			}
 
 			// Send chip status messages
@@ -236,7 +245,7 @@ void vDebugMode(void *pv_params)
 							       .aux
 							       .a_codes[11]));
 				// wait for 1/4 the chip time
-				osDelay(time_per_chip / 4);
+				osDelay(30);
 				send_beta_status_b_message(
 					getVoltage(bmsdata->chips[chip]
 							   .stata.vref2),
@@ -271,7 +280,7 @@ void vDebugMode(void *pv_params)
 							 .aux.a_codes[10])),
 					&bmsdata->chips[chip].statc);
 				// wait for 1/4 the chip time
-				osDelay(time_per_chip / 4);
+				osDelay(30);
 				send_alpha_status_b_message(
 					getVoltage(
 						bmsdata->chips[chip].statb.vr4k),
@@ -285,7 +294,7 @@ void vDebugMode(void *pv_params)
 					&bmsdata->chips[chip].statc);
 			}
 			// wait for 1/4 the chip time
-			osDelay(time_per_chip / 4);
+			osDelay(30);
 		}
 	}
 }

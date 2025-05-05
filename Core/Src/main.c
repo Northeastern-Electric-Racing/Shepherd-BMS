@@ -203,18 +203,29 @@ const void print_bms_stats(acc_data_t *acc_data)
   }
   printf("\n");
 }
+printf("OCV:\n");
+for(uint8_t c = 0; c < NUM_CHIPS; c++)
+{
+uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+for(uint8_t cell = 0; cell < num_cells; cell++)
+{
+    printf("%.5f\t", acc_data->chip_data[c].open_cell_voltage[cell]);
+}
+printf("\n");
+}
+
   // make sure `read_c_voltage_registers` is being called
-  // printf("C Voltages:\n");
-  //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-  //   for(uint8_t cell = 0; cell < num_cells; cell++)
-  //   {
-  //       printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
-  //   }
-  //   printf("\n");
-  // }
-  //   // make sure `read_f_voltage_registers` is being called
+  printf("C Voltages:\n");
+    for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
+    for(uint8_t cell = 0; cell < num_cells; cell++)
+    {
+        printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
+    }
+    printf("\n");
+  }
+    // make sure `read_f_voltage_registers` is being called
   // printf("F Voltages:\n");
   //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
   // {
@@ -339,8 +350,24 @@ int main(void)
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
   acc_data->is_charger_connected = false;
   acc_data->is_charging_enabled = false;
+  // this effectively does that if current reading is broken, voltage=ocv
+  acc_data->pack_current = 0;
   acc_data->fault_code_crit = FAULTS_CLEAR;
   acc_data->fault_code_noncrit = FAULTS_CLEAR;
+  
+  // these are starting numbers so averaging is less likely to produce NaN
+  acc_data->segment_average_temps[0] = 33.33;
+  acc_data->segment_average_temps[1] = 33.33;
+  acc_data->segment_average_temps[2] = 33.33;
+  acc_data->segment_average_temps[3] = 33.33;
+  acc_data->segment_average_temps[4] = 33.33;
+
+  acc_data->segment_average_volts[0] = 3.666;
+  acc_data->segment_average_volts[1] = 3.666;
+  acc_data->segment_average_volts[2] = 3.666;
+  acc_data->segment_average_volts[3] = 3.666;
+  acc_data->segment_average_volts[4] = 3.666;
+
   
   /* USER CODE END Init */
 
@@ -370,6 +397,9 @@ int main(void)
   /* USER CODE BEGIN 2 */
   
   HAL_Delay(500);
+  // while (1) {
+
+  // }
 	init_both_can(&hcan1, &hcan2);
   compute_init();
   // the BMS faults upon boot, the shutdown loop must clear out before drive
@@ -1076,7 +1106,8 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, I_SENSE_0_Pin|SPI1_CS_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin|EXT_GPIO_0_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, FAULT_MCU_Pin|DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin
+                          |EXT_GPIO_0_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : EXT_GPIO_1_Pin EXT_GPIO_5_Pin EXT_GPIO_4_Pin SPI3_CS_Pin
                            SPI2_CS_Pin DEBUG_LED_2_Pin */
@@ -1100,14 +1131,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : FAULT_MCU_Pin */
-  GPIO_InitStruct.Pin = FAULT_MCU_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(FAULT_MCU_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : DEBUG_LED_1_Pin WATCHDOG_Pin EXT_GPIO_2_Pin EXT_GPIO_0_Pin */
-  GPIO_InitStruct.Pin = DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin|EXT_GPIO_0_Pin;
+  /*Configure GPIO pins : FAULT_MCU_Pin DEBUG_LED_1_Pin WATCHDOG_Pin EXT_GPIO_2_Pin
+                           EXT_GPIO_0_Pin */
+  GPIO_InitStruct.Pin = FAULT_MCU_Pin|DEBUG_LED_1_Pin|WATCHDOG_Pin|EXT_GPIO_2_Pin
+                          |EXT_GPIO_0_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -1181,12 +1208,14 @@ void StartDefaultTask(void *argument)
 
     alt = !alt;
 
+    pet_watchdog();
+
     send_git_version_message();
   
     HAL_IWDG_Refresh(&hiwdg);
 
     toggle_debug_led_1();
-    osDelay(1000);
+    osDelay(500);
 
   }
   /* USER CODE END 5 */
