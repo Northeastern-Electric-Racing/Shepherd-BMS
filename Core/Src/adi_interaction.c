@@ -235,10 +235,11 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 	count_pec_errors(chips);
 }
 
-uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
+uint32_t adBmsPollAdc_indicator(cell_asic chips[NUM_CHIPS],
+				uint8_t poll_type[2])
 {
 	set_debug_led_2(1);
-	uint32_t result = adBmsPollAdc(poll_type);
+	uint32_t result = adBmsPollAdc(NUM_CHIPS, chips, poll_type);
 	set_debug_led_2(0);
 	return result;
 }
@@ -248,31 +249,31 @@ uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 void soft_reset_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(SRST);
+	spiSendCmd(ISOSPI_LINE_A, SRST);
 	adbms_wake_core();
 }
 
 void mute_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(MUTE);
+	spiSendCmd(ISOSPI_LINE_A, MUTE);
 }
 void unmute_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(UNMUTE);
+	spiSendCmd(ISOSPI_LINE_A, UNMUTE);
 }
 
 void snap_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(SNAP);
+	spiSendCmd(ISOSPI_LINE_A, SNAP);
 }
 
 void unsnap_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(MUTE);
+	spiSendCmd(ISOSPI_LINE_A, MUTE);
 }
 
 void write_config_regs(cell_asic chips[NUM_CHIPS])
@@ -348,8 +349,8 @@ void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 {
 	// TODO only poll correct GPIOs
 	adbms_wake_isospi();
-	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
-	adBmsPollAdc_indicator(PLAUX1);
+	adBms6830_Adax(NUM_CHIPS, chips, AUX_OW_OFF, PUP_DOWN, AUX_ALL);
+	adBmsPollAdc_indicator(chips, PLAUX1);
 
 	read_adbms_data(chips, RDAUXA, Aux, A);
 	read_adbms_data(chips, RDAUXB, Aux, B);
@@ -360,8 +361,8 @@ void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
 void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adax2(AUX_ALL);
-	adBmsPollAdc_indicator(PLAUX2);
+	adBms6830_Adax2(NUM_CHIPS, chips, AUX_ALL);
+	adBmsPollAdc_indicator(chips, PLAUX2);
 
 	read_adbms_data(chips, RDRAXA, RAux, A);
 	read_adbms_data(chips, RDRAXB, RAux, B);
@@ -405,8 +406,9 @@ void read_serial_id(cell_asic chips[NUM_CHIPS])
 void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
-	adBmsPollAdc_indicator(PLCADC);
+	adBms6830_Adcv(NUM_CHIPS, chips, RD_OFF, SINGLE, DCP_OFF, RSTF_ON,
+		       OW_OFF_ALL_CH);
+	adBmsPollAdc_indicator(chips, PLCADC);
 
 	read_c_voltage_registers(chips);
 }
@@ -414,8 +416,9 @@ void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
 void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
-	adBmsPollAdc_indicator(PLCADC);
+	adBms6830_Adcv(NUM_CHIPS, chips, RD_OFF, SINGLE, DCP_OFF, RSTF_OFF,
+		       OW_OFF_ALL_CH);
+	adBmsPollAdc_indicator(chips, PLCADC);
 
 	read_average_voltage_registers(chips);
 }
@@ -430,8 +433,8 @@ void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
-	adBmsPollAdc_indicator(PLSADC);
+	adBms6830_Adsv(NUM_CHIPS, chips, SINGLE, DCP_OFF, OW_OFF_ALL_CH);
+	adBmsPollAdc_indicator(chips, PLSADC);
 
 	read_s_voltage_registers(chips);
 }
@@ -439,18 +442,20 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
-	adBmsPollAdc_indicator(PLSADC);
+	adBms6830_Adcv(NUM_CHIPS, chips, RD_ON, SINGLE, DCP_OFF, RSTF_OFF,
+		       OW_OFF_ALL_CH);
+	adBmsPollAdc_indicator(chips, PLSADC);
 
 	adbms_wake_isospi();
 	read_c_voltage_registers(chips);
 	read_s_voltage_registers(chips);
 }
 
-void start_c_adc_conv()
+void start_c_adc_conv(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
+	adBms6830_Adcv(NUM_CHIPS, chips, RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON,
+		       OW_OFF_ALL_CH);
 }
 
 // --- END ADC POLL ---

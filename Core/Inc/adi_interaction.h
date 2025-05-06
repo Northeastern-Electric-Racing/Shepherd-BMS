@@ -309,7 +309,7 @@ void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
  * @brief Starts a continous c ADC conversion with S redundancy
  * 
  */
-void start_c_adc_conv();
+void start_c_adc_conv(cell_asic chips[NUM_CHIPS]);
 
 // --- END ADC POLL ---
 

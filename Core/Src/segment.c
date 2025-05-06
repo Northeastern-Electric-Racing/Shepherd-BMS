@@ -85,7 +85,7 @@ void segment_init(acc_data_t *bmsdata)
 	// disable balancing on init
 	mute_chips(bmsdata->chips);
 
-	start_c_adc_conv();
+	start_c_adc_conv(bmsdata->chips);
 }
 
 void segment_mute(acc_data_t *bmsdata)
