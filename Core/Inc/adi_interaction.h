@@ -3,8 +3,27 @@
 
 #include "adBms6830Data.h"
 #include "bmsConfig.h"
+#include "datastructs.h"
+
+/**
+ * @brief Count PEC errors for all chips, send CAN message, and reset counters.
+ *
+ * This function iterates through all chips, accumulates the PEC (Packet Error Code) 
+ * error count, resets the PEC error counter and Command counter, then sends a CAN message if any errors exist.
+ *
+ * @param bmsdata Pointer to accumulator data structure.
+ */
+void count_pec_errors(acc_data_t *bmsdata);
 
 // --- BEGIN SET HELPERS ---
+
+/**
+ * @brief Set the isoSPI line of the chip.
+ * 
+ * @param chip Pointer to the chip to modify.
+ * @param line isoSPI line of chip.
+ */
+void set_iso_spi_line(cell_asic *chip, isospi_line_ line);
 
 /**
  * @brief Set the status of the REFON bit.

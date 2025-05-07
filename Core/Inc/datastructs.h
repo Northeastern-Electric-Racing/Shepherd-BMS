@@ -63,6 +63,7 @@ enum {
 	CHARGER_CAN_FAULT				    = 0x10000,
 	CHARGE_LIMIT_ENFORCEMENT_FAULT	    = 0x20000,
 	DIE_TEMP_MAXIMUM_FAULT       	    = 0x40000,
+	INTERNAL_ISOSPI_BREAK_FAULT         = 0x80000,
 
 	MAX_FAULTS = 0x80000000 /* Maximum allowable fault code */
 };
@@ -87,6 +88,29 @@ typedef struct {
 	float val;
 	uint8_t chipNum;
 } crit_chipval_t;
+
+/**
+ * @brief ISO SPI communication state machine states.
+ */
+typedef enum {
+	ISOSPI_STATE_NORMAL,
+	ISOSPI_BREAK_DETECTED,
+	ISOSPI_RECOVERY_SUCCESS,
+	ISOSPI_RECOVERY_FAILED
+} isospi_comm_state_t;
+
+/**
+ * @brief ISO SPI break detection and recovery status structure.
+ */
+typedef struct {
+	isospi_comm_state_t state;
+	uint16_t pec_error_sum[NUM_CHIPS];
+	uint8_t break_chip_index;
+	uint8_t recovery_attempts;
+	bool recovery_successful;
+	nertimer_t startup_mask_timer;
+	nertimer_t pec_accum_timer;
+} isospi_status_t;
 
 /**
  * @brief Represents one "frame" of BMS data
@@ -153,6 +177,9 @@ typedef struct {
 	bool is_charger_connected;
 	/// whether the state machine has determined its time to charge
 	bool is_charging_enabled;
+
+	/* ISO SPI communication status and PEC error tracking */
+	isospi_status_t isospi_status;
 
 	osMutexId_t mutex;
 } acc_data_t;

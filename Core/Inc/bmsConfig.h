@@ -73,4 +73,10 @@
 // system wide base ADBMS sample rate
 #define SAMPLE_RATE 2 /* Hz */
 
+// Threshold for PEC errors to detect a possible ISO SPI break
+#define ISOSPI_STARTUP_MASK_TIME_MS 1500U
+#define ISOSPI_ACCUM_PERIOD_MS	    2000U
+#define ISOSPI_PEC_ERROR_THRESHOLD  10U
+#define ISOSPI_RECOVERY_RETRIES_MAX 3U
+
 #endif

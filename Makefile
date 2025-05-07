@@ -74,6 +74,7 @@ Core/Src/can_messages.c \
 Core/Src/shep_tasks.c \
 Core/Src/cell_data_logging.c \
 Core/Src/charging.c \
+Core/Src/isospi_recovery.c \
 Drivers/Embedded-Base/platforms/stm32f405/src/can.c \
 Drivers/Embedded-Base/general/src/m24c32.c \
 Drivers/Embedded-Base/general/src/sht30.c \

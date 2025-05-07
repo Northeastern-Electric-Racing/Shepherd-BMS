@@ -3,6 +3,7 @@
 #include "adi_interaction.h"
 #include "analyzer.h"
 #include "c_utils.h"
+#include "isospi_recovery.h"
 #include "serialPrintResult.h"
 
 /**
@@ -19,6 +20,8 @@ void init_chip(cell_asic *chip)
 	memset(chip->configa.tx_data, 0, sizeof(chip->configa.rx_data));
 	memset(chip->configb.rx_data, 0, sizeof(chip->configb.rx_data));
 	memset(chip->configb.tx_data, 0, sizeof(chip->configb.tx_data));
+
+	set_iso_spi_line(chip, ISOSPI_LINE_A);
 
 	set_REFON(chip, PWR_UP);
 
@@ -74,6 +77,9 @@ void init_chip(cell_asic *chip)
 void segment_init(acc_data_t *bmsdata)
 {
 	printf("Initializing Segments...");
+
+	isospi_break_detection_init(bmsdata);
+
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
 
