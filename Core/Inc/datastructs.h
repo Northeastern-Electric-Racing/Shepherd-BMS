@@ -107,7 +107,7 @@ typedef struct {
 	uint16_t pec_error_sum[NUM_CHIPS];
 	uint8_t break_chip_index;
 	uint8_t recovery_attempts;
-	bool recovery_successful;
+	int recovery_successful;
 	nertimer_t startup_mask_timer;
 	nertimer_t pec_accum_timer;
 } isospi_status_t;

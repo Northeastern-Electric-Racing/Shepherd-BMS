@@ -5,14 +5,6 @@
 #include "can_messages.h"
 #include "compute.h"
 
-/**
- * @brief Count and reset PEC errors for all chips, then send a CAN message if needed.
- *
- * This function iterates through all chips, accumulates the PEC (Packet Error Code) 
- * error count, resets the PEC error counter and Command counter, then sends a CAN message if any errors exist.
- *
- * @param chips Array of chips containing PEC error data.
- */
 void count_pec_errors(acc_data_t *bmsdata)
 {
 	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {

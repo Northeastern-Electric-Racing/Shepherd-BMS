@@ -18,6 +18,7 @@
 #include "segment.h"
 #include "serialPrintResult.h"
 #include "stateMachine.h"
+#include "adi_interaction.h"
 #include "isospi_recovery.h"
 
 #define STATE_MACHINE_FLAG 1
