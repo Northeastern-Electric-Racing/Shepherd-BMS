@@ -93,10 +93,10 @@ typedef struct {
  * @brief ISO SPI communication state machine states.
  */
 typedef enum {
-	ISOSPI_STATE_NORMAL,
-	ISOSPI_BREAK_DETECTED,
-	ISOSPI_RECOVERY_SUCCESS,
-	ISOSPI_RECOVERY_FAILED
+	ISOSPI_STATE_NORMAL = 0x01U,
+	ISOSPI_BREAK_DETECTED = 0x02U,
+	ISOSPI_RECOVERY_SUCCESS = 0x03U,
+	ISOSPI_RECOVERY_FAILED = 0x04U
 } isospi_comm_state_t;
 
 /**
@@ -107,7 +107,7 @@ typedef struct {
 	uint16_t pec_error_sum[NUM_CHIPS];
 	uint8_t break_chip_index;
 	uint8_t recovery_attempts;
-	int recovery_successful;
+	uint8_t recovery_successful;
 	nertimer_t startup_mask_timer;
 	nertimer_t pec_accum_timer;
 } isospi_status_t;

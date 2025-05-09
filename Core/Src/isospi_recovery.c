@@ -4,6 +4,36 @@
 #include "bmsConfig.h"
 #include "timer.h"
 
+/**
+ * @brief Verifies whether isoSPI communication recovery succeeded.
+ *
+ * Performs multiple read cycles and checks if PEC errors have dropped
+ * below the acceptable threshold for the chips after the detected break.
+ *
+ * @param bmsdata Pointer to accumulator data.
+ * @param start_chip Index of the chip where the break occurred.
+ * @return 1 if all chips recovered successfully, 0 otherwise.
+ */
+static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
+{
+	for (uint8_t r = 0U; r < ISOSPI_VERIFICATION_READS; r++) {
+		segment_retrieve_active_data(bmsdata);
+		count_pec_errors(bmsdata);
+
+		for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
+			if (bmsdata->isospi_status.pec_error_sum[i] >
+			    ISOSPI_PEC_ERROR_THRESHOLD) {
+				return 0;
+			}
+		}
+
+		memset(bmsdata->isospi_status.pec_error_sum, 0,
+		       sizeof(bmsdata->isospi_status.pec_error_sum));
+		osDelay(ISOSPI_VERIFICATION_DELAY);
+	}
+	return 1;
+}
+
 void isospi_break_detection_init(acc_data_t *bmsdata)
 {
 	// Wait a short time before enabling PEC detection to avoid startup noise
@@ -12,8 +42,8 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 	cancel_timer(&bmsdata->isospi_status.pec_accum_timer);
 
 	bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
-	bmsdata->isospi_status.recovery_attempts = 0;
-	bmsdata->isospi_status.recovery_successful = 0;
+	bmsdata->isospi_status.recovery_attempts = 0U;
+	bmsdata->isospi_status.recovery_successful = 0U;
 
 	memset(bmsdata->isospi_status.pec_error_sum, 0,
 	       sizeof(bmsdata->isospi_status.pec_error_sum));
@@ -30,12 +60,11 @@ void detect_isospi_break(acc_data_t *bmsdata)
 		return;
 	}
 
-	uint8_t chip = 0U;
 	uint8_t first_faulty_chip = NUM_CHIPS;
 	int fault_detected = 0;
 
 	// Find the first chip that has too many PEC errors
-	for (chip = 0U; chip < NUM_CHIPS; chip++) {
+	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
 		if (bmsdata->isospi_status.pec_error_sum[chip] >
 		    ISOSPI_PEC_ERROR_THRESHOLD) {
 			first_faulty_chip = chip;
@@ -45,12 +74,15 @@ void detect_isospi_break(acc_data_t *bmsdata)
 	}
 
 	// Make sure all chips after the first bad one are also bad
-	if (fault_detected) {
-		for (chip = first_faulty_chip; chip < NUM_CHIPS; chip++) {
-			if (bmsdata->isospi_status.pec_error_sum[chip] <=
-			    ISOSPI_PEC_ERROR_THRESHOLD) {
-				fault_detected = 0;
-				break;
+	if (bmsdata->isospi_status.recovery_successful == 0U) {
+		if (fault_detected) {
+			for (uint8_t chip = first_faulty_chip; chip < NUM_CHIPS;
+			     chip++) {
+				if (bmsdata->isospi_status.pec_error_sum[chip] <=
+				    ISOSPI_PEC_ERROR_THRESHOLD) {
+					fault_detected = 0;
+					break;
+				}
 			}
 		}
 	}
@@ -60,20 +92,19 @@ void detect_isospi_break(acc_data_t *bmsdata)
 		bmsdata->isospi_status.break_chip_index = first_faulty_chip;
 
 		// Log and set non-critical fault
-		printf("ISO SPI Break Detected! First bad chip: %u\n",
-		       first_faulty_chip);
 		bmsdata->fault_code_noncrit |= INTERNAL_ISOSPI_BREAK_FAULT;
+		printf("[isoSPI] Break Detected at Chip %u\n",
+		       first_faulty_chip);
 	}
 
 	// Reset PEC counters and restart timer
-	for (chip = 0U; chip < NUM_CHIPS; chip++) {
-		bmsdata->isospi_status.pec_error_sum[chip] = 0U;
-	}
+	memset(bmsdata->isospi_status.pec_error_sum, 0,
+	       sizeof(bmsdata->isospi_status.pec_error_sum));
 	start_timer(&bmsdata->isospi_status.pec_accum_timer,
 		    ISOSPI_ACCUM_PERIOD_MS);
 }
 
-int attempt_isospi_recovery(acc_data_t *bmsdata)
+int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
 {
 	uint8_t break_chip = bmsdata->isospi_status.break_chip_index;
 
@@ -83,7 +114,7 @@ int attempt_isospi_recovery(acc_data_t *bmsdata)
 	}
 
 	// Only set COMM_BK if we're not rerouting the entire chain
-	if (break_chip > 0) {
+	if (break_chip > 0U) {
 		// Set COMM_BK on both sides of the break
 		set_comm_break(&bmsdata->chips[break_chip], COMM_BK_ON);
 		set_comm_break(&bmsdata->chips[break_chip - 1], COMM_BK_ON);
@@ -91,20 +122,7 @@ int attempt_isospi_recovery(acc_data_t *bmsdata)
 
 	// Write updated config to chips
 	write_config_regs(bmsdata->chips);
-
-	// Try reading data again
-	segment_retrieve_active_data(bmsdata);
-	count_pec_errors(bmsdata);
-
-	// Check if errors are gone
-	for (int i = break_chip; i < NUM_CHIPS; i++) {
-		if (bmsdata->isospi_status.pec_error_sum[i] >
-		    ISOSPI_PEC_ERROR_THRESHOLD) {
-			return 0; // Recovery failed
-		}
-	}
-
-	return 1; // Recovery successful
+	return verify_isospi_recovery(bmsdata, break_chip);
 }
 
 void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
@@ -116,31 +134,39 @@ void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
 		break;
 
 	case ISOSPI_BREAK_DETECTED:
-		// Don’t retry if we already tried once
-		if (bmsdata->isospi_status.recovery_attempts > 0) {
+		if (bmsdata->isospi_status.recovery_successful == 1U) {
+			printf("[isoSPI] Break reoccurred after recovery — escalation\n");
 			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
 			break;
 		}
 
-		int result = attempt_isospi_recovery(bmsdata);
-		bmsdata->isospi_status.recovery_attempts++;
-
-		if (result) {
-			bmsdata->isospi_status.state = ISOSPI_RECOVERY_SUCCESS;
-			bmsdata->isospi_status.recovery_successful = 1;
-		} else {
+		if (bmsdata->isospi_status.recovery_attempts >=
+		    ISOSPI_RECOVERY_RETRIES_MAX) {
+			printf("[isoSPI] Recovery attempt limit reached\n");
 			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
+			break;
+		}
+
+		if (attempt_isospi_recovery(bmsdata) != 0) {
+			printf("[isoSPI] Recovery Succeeded\n");
+			bmsdata->isospi_status.state = ISOSPI_RECOVERY_SUCCESS;
+			bmsdata->isospi_status.recovery_successful = 1U;
+		} else {
+			bmsdata->isospi_status.recovery_attempts++;
+			printf("[isoSPI] Recovery Failed (attempt %u)\n",
+			       bmsdata->isospi_status.recovery_attempts);
 		}
 		break;
 
 	case ISOSPI_RECOVERY_SUCCESS:
-		// Clear all fault flags if recovery worked
+		printf("[isoSPI] Recovery Complete, Fault Cleared\n");
 		bmsdata->fault_code_noncrit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
 		bmsdata->fault_code_crit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
+		bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
 		break;
 
 	case ISOSPI_RECOVERY_FAILED:
-		// Escalate to critical fault if recovery failed
+		printf("[isoSPI] Recovery Failed — Critical Fault\n");
 		bmsdata->fault_code_noncrit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
 		bmsdata->fault_code_crit |= INTERNAL_ISOSPI_BREAK_FAULT;
 		break;
