@@ -261,8 +261,8 @@ void segment_disable_balancing(acc_data_t *bmsdata)
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 	segment_configure_balancing(bmsdata, discharge_config);
 
-	// // force balancing muted
-	// mute_chips(bmsdata->chips);
+	// force balancing muted
+	mute_chips(bmsdata->chips);
 }
 
 void segment_enable_balancing(acc_data_t *bmsdata)
