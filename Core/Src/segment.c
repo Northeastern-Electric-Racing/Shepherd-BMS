@@ -139,6 +139,7 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		//printf("CHIP %d :", chip);
+		printf("MUTE: %d, %d\n", chip, chips[chip].rx_cfga.mute_st);
 		if (chips[chip].statc.cs_flt > 0) {
 			//printf("C VS S MISMATCH on cells ");
 			for (int i = 0; i < 16; i++) {
@@ -260,8 +261,8 @@ void segment_disable_balancing(acc_data_t *bmsdata)
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 	segment_configure_balancing(bmsdata, discharge_config);
 
-	// force balancing muted
-	mute_chips(bmsdata->chips);
+	// // force balancing muted
+	// mute_chips(bmsdata->chips);
 }
 
 void segment_enable_balancing(acc_data_t *bmsdata)
@@ -294,7 +295,7 @@ void segment_configure_balancing(
 {
 	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
+		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
 		for (int cell = 0; cell < num_cells; cell++) {
 			set_cell_discharge(&bmsdata->chips[chip], cell,
 					   discharge_config[chip][cell]);

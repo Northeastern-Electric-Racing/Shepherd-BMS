@@ -19,7 +19,7 @@ nertimer_t charger_message_timer;
 
 const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	/*   BOOT,     READY,      CHARGING,   FAULTED	*/
-	{ true, true, false, true }, /* BOOT */
+	{ true, true, true, true }, /* BOOT */
 	{ false, true, true, true }, /* READY */
 	{ false, true, true, true }, /* CHARGING */
 	{ true, false, false, true } /* FAULTED */
@@ -371,7 +371,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
-	return false;
+	return true;
 
 	if (!bmsdata->is_charger_connected)
 		return false;

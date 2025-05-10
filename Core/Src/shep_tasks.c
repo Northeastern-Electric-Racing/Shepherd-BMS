@@ -25,7 +25,7 @@
 
 osThreadId_t get_segment_data_thread;
 const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
-						.stack_size = 2048,
+						.stack_size = 8192,
 						.priority = osPriorityNormal };
 
 void vGetSegmentData(void *pv_params)
@@ -146,7 +146,7 @@ void vCurrentMonitor(void *pv_params)
 
 osThreadId_t state_machine_thread;
 const osThreadAttr_t state_machine_attrs = { .name = "State machine task",
-					     .stack_size = 4096,
+					     .stack_size = 8192,
 					     .priority = osPriorityRealtime };
 void vStateMachine(void *pv_params)
 {
@@ -176,7 +176,7 @@ void vStateMachine(void *pv_params)
 
 osThreadId_t debug_mode_thread;
 const osThreadAttr_t debug_mode_attrs = { .name = "Debug Mode Thread",
-					  .stack_size = 2048,
+					  .stack_size = 1024,
 					  .priority = osPriorityNormal };
 void vDebugMode(void *pv_params)
 {
