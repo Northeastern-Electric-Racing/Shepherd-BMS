@@ -272,7 +272,7 @@ void snap_chips(cell_asic chips[NUM_CHIPS])
 void unsnap_chips(cell_asic chips[NUM_CHIPS])
 {
 	adbms_wake_isospi();
-	spiSendCmd(MUTE);
+	spiSendCmd(UNSNAP);
 }
 
 void write_config_regs(cell_asic chips[NUM_CHIPS])
