@@ -66,7 +66,7 @@ const bool VOLTS_FAIL_MAP[NUM_CHIPS][NUM_CELLS_ALPHA] = {
     {0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-    {1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
     {1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 };
 // clang-format on
@@ -440,7 +440,7 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 		scaled_dcl = MIN_DCL;
 	}
 
-	bmsdata->cont_DCL = scaled_dcl;
+	bmsdata->cont_DCL = 200;
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)

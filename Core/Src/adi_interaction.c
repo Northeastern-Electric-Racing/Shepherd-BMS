@@ -175,8 +175,18 @@ inline void delay_us(uint16_t us)
  */
 void adbms_wake_isospi()
 {
-	cell_asic chips[NUM_CHIPS] = {};
-	adBmsReadData(NUM_CHIPS, chips, RDAUXA, Aux, A);
+	//__disable_irq();
+
+	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++)
+  {
+    adBmsCsLow();
+    adBmsCsHigh();
+    delay_us(500);
+  }
+
+
+
+	//__enable_irq();
 }
 
 /**

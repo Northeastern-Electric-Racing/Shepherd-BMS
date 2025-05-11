@@ -40,7 +40,9 @@ void vGetSegmentData(void *pv_params)
 	osDelay(500);
 
 	for (;;) {
-		mute_chips(bmsdata);
+			HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
+
+		segment_mute(bmsdata);
 
 		if (current_state == CHARGING_STATE) {
 			osDelay(75);
@@ -82,6 +84,9 @@ void vGetSegmentData(void *pv_params)
 			// unsnap after getting data
 			//segment_unsnap(bmsdata);
 		}
+
+		  	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);
@@ -167,7 +172,7 @@ void vStateMachine(void *pv_params)
 				segment_is_balancing(bmsdata->chips));
 			send_fault_status_message(bmsdata->fault_code_crit,
 						  bmsdata->fault_code_noncrit);
-			start_timer(&telem_timer, 300);
+			start_timer(&telem_timer, 500);
 		}
 
 		osDelay(100);
