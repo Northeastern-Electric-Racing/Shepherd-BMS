@@ -21,8 +21,7 @@ static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
 		count_pec_errors(bmsdata);
 
 		for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
-			if (bmsdata->isospi_status.pec_error_sum[i] >
-			    ISOSPI_PEC_ERROR_THRESHOLD) {
+			if (bmsdata->isospi_status.pec_error_sum[i] > 0) {
 				return 0;
 			}
 		}
