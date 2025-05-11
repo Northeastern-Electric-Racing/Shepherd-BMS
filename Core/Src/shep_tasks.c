@@ -40,11 +40,11 @@ void vGetSegmentData(void *pv_params)
 	osDelay(500);
 
 	for (;;) {
-		segment_mute(bmsdata);
+		mute_chips(bmsdata);
 
 		if (current_state == CHARGING_STATE) {
-			// must delay to let settle after balancing has halted, or else cells read high
 			osDelay(75);
+			// must delay to let settle after balancing has halted, or else cells read high
 		} else { // snap before getting data
 			//segment_snap(bmsdata);
 		}

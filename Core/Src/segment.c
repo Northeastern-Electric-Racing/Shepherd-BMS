@@ -215,7 +215,6 @@ void segment_retrieve_charging_data(acc_data_t *bmsdata)
 	// read from ADC convs
 	get_c_adc_voltages(bmsdata->chips);
 
-	// read the above into status registers
 	read_status_registers(bmsdata->chips);
 
 	//segment_adc_comparison(bmsdata);
