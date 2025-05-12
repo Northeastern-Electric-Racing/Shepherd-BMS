@@ -149,6 +149,11 @@ typedef struct {
 	float avg_ocv;
 	float delt_ocv;
 
+	// the current discharge configuration the state machine wants
+	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA];
+	// whether balancing should be on, or muted
+	bool should_balance;
+
 	/// whether the charger is connected, synonymous with being in the state of CHARGING, and therefore irreversible
 	bool is_charger_connected;
 	/// whether the state machine has determined its time to charge

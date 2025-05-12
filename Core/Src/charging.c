@@ -6,38 +6,14 @@
 
 #include <math.h>
 
-/* Constants */
-static const uint8_t STD_FACTOR = 1;
-
-/* Find standard deviation from BMS data */
-static float calc_cell_voltage_std(acc_data_t *data)
-{
-	/* Calculate mean squared error */
-	float mse = 0;
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
-			float cell_voltage =
-				data->chip_data[chip].cell_voltages[cell];
-			mse += pow(cell_voltage - data->avg_voltage, 2);
-		}
-	}
-
-	/* Calculate standard deviation */
-	float std = pow(mse / (NUM_CELLS_ALPHA * NUM_CHIPS), 0.5);
-	return std;
-}
-
 /* Send cell balancing config to the segment */
 void handle_balance_cells(acc_data_t *bmsdata)
 {
 	if (bmsdata->delt_ocv <= MAX_DELTA_V) {
 		/* No balancing, return */
 		// technically this should never be reached
-		segment_disable_balancing(bmsdata);
 		return;
 	}
-
-	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 
 	/* Get cell voltage average and standard deviation */
 	float low = bmsdata->min_ocv.val;
@@ -53,17 +29,11 @@ void handle_balance_cells(acc_data_t *bmsdata)
 			if (bmsdata->chip_data[chip].open_cell_voltage[cell] >
 			    (low + thresh)) {
 				/* Balance cell */
-				balanceConfig[chip][cell] = true;
+				bmsdata->discharge_config[chip][cell] = true;
 			} else {
 				/* Do not balance cell */
-				balanceConfig[chip][cell] = false;
+				bmsdata->discharge_config[chip][cell] = false;
 			}
 		}
 	}
-
-	/* Configure balancing */
-	segment_configure_balancing(bmsdata, balanceConfig);
-
-	// enable balancing
-	// segment_enable_balancing(bmsdata);
 }
