@@ -74,6 +74,7 @@
 #define SAMPLE_RATE 2 /* Hz */
 
 // Threshold for PEC errors to detect a possible ISO SPI break
+#define MAX_PEC_ERROR_ACCUM 1000U
 #define ISOSPI_STARTUP_MASK_TIME_MS \
 	1500U // Time to ignore PEC errors after boot (ms)
 #define ISOSPI_ACCUM_PERIOD_MS 2000U // Interval between PEC error checks (ms)

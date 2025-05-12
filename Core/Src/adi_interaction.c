@@ -40,11 +40,12 @@ void count_pec_errors(cell_asic chips[NUM_CHIPS])
 		}
 
 		// Accumulate per-chip PEC errors with overflow protection
-		if ((UINT16_MAX - chips[chip].pec_error_sum) <
+		if ((MAX_PEC_ERROR_ACCUM - chips[chip].pec_error_sum) <
 		    pec_error_count) {
-			chips[chip].pec_error_sum = UINT16_MAX;
+			chips[chip].pec_error_sum = MAX_PEC_ERROR_ACCUM;
 		} else {
-			chips[chip].pec_error_sum += pec_error_count;
+			chips[chip].pec_error_sum +=
+				pec_error_count; // cleared in detect_isospi_break()
 		}
 
 		// Reset PEC counters for next round
