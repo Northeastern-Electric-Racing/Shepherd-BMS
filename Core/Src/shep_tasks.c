@@ -40,7 +40,7 @@ void vGetSegmentData(void *pv_params)
 	osDelay(500);
 
 	for (;;) {
-			HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
+		HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
 
 		segment_mute(bmsdata);
 
@@ -85,8 +85,7 @@ void vGetSegmentData(void *pv_params)
 			//segment_unsnap(bmsdata);
 		}
 
-		  	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-
+		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
 		osDelay(1000 / SAMPLE_RATE);

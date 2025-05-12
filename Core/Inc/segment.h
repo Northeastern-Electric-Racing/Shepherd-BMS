@@ -58,7 +58,7 @@ void segment_retrieve_debug_data(acc_data_t *bmsdata);
 void segment_disable_balancing(acc_data_t *bmsdata);
 
 /**
- * @brief Enable balancing (still need to configure it)
+ * @brief Enable balancing (still need to configure it).  Identical to segment_unmute
  * 
  */
 void segment_enable_balancing(acc_data_t *bmsdata);
