@@ -74,11 +74,15 @@
 #define SAMPLE_RATE 2 /* Hz */
 
 // Threshold for PEC errors to detect a possible ISO SPI break
-#define ISOSPI_STARTUP_MASK_TIME_MS 1500U
-#define ISOSPI_ACCUM_PERIOD_MS	    2000U
-#define ISOSPI_PEC_ERROR_THRESHOLD  10U
-#define ISOSPI_RECOVERY_RETRIES_MAX 3U
-#define ISOSPI_VERIFICATION_READS   3U
-#define ISOSPI_VERIFICATION_DELAY   100U
+#define ISOSPI_STARTUP_MASK_TIME_MS \
+	1500U // Time to ignore PEC errors after boot (ms)
+#define ISOSPI_ACCUM_PERIOD_MS 2000U // Interval between PEC error checks (ms)
+#define ISOSPI_PEC_ERROR_THRESHOLD \
+	10U // PEC error count to trigger break detection
+#define ISOSPI_RECOVERY_RETRIES_MAX \
+	3U // Maximum isoSPI recovery attempts before fault
+#define ISOSPI_VERIFICATION_READS \
+	3U // Number of read cycles to confirm recovery success
+#define ISOSPI_VERIFICATION_DELAY 100U // Delay between verification reads (ms)
 
 #endif

@@ -2,6 +2,7 @@
 #include "adi_interaction.h"
 #include "segment.h"
 #include "bmsConfig.h"
+#include "can_messages.h"
 #include "timer.h"
 
 /**
@@ -46,6 +47,9 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 
 	memset(bmsdata->isospi_status.pec_error_sum, 0,
 	       sizeof(bmsdata->isospi_status.pec_error_sum));
+
+	send_isospi_status_message(&bmsdata->isospi_status);
+	send_isospi_lines_message(bmsdata->chips);
 }
 
 void detect_isospi_break(acc_data_t *bmsdata)
@@ -63,7 +67,7 @@ void detect_isospi_break(acc_data_t *bmsdata)
 	int fault_detected = 0;
 
 	// Find the first chip that has too many PEC errors
-	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
+	for (uint8_t chip = 1U; chip < NUM_CHIPS; chip++) {
 		if (bmsdata->isospi_status.pec_error_sum[chip] >
 		    ISOSPI_PEC_ERROR_THRESHOLD) {
 			first_faulty_chip = chip;
@@ -121,6 +125,9 @@ int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
 
 	// Write updated config to chips
 	write_config_regs(bmsdata->chips);
+	mute_chips(bmsdata->chips);
+	start_c_adc_conv(bmsdata->chips);
+
 	return verify_isospi_recovery(bmsdata, break_chip);
 }
 
@@ -133,6 +140,8 @@ void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
 		break;
 
 	case ISOSPI_BREAK_DETECTED:
+		send_isospi_status_message(&bmsdata->isospi_status);
+
 		if (bmsdata->isospi_status.recovery_successful == 1U) {
 			printf("[isoSPI] Break reoccurred after recovery — escalation\n");
 			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
@@ -154,10 +163,14 @@ void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
 			bmsdata->isospi_status.recovery_attempts++;
 			printf("[isoSPI] Recovery Failed (attempt %u)\n",
 			       bmsdata->isospi_status.recovery_attempts);
+			osDelay(250);
 		}
 		break;
 
 	case ISOSPI_RECOVERY_SUCCESS:
+		send_isospi_status_message(&bmsdata->isospi_status);
+		send_isospi_lines_message(bmsdata->chips);
+
 		printf("[isoSPI] Recovery Complete, Fault Cleared\n");
 		bmsdata->fault_code_noncrit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
 		bmsdata->fault_code_crit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
@@ -165,6 +178,8 @@ void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
 		break;
 
 	case ISOSPI_RECOVERY_FAILED:
+		send_isospi_status_message(&bmsdata->isospi_status);
+
 		printf("[isoSPI] Recovery Failed — Critical Fault\n");
 		bmsdata->fault_code_noncrit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
 		bmsdata->fault_code_crit |= INTERNAL_ISOSPI_BREAK_FAULT;
