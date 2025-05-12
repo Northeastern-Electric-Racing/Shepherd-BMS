@@ -34,7 +34,7 @@
 #define SEGMENT_TEMP_CANID  0x85
 #define SEGMENT_TEMP_SIZE   5
 #define ISOSPI_STS_CANID    0x86
-#define ISOSPI_STS_SIZE     4
+#define ISOSPI_STS_SIZE	    4
 #define ISOSPI_LINE_CANID   0x87
 #define ISOSPI_LINE_SIZE    2
 #define SEGMENT_VOLT_CANID  0x90
