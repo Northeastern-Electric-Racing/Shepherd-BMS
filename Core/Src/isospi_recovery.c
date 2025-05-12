@@ -19,16 +19,17 @@ static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
 {
 	for (uint8_t r = 0U; r < ISOSPI_VERIFICATION_READS; r++) {
 		segment_retrieve_active_data(bmsdata);
-		count_pec_errors(bmsdata);
+		count_pec_errors(bmsdata->chips);
 
 		for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
-			if (bmsdata->isospi_status.pec_error_sum[i] > 0) {
+			if (bmsdata->chips[i].pec_error_sum > 0) {
 				return 0;
 			}
 		}
 
-		memset(bmsdata->isospi_status.pec_error_sum, 0,
-		       sizeof(bmsdata->isospi_status.pec_error_sum));
+		for (uint8_t i = 0; i < NUM_CHIPS; i++) {
+			bmsdata->chips[i].pec_error_sum = 0U;
+		}
 		osDelay(ISOSPI_VERIFICATION_DELAY);
 	}
 	return 1;
@@ -45,8 +46,9 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 	bmsdata->isospi_status.recovery_attempts = 0U;
 	bmsdata->isospi_status.recovery_successful = 0U;
 
-	memset(bmsdata->isospi_status.pec_error_sum, 0,
-	       sizeof(bmsdata->isospi_status.pec_error_sum));
+	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
+		bmsdata->chips[i].pec_error_sum = 0U;
+	}
 
 	send_isospi_status_message(&bmsdata->isospi_status);
 	send_isospi_lines_message(bmsdata->chips);
@@ -58,7 +60,20 @@ void detect_isospi_break(acc_data_t *bmsdata)
 		return;
 	}
 
-	// Only run detection periodically based on timer
+	// Start accumulation timer on first PEC activity
+	if (!is_timer_active(&bmsdata->isospi_status.pec_accum_timer)) {
+		for (uint8_t i = 1U; i < NUM_CHIPS; i++) {
+			if (bmsdata->chips[i].pec_error_sum > 0U) {
+				start_timer(
+					&bmsdata->isospi_status.pec_accum_timer,
+					ISOSPI_ACCUM_PERIOD_MS);
+				return;
+			}
+		}
+		return;
+	}
+
+	// Only proceed if timer has expired
 	if (!is_timer_expired(&bmsdata->isospi_status.pec_accum_timer)) {
 		return;
 	}
@@ -68,7 +83,7 @@ void detect_isospi_break(acc_data_t *bmsdata)
 
 	// Find the first chip that has too many PEC errors
 	for (uint8_t chip = 1U; chip < NUM_CHIPS; chip++) {
-		if (bmsdata->isospi_status.pec_error_sum[chip] >
+		if (bmsdata->chips[chip].pec_error_sum >
 		    ISOSPI_PEC_ERROR_THRESHOLD) {
 			first_faulty_chip = chip;
 			fault_detected = 1;
@@ -76,16 +91,15 @@ void detect_isospi_break(acc_data_t *bmsdata)
 		}
 	}
 
-	// Make sure all chips after the first bad one are also bad
-	if (bmsdata->isospi_status.recovery_successful == 0U) {
-		if (fault_detected) {
-			for (uint8_t chip = first_faulty_chip; chip < NUM_CHIPS;
-			     chip++) {
-				if (bmsdata->isospi_status.pec_error_sum[chip] <=
-				    ISOSPI_PEC_ERROR_THRESHOLD) {
-					fault_detected = 0;
-					break;
-				}
+	// Check that all chips after the break also exceed threshold
+	if (bmsdata->isospi_status.recovery_successful == 0U &&
+	    fault_detected) {
+		for (uint8_t chip = first_faulty_chip; chip < NUM_CHIPS;
+		     chip++) {
+			if (bmsdata->chips[chip].pec_error_sum <=
+			    ISOSPI_PEC_ERROR_THRESHOLD) {
+				fault_detected = 0;
+				break;
 			}
 		}
 	}
@@ -93,16 +107,16 @@ void detect_isospi_break(acc_data_t *bmsdata)
 	if (fault_detected) {
 		bmsdata->isospi_status.state = ISOSPI_BREAK_DETECTED;
 		bmsdata->isospi_status.break_chip_index = first_faulty_chip;
-
-		// Log and set non-critical fault
 		bmsdata->fault_code_noncrit |= INTERNAL_ISOSPI_BREAK_FAULT;
+
 		printf("[isoSPI] Break Detected at Chip %u\n",
 		       first_faulty_chip);
 	}
 
-	// Reset PEC counters and restart timer
-	memset(bmsdata->isospi_status.pec_error_sum, 0,
-	       sizeof(bmsdata->isospi_status.pec_error_sum));
+	// Reset PEC accumulation and restart timer for next window
+	for (uint8_t i = 0; i < NUM_CHIPS; i++) {
+		bmsdata->chips[i].pec_error_sum = 0U;
+	}
 	start_timer(&bmsdata->isospi_status.pec_accum_timer,
 		    ISOSPI_ACCUM_PERIOD_MS);
 }
@@ -131,10 +145,9 @@ int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
 	return verify_isospi_recovery(bmsdata, break_chip);
 }
 
-void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
-			     acc_data_t *bmsdata)
+void isospi_state_dispatcher(acc_data_t *bmsdata)
 {
-	switch (isospi_state) {
+	switch (bmsdata->isospi_status.state) {
 	case ISOSPI_STATE_NORMAL:
 		detect_isospi_break(bmsdata);
 		break;

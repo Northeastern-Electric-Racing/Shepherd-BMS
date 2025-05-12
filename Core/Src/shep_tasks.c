@@ -55,18 +55,12 @@ void vGetSegmentData(void *pv_params)
 			// in charging, debug data is required to get things like die temp
 			segment_retrieve_charging_data(bmsdata);
 
-			count_pec_errors(bmsdata);
-
-			isospi_state_dispatcher(bmsdata->isospi_status.state,
-						bmsdata);
+			isospi_state_dispatcher(bmsdata);
 
 		} else {
 			segment_retrieve_active_data(bmsdata);
 
-			count_pec_errors(bmsdata);
-
-			isospi_state_dispatcher(bmsdata->isospi_status.state,
-						bmsdata);
+			isospi_state_dispatcher(bmsdata);
 
 			if (DEBUG_MODE_ENABLED) {
 				segment_retrieve_debug_data(bmsdata);

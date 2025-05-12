@@ -40,7 +40,6 @@ int32_t attempt_isospi_recovery(acc_data_t *bmsdata);
  * @param isospi_state Current communication state.
  * @param bmsdata Pointer to accumulator data structure.
  */
-void isospi_state_dispatcher(isospi_comm_state_t isospi_state,
-			     acc_data_t *bmsdata);
+void isospi_state_dispatcher(acc_data_t *bmsdata);
 
 #endif // ISOSPI_RECOVERY_H

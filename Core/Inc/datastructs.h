@@ -104,7 +104,6 @@ typedef enum {
  */
 typedef struct {
 	isospi_comm_state_t state;
-	uint16_t pec_error_sum[NUM_CHIPS];
 	uint8_t break_chip_index;
 	uint8_t recovery_attempts;
 	uint8_t recovery_successful;

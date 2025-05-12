@@ -5,21 +5,21 @@
 #include "can_messages.h"
 #include "compute.h"
 
-void count_pec_errors(acc_data_t *bmsdata)
+void count_pec_errors(cell_asic chips[NUM_CHIPS])
 {
 	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
 		uint16_t pec_error_count =
-			(uint16_t)(bmsdata->chips[chip].cccrc.cfgr_pec +
-				   bmsdata->chips[chip].cccrc.cell_pec +
-				   bmsdata->chips[chip].cccrc.acell_pec +
-				   bmsdata->chips[chip].cccrc.scell_pec +
-				   bmsdata->chips[chip].cccrc.fcell_pec +
-				   bmsdata->chips[chip].cccrc.aux_pec +
-				   bmsdata->chips[chip].cccrc.raux_pec +
-				   bmsdata->chips[chip].cccrc.stat_pec +
-				   bmsdata->chips[chip].cccrc.comm_pec +
-				   bmsdata->chips[chip].cccrc.pwm_pec +
-				   bmsdata->chips[chip].cccrc.sid_pec);
+			(uint16_t)(chips[chip].cccrc.cfgr_pec +
+				   chips[chip].cccrc.cell_pec +
+				   chips[chip].cccrc.acell_pec +
+				   chips[chip].cccrc.scell_pec +
+				   chips[chip].cccrc.fcell_pec +
+				   chips[chip].cccrc.aux_pec +
+				   chips[chip].cccrc.raux_pec +
+				   chips[chip].cccrc.stat_pec +
+				   chips[chip].cccrc.comm_pec +
+				   chips[chip].cccrc.pwm_pec +
+				   chips[chip].cccrc.sid_pec);
 
 		// printf("1 %d\n", chips[chip].cccrc.cfgr_pec);
 		// printf("b %d\n", chips[chip].cccrc.cell_pec);
@@ -37,21 +37,18 @@ void count_pec_errors(acc_data_t *bmsdata)
 			printf("PEC Error: Chip %u, Count: %u\n", chip,
 			       pec_error_count);
 			send_pec_error_message(chip, pec_error_count);
-
-			// Start accumulation timer if it's not running
-			if (!is_timer_active(
-				    &bmsdata->isospi_status.pec_accum_timer)) {
-				start_timer(
-					&bmsdata->isospi_status.pec_accum_timer,
-					ISOSPI_ACCUM_PERIOD_MS);
-			}
 		}
 
-		bmsdata->isospi_status.pec_error_sum[chip] += pec_error_count;
+		// Accumulate per-chip PEC errors with overflow protection
+		if ((UINT16_MAX - chips[chip].pec_error_sum) <
+		    pec_error_count) {
+			chips[chip].pec_error_sum = UINT16_MAX;
+		} else {
+			chips[chip].pec_error_sum += pec_error_count;
+		}
 
-		// Reset PEC counters for the next round
-		memset(&(bmsdata->chips[chip].cccrc), 0,
-		       sizeof(bmsdata->chips[chip].cccrc));
+		// Reset PEC counters for next round
+		memset(&chips[chip].cccrc, 0, sizeof(chips[chip].cccrc));
 	}
 }
 
@@ -216,6 +213,8 @@ void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
 		     GRP group)
 {
 	adBmsReadData(NUM_CHIPS, chips, command, type, group);
+
+	count_pec_errors(chips);
 }
 
 uint32_t adBmsPollAdc_indicator(cell_asic chips[NUM_CHIPS],

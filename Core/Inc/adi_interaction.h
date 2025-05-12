@@ -13,7 +13,7 @@
  *
  * @param bmsdata Pointer to accumulator data structure.
  */
-void count_pec_errors(acc_data_t *bmsdata);
+void count_pec_errors(cell_asic chips[NUM_CHIPS]);
 
 // --- BEGIN SET HELPERS ---
 
