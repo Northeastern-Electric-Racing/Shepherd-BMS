@@ -283,6 +283,13 @@ printf("\n");
     }
     printf("\n");
   }
+  printf("CHIP TEMPS: \n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+   
+    printf("%.1f\t", acc_data->chip_data[c].die_temp);
+  }
+  printf("\n");
   #endif
 
   #ifdef DEBUG_OTHER

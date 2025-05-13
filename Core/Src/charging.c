@@ -69,8 +69,6 @@ void handle_balance_cells(acc_data_t *bmsdata)
 	// the maximum number of cells to balance per chip, usually tuned for thermal reasons
 	static const int MAX_BAL_CHIP = 7;
 
-	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
-
 	// the low cell, eventually they all must get there
 	float low = bmsdata->min_ocv.val;
 	// the margin above the low cell to ignore, which is usually X% of the delta
@@ -91,14 +89,14 @@ void handle_balance_cells(acc_data_t *bmsdata)
 			/* Check if cell voltage is above (low + threshold) */
 			if (new_ocv_map[chip][cell].val > (low + min_thresh)) {
 				/* Balance cell */
-				balanceConfig[chip]
-					     [new_ocv_map[chip][cell].idex] =
-						     true;
+				bmsdata->discharge_config
+					[chip][new_ocv_map[chip][cell].idex] =
+					true;
 			} else {
 				/* Do not balance cell */
-				balanceConfig[chip]
-					     [new_ocv_map[chip][cell].idex] =
-						     false;
+				bmsdata->discharge_config
+					[chip][new_ocv_map[chip][cell].idex] =
+					false;
 			}
 		}
 	}
