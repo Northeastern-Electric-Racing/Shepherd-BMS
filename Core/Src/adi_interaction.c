@@ -135,6 +135,14 @@ void set_cell_discharge(cell_asic *chip, DCC cell, DCC_BIT discharge)
 	}
 }
 
+void set_cell_pwm(cell_asic *chip, DCC cell, PWM_DUTY discharge)
+{
+	if (cell < 12)
+		chip->PwmA.pwma[cell] = discharge;
+	else
+		chip->PwmB.pwmb[cell - 12] = discharge;
+}
+
 void clear_cell_discharge(cell_asic *chip)
 {
 	chip->tx_cfgb.dcc = 0;
@@ -322,13 +330,19 @@ void snap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 void unsnap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	adbms_wake_isospi(hspi);
-  spiSendCmd(UNSNAP);
+	spiSendCmd(UNSNAP);
 }
 
 void write_config_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	write_adbms_data(chips, WRCFGA, Config, A, hspi);
 	write_adbms_data(chips, WRCFGB, Config, B, hspi);
+}
+
+void write_pwm_regs(cell_asic chips[NUM_CHIPS])
+{
+	write_adbms_data(chips, WRPWM1, Pwm, A);
+	write_adbms_data(chips, WRPWM2, Pwm, B);
 }
 
 void write_clear_flags(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)

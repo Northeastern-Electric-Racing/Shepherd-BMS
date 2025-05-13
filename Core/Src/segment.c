@@ -333,8 +333,10 @@ void segment_configure_balancing(
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells_seg(chip);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&chips[chip], cell,
-					   discharge_config[chip][cell]);
+			set_cell_pwm(&chips[chip], cell,
+				     discharge_config[chip][cell] ?
+					     PWM_100_0_PCT :
+					     PWM_0_0_PCT);
 		}
 	}
 	write_config_regs(chips, hspi);
