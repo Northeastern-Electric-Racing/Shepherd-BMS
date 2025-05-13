@@ -39,7 +39,9 @@ void vGetSegmentData(void *pv_params)
 
 	free(args);
 
+	HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
 	segment_init(bmsdata->chips, hspi);
+	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
 	// must delay after init for some reason, or else ADC doesnt start up (-3.45 or something)
 	osDelay(500);
@@ -53,7 +55,7 @@ void vGetSegmentData(void *pv_params)
 			osDelay(75);
 			// must delay to let settle after balancing has halted, or else cells read high
 		} else { // snap before getting data
-			//segment_snap(bmsdata);
+			segment_snap(bmsdata->chips, hspi);
 		}
 
 		if (current_state == CHARGING_STATE) {
@@ -88,7 +90,7 @@ void vGetSegmentData(void *pv_params)
 			segment_unmute(bmsdata->chips, hspi);
 		} else {
 			// unsnap after getting data
-			//segment_unsnap(bmsdata);
+			segment_unsnap(bmsdata->chips, hspi);
 		}
 
 		if (bmsdata->should_balance)
