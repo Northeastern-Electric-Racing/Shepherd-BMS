@@ -191,6 +191,10 @@ void vDebugMode(void *pv_params)
 				num_cells -= 1;
 			}
 			for (int cell = 0; cell < num_cells; cell += 2) {
+				bool is_bal_a = false;
+				if (bmsdata->chips[chip].PwmA[cell] > 0) {
+					
+				}
 				send_cell_data_message(
 					bmsdata->chip_data[chip].alpha,
 
@@ -209,7 +213,7 @@ void vDebugMode(void *pv_params)
 					cell + 1,
 
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
-					 cell) & 1,
+					 cell || ) & 1,
 
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
 					 (cell + 1)) &
