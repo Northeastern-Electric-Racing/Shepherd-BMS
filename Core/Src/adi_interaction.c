@@ -207,6 +207,10 @@ extern TIM_HandleTypeDef htim2;
  * 
  * Approximately +50% error as seen in logic analyzer
  * 
+ * Make sure this TIM timer prescaler is set to (InternalClock)/(Prescaler) - 1
+ * 
+ * So a 64 MKhz clock would have a 63 Mhz prescaler to set a 1us tick
+ * 
  * @param us the number of us to delay
  */
 inline void delay_us(uint32_t us)
@@ -214,8 +218,8 @@ inline void delay_us(uint32_t us)
 	uint32_t tickstart = __HAL_TIM_GET_COUNTER(&htim2);
 	uint32_t wait = us;
 
-	while ((__HAL_TIM_GET_COUNTER(&htim2) - tickstart) < wait) {
-	}
+	while ((__HAL_TIM_GET_COUNTER(&htim2) - tickstart) < wait)
+		;
 }
 
 /**
@@ -228,6 +232,7 @@ void adbms_wake_isospi(SPI_HandleTypeDef *hspi)
 {
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
+		delay_us(500);
 		adBmsCsHigh();
 		delay_us(500);
 	}
@@ -241,8 +246,8 @@ void adbms_wake_core()
 {
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
-		delay_us(1000);
 		adBmsCsHigh();
+		delay_us(4000);
 	}
 }
 
