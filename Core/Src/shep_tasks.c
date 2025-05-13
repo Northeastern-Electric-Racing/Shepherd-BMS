@@ -54,15 +54,17 @@ void vGetSegmentData(void *pv_params)
 		if (current_state == CHARGING_STATE) {
 			osDelay(75);
 			// must delay to let settle after balancing has halted, or else cells read high
-		} else { // snap before getting data
-			segment_snap(bmsdata->chips, hspi);
 		}
 
 		if (current_state == CHARGING_STATE) {
 			// in charging, debug data is required to get things like die temp
 			segment_retrieve_charging_data(bmsdata->chips, hspi);
 		} else {
+			// snap before getting data
+			segment_snap(bmsdata->chips, hspi);
 			segment_retrieve_active_data(bmsdata->chips, hspi);
+			// unsnap after getting data
+			segment_unsnap(bmsdata->chips, hspi);
 			if (DEBUG_MODE_ENABLED) {
 				segment_retrieve_debug_data(bmsdata->chips,
 							    hspi);
@@ -88,9 +90,6 @@ void vGetSegmentData(void *pv_params)
 
 		if (current_state == CHARGING_STATE) {
 			segment_unmute(bmsdata->chips, hspi);
-		} else {
-			// unsnap after getting data
-			segment_unsnap(bmsdata->chips, hspi);
 		}
 
 		if (bmsdata->should_balance)
