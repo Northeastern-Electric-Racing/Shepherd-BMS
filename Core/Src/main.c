@@ -368,6 +368,10 @@ int main(void)
   acc_data->segment_average_volts[3] = 3.666;
   acc_data->segment_average_volts[4] = 3.666;
 
+  // always default to no balancing
+  memset(acc_data->discharge_config, 0, sizeof(acc_data->discharge_config));
+  acc_data->should_balance = false;
+
   
   /* USER CODE END Init */
 
@@ -433,13 +437,16 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   
   /* Messaging */
-  can_dispatch_handle = osThreadNew(vCanDispatch, acc_data, &can_dispatch_attributes);
+  can_dispatch_handle = osThreadNew(vCanDispatch, NULL, &can_dispatch_attributes);
   assert(can_dispatch_handle);
   
   can_receive_thread = osThreadNew(vCanReceive, acc_data, &can_receive_attributes);
   assert(can_receive_thread);
 
-  get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
+  get_segment_data_args_t *seg_args = malloc(sizeof(get_segment_data_args_t));
+  seg_args->bmsdata = acc_data;
+  seg_args->hspi = &hspi2;
+  get_segment_data_thread = osThreadNew(vGetSegmentData, seg_args, &get_segment_data_attrs);
   assert(get_segment_data_thread);
 
   analyzer_thread = osThreadNew(vAnalyzer, acc_data, &analyzer_attrs);

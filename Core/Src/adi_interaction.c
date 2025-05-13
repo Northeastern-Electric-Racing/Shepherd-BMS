@@ -1,9 +1,9 @@
 #include "adi_interaction.h"
 #include "adBms6830CmdList.h"
 #include "adBms6830GenericType.h"
-#include "mcuWrapper.h"
 #include "can_messages.h"
 #include "compute.h"
+#include "mcuWrapper.h"
 
 /**
  * @brief Count and reset PEC errors for all chips, then send a CAN message if needed.
@@ -44,6 +44,55 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 		if (pec_error_count > 0) {
 			printf("PEC Error: Chip %u, Count: %u\n", chip,
 			       pec_error_count);
+
+			// if only a few PEC errors happened, print which registers they came from
+			if (pec_error_count < 10) {
+				if (chips[chip].cccrc.cfgr_pec > 0) {
+					printf("CFGR PEC %d, ",
+					       chips[chip].cccrc.cfgr_pec);
+				}
+				if (chips[chip].cccrc.cell_pec > 0) {
+					printf("CELL PEC %d, ",
+					       chips[chip].cccrc.cell_pec);
+				}
+				if (chips[chip].cccrc.acell_pec > 0) {
+					printf("ACELL PEC %d, ",
+					       chips[chip].cccrc.acell_pec);
+				}
+				if (chips[chip].cccrc.scell_pec > 0) {
+					printf("SCELL PEC %d, ",
+					       chips[chip].cccrc.scell_pec);
+				}
+				if (chips[chip].cccrc.fcell_pec > 0) {
+					printf("FCELL PEC %d, ",
+					       chips[chip].cccrc.fcell_pec);
+				}
+				if (chips[chip].cccrc.aux_pec > 0) {
+					printf("AUX PEC %d, ",
+					       chips[chip].cccrc.aux_pec);
+				}
+				if (chips[chip].cccrc.raux_pec > 0) {
+					printf("RAUX PEC %d, ",
+					       chips[chip].cccrc.raux_pec);
+				}
+				if (chips[chip].cccrc.stat_pec > 0) {
+					printf("STAT PEC %d, ",
+					       chips[chip].cccrc.stat_pec);
+				}
+				if (chips[chip].cccrc.comm_pec > 0) {
+					printf("COMM PEC %d, ",
+					       chips[chip].cccrc.comm_pec);
+				}
+				if (chips[chip].cccrc.pwm_pec > 0) {
+					printf("PWM PEC %d, ",
+					       chips[chip].cccrc.pwm_pec);
+				}
+				if (chips[chip].cccrc.sid_pec > 0) {
+					printf("SID PEC %d, ",
+					       chips[chip].cccrc.sid_pec);
+				}
+				printf("\n");
+			}
 
 			send_pec_error_message(chip, pec_error_count);
 		}
@@ -160,10 +209,10 @@ extern TIM_HandleTypeDef htim2;
  * 
  * @param us the number of us to delay
  */
-inline void delay_us(uint16_t us)
+inline void delay_us(uint32_t us)
 {
-	uint16_t tickstart = __HAL_TIM_GET_COUNTER(&htim2);
-	uint16_t wait = us;
+	uint32_t tickstart = __HAL_TIM_GET_COUNTER(&htim2);
+	uint32_t wait = us;
 
 	while ((__HAL_TIM_GET_COUNTER(&htim2) - tickstart) < wait) {
 	}
@@ -172,16 +221,16 @@ inline void delay_us(uint16_t us)
 /**
  * @brief Wake the isoSPI of every ADBMS6830 IC in the daisy chain. Blocking critical section wait for around 30us * NUM_CHIPS.
  * 
+ * Takes in the SPI object as an onwership strategy, it is externed inside the driver
+ * 
  */
-void adbms_wake_isospi()
+void adbms_wake_isospi(SPI_HandleTypeDef *hspi)
 {
-	__disable_irq();
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
 		adBmsCsHigh();
-		delay_us(20);
+		delay_us(500);
 	}
-	__enable_irq();
 }
 
 /**
@@ -190,15 +239,11 @@ void adbms_wake_isospi()
  */
 void adbms_wake_core()
 {
-	__disable_irq();
-
 	for (uint8_t ic = 0; ic < NUM_CHIPS; ic++) {
 		adBmsCsLow();
-		adBmsCsHigh();
 		delay_us(1000);
+		adBmsCsHigh();
 	}
-
-	__enable_irq();
 }
 
 /**
@@ -210,9 +255,9 @@ void adbms_wake_core()
  * @param group Group of registers to write to.
  */
 void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
-		      GRP group)
+		      GRP group, SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 
 	adBmsWriteData(NUM_CHIPS, chips, command, type, group);
 }
@@ -226,9 +271,9 @@ void write_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
  * @param group Group of registers to write to.
  */
 void read_adbms_data(cell_asic chips[NUM_CHIPS], uint8_t command[2], TYPE type,
-		     GRP group)
+		     GRP group, SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 
 	adBmsReadData(NUM_CHIPS, chips, command, type, group);
 
@@ -245,43 +290,43 @@ uint32_t adBmsPollAdc_indicator(uint8_t poll_type[2])
 
 // --- BEGIN WRITE COMMANDS ---
 
-void soft_reset_chips(cell_asic chips[NUM_CHIPS])
+void soft_reset_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	spiSendCmd(SRST);
 	adbms_wake_core();
 }
 
-void mute_chips(cell_asic chips[NUM_CHIPS])
+void mute_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	spiSendCmd(MUTE);
 }
-void unmute_chips(cell_asic chips[NUM_CHIPS])
+void unmute_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	spiSendCmd(UNMUTE);
 }
 
-void snap_chips(cell_asic chips[NUM_CHIPS])
+void snap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	spiSendCmd(SNAP);
 }
 
-void unsnap_chips(cell_asic chips[NUM_CHIPS])
+void unsnap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
-	spiSendCmd(UNSNAP);
+	adbms_wake_isospi(hspi);
+  spiSendCmd(UNSNAP);
 }
 
-void write_config_regs(cell_asic chips[NUM_CHIPS])
+void write_config_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	write_adbms_data(chips, WRCFGA, Config, A);
-	write_adbms_data(chips, WRCFGB, Config, B);
+	write_adbms_data(chips, WRCFGA, Config, A, hspi);
+	write_adbms_data(chips, WRCFGB, Config, B, hspi);
 }
 
-void write_clear_flags(cell_asic chips[NUM_CHIPS])
+void write_clear_flags(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		chips[chip].clflag.cl_sleep = 1;
@@ -301,123 +346,141 @@ void write_clear_flags(cell_asic chips[NUM_CHIPS])
 		chips[chip].clflag.cl_vdel = 1;
 		chips[chip].clflag.cl_vde = 1;
 	}
-	write_adbms_data(chips, CLRFLAG, Clrflag, NONE);
+	write_adbms_data(chips, CLRFLAG, Clrflag, NONE, hspi);
 }
 
 // --- END WRITE COMMANDS
 
 // --- BEGIN READ COMMANDS ---
 
-void read_c_voltage_registers(cell_asic chips[NUM_CHIPS])
+void read_c_voltage_registers(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDCVA, Cell, A);
-	read_adbms_data(chips, RDCVB, Cell, B);
-	read_adbms_data(chips, RDCVC, Cell, C);
-	read_adbms_data(chips, RDCVD, Cell, D);
-	read_adbms_data(chips, RDCVE, Cell, E);
+	read_adbms_data(chips, RDCVA, Cell, A, hspi);
+	read_adbms_data(chips, RDCVB, Cell, B, hspi);
+	read_adbms_data(chips, RDCVC, Cell, C, hspi);
+	read_adbms_data(chips, RDCVD, Cell, D, hspi);
+	read_adbms_data(chips, RDCVE, Cell, E, hspi);
 }
 
-void read_average_voltage_registers(cell_asic chips[NUM_CHIPS])
+void read_average_voltage_registers(cell_asic chips[NUM_CHIPS],
+				    SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDACA, AvgCell, A);
-	read_adbms_data(chips, RDACB, AvgCell, B);
-	read_adbms_data(chips, RDACC, AvgCell, C);
-	read_adbms_data(chips, RDACD, AvgCell, D);
-	read_adbms_data(chips, RDACE, AvgCell, E);
+	read_adbms_data(chips, RDACA, AvgCell, A, hspi);
+	read_adbms_data(chips, RDACB, AvgCell, B, hspi);
+	read_adbms_data(chips, RDACC, AvgCell, C, hspi);
+	read_adbms_data(chips, RDACD, AvgCell, D, hspi);
+	read_adbms_data(chips, RDACE, AvgCell, E, hspi);
 }
 
-void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS])
+void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS],
+				     SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDFCA, F_volt, A);
-	read_adbms_data(chips, RDFCB, F_volt, B);
-	read_adbms_data(chips, RDFCC, F_volt, C);
-	read_adbms_data(chips, RDFCD, F_volt, D);
-	read_adbms_data(chips, RDFCE, F_volt, E);
+	read_adbms_data(chips, RDFCA, F_volt, A, hspi);
+	read_adbms_data(chips, RDFCB, F_volt, B, hspi);
+	read_adbms_data(chips, RDFCC, F_volt, C, hspi);
+	read_adbms_data(chips, RDFCD, F_volt, D, hspi);
+	read_adbms_data(chips, RDFCE, F_volt, E, hspi);
 }
 
-void read_s_voltage_registers(cell_asic chips[NUM_CHIPS])
+void read_s_voltage_registers(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDSVA, S_volt, A);
-	read_adbms_data(chips, RDSVB, S_volt, B);
-	read_adbms_data(chips, RDSVC, S_volt, C);
-	read_adbms_data(chips, RDSVD, S_volt, D);
-	read_adbms_data(chips, RDSVE, S_volt, E);
+	read_adbms_data(chips, RDSVA, S_volt, A, hspi);
+	read_adbms_data(chips, RDSVB, S_volt, B, hspi);
+	read_adbms_data(chips, RDSVC, S_volt, C, hspi);
+	read_adbms_data(chips, RDSVD, S_volt, D, hspi);
+	read_adbms_data(chips, RDSVE, S_volt, E, hspi);
 }
 
-void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS])
+void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS],
+				SPI_HandleTypeDef *hspi)
 {
 	// TODO only poll correct GPIOs
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adax(AUX_OW_OFF, PUP_DOWN, AUX_ALL);
 	adBmsPollAdc_indicator(PLAUX1);
 
-	read_adbms_data(chips, RDAUXA, Aux, A);
-	read_adbms_data(chips, RDAUXB, Aux, B);
-	read_adbms_data(chips, RDAUXC, Aux, C);
-	read_adbms_data(chips, RDAUXD, Aux, D);
+	read_adbms_data(chips, RDAUXA, Aux, A, hspi);
+	read_adbms_data(chips, RDAUXB, Aux, B, hspi);
+	read_adbms_data(chips, RDAUXC, Aux, C, hspi);
+	read_adbms_data(chips, RDAUXD, Aux, D, hspi);
 }
 
-void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS])
+void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS],
+				 SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adax2(AUX_ALL);
 	adBmsPollAdc_indicator(PLAUX2);
 
-	read_adbms_data(chips, RDRAXA, RAux, A);
-	read_adbms_data(chips, RDRAXB, RAux, B);
-	read_adbms_data(chips, RDRAXC, RAux, C);
-	read_adbms_data(chips, RDRAXD, RAux, D);
+	read_adbms_data(chips, RDRAXA, RAux, A, hspi);
+	read_adbms_data(chips, RDRAXB, RAux, B, hspi);
+	read_adbms_data(chips, RDRAXC, RAux, C, hspi);
+	read_adbms_data(chips, RDRAXD, RAux, D, hspi);
 }
 
-void read_status_registers(cell_asic chips[NUM_CHIPS])
+void read_status_registers(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDSTATA, Status, A);
-	read_adbms_data(chips, RDSTATB, Status, B);
-	read_adbms_data(chips, RDSTATC, Status, C);
-	read_adbms_data(chips, RDSTATD, Status, D);
-	read_adbms_data(chips, RDSTATE, Status, E);
+	read_adbms_data(chips, RDSTATA, Status, A, hspi);
+	read_adbms_data(chips, RDSTATB, Status, B, hspi);
+	read_adbms_data(chips, RDSTATC, Status, C, hspi);
+	read_adbms_data(chips, RDSTATD, Status, D, hspi);
+	read_adbms_data(chips, RDSTATE, Status, E, hspi);
 }
 
-void read_status_register_c(cell_asic chips[NUM_CHIPS])
+void read_status_register_c(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDSTATC, Status, C);
+	read_adbms_data(chips, RDSTATC, Status, C, hspi);
 }
 
-void read_config_register_b(cell_asic chips[NUM_CHIPS])
+void read_config_register_a(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDCFGB, Config, B);
+	read_adbms_data(chips, RDCFGA, Config, A, hspi);
 }
 
-void read_status_aux_registers(cell_asic chips[NUM_CHIPS])
+void read_config_register_b(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDASALL, Rdasall, ALL_GRP);
+	read_adbms_data(chips, RDCFGB, Config, B, hspi);
 }
 
-void read_serial_id(cell_asic chips[NUM_CHIPS])
+void read_pwm_registers(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	read_adbms_data(chips, RDSID, Sid, NONE);
+	read_adbms_data(chips, RDPWM1, Pwm, A, hspi);
+	read_adbms_data(chips, RDPWM2, Pwm, B, hspi);
+}
+
+void read_status_aux_registers(cell_asic chips[NUM_CHIPS],
+			       SPI_HandleTypeDef *hspi)
+{
+	read_adbms_data(chips, RDASALL, Rdasall, ALL_GRP, hspi);
+}
+
+void read_serial_id(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
+{
+	read_adbms_data(chips, RDSID, Sid, NONE, hspi);
 }
 
 // --- END READ COMMANDS ---
 
 // --- BEGIN ADC POLL ---
 
-void get_c_adc_voltages(cell_asic chips[NUM_CHIPS])
+void get_c_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
-	read_c_voltage_registers(chips);
+	read_c_voltage_registers(chips, hspi);
 }
 
-void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
+void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adcv(RD_OFF, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLCADC);
 
-	read_average_voltage_registers(chips);
+	read_average_voltage_registers(chips, hspi);
 }
 
 // useless, as a filter needs to be continous
@@ -427,29 +490,29 @@ void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS])
 // 	read_adbms_data(chips, RDFCALL, Rdfcall, ALL_GRP);
 // }
 
-void get_s_adc_voltages(cell_asic chips[NUM_CHIPS])
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adsv(SINGLE, DCP_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLSADC);
 
-	read_s_voltage_registers(chips);
+	read_s_voltage_registers(chips, hspi);
 }
 
-void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS])
+void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adcv(RD_ON, SINGLE, DCP_OFF, RSTF_OFF, OW_OFF_ALL_CH);
 	adBmsPollAdc_indicator(PLSADC);
 
-	adbms_wake_isospi();
-	read_c_voltage_registers(chips);
-	read_s_voltage_registers(chips);
+	read_c_voltage_registers(chips, hspi);
+	read_s_voltage_registers(chips, hspi);
 }
 
-void start_c_adc_conv()
+void start_c_adc_conv(SPI_HandleTypeDef *hspi)
 {
-	adbms_wake_isospi();
+	adbms_wake_isospi(hspi);
 	adBms6830_Adcv(RD_ON, CONTINUOUS, DCP_OFF, RSTF_ON, OW_OFF_ALL_CH);
 }
 
