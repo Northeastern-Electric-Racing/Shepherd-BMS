@@ -290,20 +290,17 @@ void send_segment_average_volt_message(acc_data_t *bmsdata)
 
 void send_segment_total_volt_message(acc_data_t *bmsdata)
 {
+	// clang-format off
 	bitstream_t segment_total_volt_msg;
 	uint8_t bitstream_data[8];
 	bitstream_init(&segment_total_volt_msg, bitstream_data, 8);
 
-	bitstream_add(&segment_total_volt_msg,
-		      bmsdata->segment_average_volts[0] * 1000, 12);
-	bitstream_add(&segment_total_volt_msg,
-		      bmsdata->segment_average_volts[1] * 1000, 12);
-	bitstream_add(&segment_total_volt_msg,
-		      bmsdata->segment_average_volts[2] * 1000, 12);
-	bitstream_add(&segment_total_volt_msg,
-		      bmsdata->segment_average_volts[3] * 1000, 12);
-	bitstream_add(&segment_total_volt_msg,
-		      bmsdata->segment_average_volts[4] * 1000, 12);
+	bitstream_add(&segment_total_volt_msg, bmsdata->segment_average_volts[0] * 1000, 12); // Segment 1
+	bitstream_add(&segment_total_volt_msg, bmsdata->segment_average_volts[1] * 1000, 12); // Segment 2
+	bitstream_add(&segment_total_volt_msg, bmsdata->segment_average_volts[2] * 1000, 12); // Segment 3
+	bitstream_add(&segment_total_volt_msg, bmsdata->segment_average_volts[3] * 1000, 12); // Segment 4
+	bitstream_add(&segment_total_volt_msg, bmsdata->segment_average_volts[4] * 1000, 12); // Segment 5
+	bitstream_add(&segment_total_volt_msg, 0, 4); // Extra (4 bits)
 
 	can_msg_t msg;
 	msg.id = SEGMENT_TOTAL_VOLT_CANID;
@@ -313,6 +310,7 @@ void send_segment_total_volt_message(acc_data_t *bmsdata)
 
 	handle_bitstream_overflow(&segment_total_volt_msg, msg.id);
 	queue_can_msg(msg);
+	// clang-format on
 }
 
 void send_cell_temp_message(crit_cellval_t max_temp, crit_cellval_t min_temp,
