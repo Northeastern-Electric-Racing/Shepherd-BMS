@@ -115,6 +115,8 @@ typedef struct {
 	float segment_average_temps[NUM_SEGMENTS];
 	/* OCV average voltages */
 	float segment_average_volts[NUM_SEGMENTS];
+	/* Total voltages for each segment */
+	float segment_total_volts[NUM_SEGMENTS];
 
 	// the board temperature
 	float internal_temp;

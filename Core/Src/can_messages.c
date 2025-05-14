@@ -261,30 +261,57 @@ void send_cell_voltage_message(crit_cellval_t max_voltage,
 
 	queue_can_msg(msg);
 }
-void send_segment_volt_message(acc_data_t *bmsdata)
+void send_segment_average_volt_message(acc_data_t *bmsdata)
 {
-	bitstream_t segment_volt_msg_data;
+	bitstream_t segment_average_volt_msg;
 	uint8_t bitstream_data[8];
-	bitstream_init(&segment_volt_msg_data, bitstream_data, 8);
+	bitstream_init(&segment_average_volt_msg, bitstream_data, 8);
 
-	bitstream_add(&segment_volt_msg_data,
+	bitstream_add(&segment_average_volt_msg,
 		      bmsdata->segment_average_volts[0] * 1000, 12);
-	bitstream_add(&segment_volt_msg_data,
+	bitstream_add(&segment_average_volt_msg,
 		      bmsdata->segment_average_volts[1] * 1000, 12);
-	bitstream_add(&segment_volt_msg_data,
+	bitstream_add(&segment_average_volt_msg,
 		      bmsdata->segment_average_volts[2] * 1000, 12);
-	bitstream_add(&segment_volt_msg_data,
+	bitstream_add(&segment_average_volt_msg,
 		      bmsdata->segment_average_volts[3] * 1000, 12);
-	bitstream_add(&segment_volt_msg_data,
+	bitstream_add(&segment_average_volt_msg,
 		      bmsdata->segment_average_volts[4] * 1000, 12);
 
 	can_msg_t msg;
-	msg.id = SEGMENT_VOLT_CANID;
-	msg.len = SEGMENT_VOLT_SIZE;
+	msg.id = SEGMENT_AVERAGE_VOLT_CANID;
+	msg.len = SEGMENT_AVERAGE_VOLT_SIZE;
 
 	memcpy(msg.data, &bitstream_data, 8);
 
-	handle_bitstream_overflow(&segment_volt_msg_data, msg.id);
+	handle_bitstream_overflow(&segment_average_volt_msg, msg.id);
+	queue_can_msg(msg);
+}
+
+void send_segment_total_volt_message(acc_data_t *bmsdata)
+{
+	bitstream_t segment_total_volt_msg;
+	uint8_t bitstream_data[8];
+	bitstream_init(&segment_total_volt_msg, bitstream_data, 8);
+
+	bitstream_add(&segment_total_volt_msg,
+		      bmsdata->segment_average_volts[0] * 1000, 12);
+	bitstream_add(&segment_total_volt_msg,
+		      bmsdata->segment_average_volts[1] * 1000, 12);
+	bitstream_add(&segment_total_volt_msg,
+		      bmsdata->segment_average_volts[2] * 1000, 12);
+	bitstream_add(&segment_total_volt_msg,
+		      bmsdata->segment_average_volts[3] * 1000, 12);
+	bitstream_add(&segment_total_volt_msg,
+		      bmsdata->segment_average_volts[4] * 1000, 12);
+
+	can_msg_t msg;
+	msg.id = SEGMENT_TOTAL_VOLT_CANID;
+	msg.len = SEGMENT_TOTAL_VOLT_SIZE;
+
+	memcpy(msg.data, &bitstream_data, 8);
+
+	handle_bitstream_overflow(&segment_total_volt_msg, msg.id);
 	queue_can_msg(msg);
 }
 
