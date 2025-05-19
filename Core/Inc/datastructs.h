@@ -107,8 +107,7 @@ typedef struct {
 	uint8_t break_chip_index;
 	uint8_t recovery_attempts;
 	uint8_t recovery_successful;
-	nertimer_t startup_mask_timer;
-	nertimer_t pec_accum_timer;
+	uint8_t fault_latched;
 } isospi_status_t;
 
 /**

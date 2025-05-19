@@ -4,6 +4,13 @@
 #include "datastructs.h"
 
 /**
+ * @brief Checks whether the isoSPI startup mask period is still active.
+ *
+ * @return 1 if the startup mask is active (PEC faults should be ignored), 0 otherwise.
+ */
+int is_startup_mask_active(void);
+
+/**
  * @brief Initializes ISO SPI break detection timers and state.
  *
  * Should be called during system startup or segment re-initialization.

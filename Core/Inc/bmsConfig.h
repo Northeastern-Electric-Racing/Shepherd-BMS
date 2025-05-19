@@ -75,15 +75,18 @@
 
 // Threshold for PEC errors to detect a possible ISO SPI break
 #define MAX_PEC_ERROR_ACCUM 1000U
-#define ISOSPI_STARTUP_MASK_TIME_MS \
+#define ISOSPI_STARTUP_MASK_TIME \
 	1500U // Time to ignore PEC errors after boot (ms)
-#define ISOSPI_ACCUM_PERIOD_MS 2000U // Interval between PEC error checks (ms)
+#define ISOSPI_ACCUM_PERIOD_MS 5000U // Interval between PEC error checks (ms)
 #define ISOSPI_PEC_ERROR_THRESHOLD \
-	10U // PEC error count to trigger break detection
+	40U // PEC error count to trigger break detection
 #define ISOSPI_RECOVERY_RETRIES_MAX \
 	3U // Maximum isoSPI recovery attempts before fault
 #define ISOSPI_VERIFICATION_READS \
 	3U // Number of read cycles to confirm recovery success
-#define ISOSPI_VERIFICATION_DELAY 100U // Delay between verification reads (ms)
+#define ISOSPI_RECOVERY_VALIDATION_THRESHOLD \
+	3U // Max PECs per chip allowed during recovery to consider it successful
+#define ISOSPI_VERIFICATION_DELAY   100U // Delay between verification reads (ms)
+#define ISOSPI_RECOVERY_RETRY_DELAY 250U // Delay between recovery attempts (ms)
 
 #endif

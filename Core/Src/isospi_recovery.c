@@ -5,6 +5,16 @@
 #include "can_messages.h"
 #include "timer.h"
 
+/** 
+ * @brief Timer to mask PEC faults during startup delay window 
+ */
+static nertimer_t startup_mask_timer;
+
+/** 
+ * @brief Timer to accumulate PEC errors before break detection 
+ */
+static nertimer_t pec_accum_timer;
+
 /**
  * @brief Reset PEC error accumulators for all chips.
  *
@@ -32,31 +42,37 @@ static void reset_all_pec_error_sums(cell_asic chips[NUM_CHIPS])
 static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
 {
 	for (uint8_t r = 0U; r < ISOSPI_VERIFICATION_READS; r++) {
+		reset_all_pec_error_sums(bmsdata->chips);
 		segment_retrieve_active_data(bmsdata);
 		count_pec_errors(bmsdata->chips);
 
 		for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
-			if (bmsdata->chips[i].pec_error_sum > 0) {
+			if (bmsdata->chips[i].pec_error_sum >
+			    ISOSPI_RECOVERY_VALIDATION_THRESHOLD) {
 				return 0;
 			}
 		}
 
-		reset_all_pec_error_sums(bmsdata->chips);
 		osDelay(ISOSPI_VERIFICATION_DELAY);
 	}
 	return 1;
 }
 
+int is_startup_mask_active(void)
+{
+	return !is_timer_expired(&startup_mask_timer);
+}
+
 void isospi_break_detection_init(acc_data_t *bmsdata)
 {
 	// Wait a short time before enabling PEC detection to avoid startup noise
-	start_timer(&bmsdata->isospi_status.startup_mask_timer,
-		    ISOSPI_STARTUP_MASK_TIME_MS);
-	cancel_timer(&bmsdata->isospi_status.pec_accum_timer);
+	start_timer(&startup_mask_timer, ISOSPI_STARTUP_MASK_TIME);
+	cancel_timer(&pec_accum_timer);
 
 	bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
 	bmsdata->isospi_status.recovery_attempts = 0U;
 	bmsdata->isospi_status.recovery_successful = 0U;
+	bmsdata->isospi_status.fault_latched = 0U;
 
 	reset_all_pec_error_sums(bmsdata->chips);
 
@@ -66,17 +82,12 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 
 void detect_isospi_break(acc_data_t *bmsdata)
 {
-	if (!is_timer_expired(&bmsdata->isospi_status.startup_mask_timer)) {
-		return;
-	}
-
 	// Start accumulation timer on first PEC activity
-	if (!is_timer_active(&bmsdata->isospi_status.pec_accum_timer)) {
+	if (!is_timer_active(&pec_accum_timer)) {
 		for (uint8_t i = 1U; i < NUM_CHIPS; i++) {
 			if (bmsdata->chips[i].pec_error_sum > 0U) {
-				start_timer(
-					&bmsdata->isospi_status.pec_accum_timer,
-					ISOSPI_ACCUM_PERIOD_MS);
+				start_timer(&pec_accum_timer,
+					    ISOSPI_ACCUM_PERIOD_MS);
 				return;
 			}
 		}
@@ -84,7 +95,7 @@ void detect_isospi_break(acc_data_t *bmsdata)
 	}
 
 	// Only proceed if timer has expired
-	if (!is_timer_expired(&bmsdata->isospi_status.pec_accum_timer)) {
+	if (!is_timer_expired(&pec_accum_timer)) {
 		return;
 	}
 
@@ -126,8 +137,8 @@ void detect_isospi_break(acc_data_t *bmsdata)
 	// Reset PEC accumulation and restart timer for next window
 	reset_all_pec_error_sums(bmsdata->chips);
 
-	start_timer(&bmsdata->isospi_status.pec_accum_timer,
-		    ISOSPI_ACCUM_PERIOD_MS);
+	// Disabled for now — will enable based on test results for PEC accumulation timing
+	//start_timer(&pec_accum_timer, ISOSPI_ACCUM_PERIOD_MS);
 }
 
 int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
@@ -185,7 +196,7 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 			bmsdata->isospi_status.recovery_attempts++;
 			printf("[isoSPI] Recovery Failed (attempt %u)\n\r",
 			       bmsdata->isospi_status.recovery_attempts);
-			osDelay(250);
+			osDelay(ISOSPI_RECOVERY_RETRY_DELAY);
 		}
 		break;
 
@@ -200,11 +211,19 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		break;
 
 	case ISOSPI_RECOVERY_FAILED:
-		send_isospi_status_message(&bmsdata->isospi_status);
+		// Run critical fault logic only once to avoid repeating logs and CAN messages
+		if (!bmsdata->isospi_status.fault_latched) {
+			send_isospi_status_message(&bmsdata->isospi_status);
+			printf("[isoSPI] Recovery Failed — Critical Fault\n\r");
 
-		printf("[isoSPI] Recovery Failed — Critical Fault\n\r");
-		bmsdata->fault_code_noncrit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
-		bmsdata->fault_code_crit |= INTERNAL_ISOSPI_BREAK_FAULT;
+			bmsdata->fault_code_noncrit &=
+				~INTERNAL_ISOSPI_BREAK_FAULT;
+			bmsdata->fault_code_crit |= INTERNAL_ISOSPI_BREAK_FAULT;
+
+			bmsdata->isospi_status.recovery_successful = 0U;
+			bmsdata->isospi_status.fault_latched = 1U;
+		}
+
 		reset_all_pec_error_sums(bmsdata->chips);
 		break;
 

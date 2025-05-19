@@ -4,6 +4,7 @@
 #include "mcuWrapper.h"
 #include "can_messages.h"
 #include "compute.h"
+#include "isospi_recovery.h"
 
 void count_pec_errors(cell_asic chips[NUM_CHIPS])
 {
@@ -39,13 +40,15 @@ void count_pec_errors(cell_asic chips[NUM_CHIPS])
 			send_pec_error_message(chip, pec_error_count);
 		}
 
-		// Accumulate per-chip PEC errors with overflow protection
-		if ((MAX_PEC_ERROR_ACCUM - chips[chip].pec_error_sum) <
-		    pec_error_count) {
-			chips[chip].pec_error_sum = MAX_PEC_ERROR_ACCUM;
-		} else {
-			chips[chip].pec_error_sum +=
-				pec_error_count; // cleared in detect_isospi_break()
+		// Accumulate PEC errors only after startup mask period ends, with overflow protection
+		if (!is_startup_mask_active()) {
+			if ((MAX_PEC_ERROR_ACCUM - chips[chip].pec_error_sum) <
+			    pec_error_count) {
+				chips[chip].pec_error_sum = MAX_PEC_ERROR_ACCUM;
+			} else {
+				chips[chip].pec_error_sum +=
+					pec_error_count; // cleared in detect_isospi_break()
+			}
 		}
 
 		// Reset PEC counters for next round
