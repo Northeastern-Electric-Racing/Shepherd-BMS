@@ -5,6 +5,20 @@
 #include "can_messages.h"
 #include "timer.h"
 
+/* PEC Error Thresholds */
+#define ISOSPI_PEC_ERROR_THRESHOLD  40U // Break detect threshold
+#define ISOSPI_VALIDATION_THRESHOLD 3U // PECs allowed during recovery
+
+/* Timing (ms) */
+#define ISOSPI_STARTUP_MASK_TIME    1500U // Ignore PECs after boot
+#define ISOSPI_ACCUM_PERIOD_MS	    5000U // Accumulation window
+#define ISOSPI_VERIFICATION_DELAY   100U // Delay between reads
+#define ISOSPI_RECOVERY_RETRY_DELAY 250U // Delay between retries
+
+/* Recovery Parameters */
+#define ISOSPI_RECOVERY_RETRIES_MAX 3U // Max recovery attempts
+#define ISOSPI_VERIFICATION_READS   3U // Reads to confirm success
+
 /** 
  * @brief Timer to mask PEC faults during startup delay window 
  */
@@ -48,7 +62,7 @@ static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
 
 		for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
 			if (bmsdata->chips[i].pec_error_sum >
-			    ISOSPI_RECOVERY_VALIDATION_THRESHOLD) {
+			    ISOSPI_VALIDATION_THRESHOLD) {
 				return 0;
 			}
 		}
@@ -58,29 +72,15 @@ static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
 	return 1;
 }
 
-int is_startup_mask_active(void)
-{
-	return !is_timer_expired(&startup_mask_timer);
-}
-
-void isospi_break_detection_init(acc_data_t *bmsdata)
-{
-	// Wait a short time before enabling PEC detection to avoid startup noise
-	start_timer(&startup_mask_timer, ISOSPI_STARTUP_MASK_TIME);
-	cancel_timer(&pec_accum_timer);
-
-	bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
-	bmsdata->isospi_status.recovery_attempts = 0U;
-	bmsdata->isospi_status.recovery_successful = 0U;
-	bmsdata->isospi_status.fault_latched = 0U;
-
-	reset_all_pec_error_sums(bmsdata->chips);
-
-	send_isospi_status_message(&bmsdata->isospi_status);
-	send_isospi_lines_message(bmsdata->chips);
-}
-
-void detect_isospi_break(acc_data_t *bmsdata)
+/**
+ * @brief Checks for ISO SPI communication break using PEC error tracking.
+ *
+ * If a break is detected based on PEC thresholds, the internal state is updated and
+ * a non-critical fault is flagged. Resets counters after each check.
+ *
+ * @param bmsdata Pointer to accumulator data structure.
+ */
+static void detect_isospi_break(acc_data_t *bmsdata)
 {
 	// Start accumulation timer on first PEC activity
 	if (!is_timer_active(&pec_accum_timer)) {
@@ -141,7 +141,15 @@ void detect_isospi_break(acc_data_t *bmsdata)
 	//start_timer(&pec_accum_timer, ISOSPI_ACCUM_PERIOD_MS);
 }
 
-int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
+/**
+ * @brief Attempts to recover from an ISO SPI break by switching to the secondary line.
+ *
+ * Updates chip direction, sets COMM_BK, writes configs, and verifies recovery by checking PEC errors.
+ *
+ * @param bmsdata Pointer to the accumulator data structure.
+ * @return int 1 if recovery was successful, 0 otherwise.
+ */
+static int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
 {
 	uint8_t break_chip = bmsdata->isospi_status.break_chip_index;
 
@@ -163,6 +171,28 @@ int32_t attempt_isospi_recovery(acc_data_t *bmsdata)
 	start_c_adc_conv(bmsdata->chips);
 
 	return verify_isospi_recovery(bmsdata, break_chip);
+}
+
+int is_startup_mask_active(void)
+{
+	return !is_timer_expired(&startup_mask_timer);
+}
+
+void isospi_break_detection_init(acc_data_t *bmsdata)
+{
+	// Wait a short time before enabling PEC detection to avoid startup noise
+	start_timer(&startup_mask_timer, ISOSPI_STARTUP_MASK_TIME);
+	cancel_timer(&pec_accum_timer);
+
+	bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
+	bmsdata->isospi_status.recovery_attempts = 0U;
+	bmsdata->isospi_status.recovery_successful = 0U;
+	bmsdata->isospi_status.fault_latched = 0U;
+
+	reset_all_pec_error_sums(bmsdata->chips);
+
+	send_isospi_status_message(&bmsdata->isospi_status);
+	send_isospi_lines_message(bmsdata->chips);
 }
 
 void isospi_state_dispatcher(acc_data_t *bmsdata)
