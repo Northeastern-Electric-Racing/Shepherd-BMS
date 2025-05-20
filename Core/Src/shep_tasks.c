@@ -96,6 +96,8 @@ void vGetSegmentData(void *pv_params)
 			segment_configure_balancing(bmsdata->chips,
 						    bmsdata->discharge_config,
 						    hspi);
+		else 
+			segment_disable_balancing(bmsdata->chips, hspi);
 
 		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 

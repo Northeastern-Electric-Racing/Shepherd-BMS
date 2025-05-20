@@ -7,6 +7,8 @@
 
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
+#define MAX_BALANCING_CHIP_TEMP 55
+
 /// the current state of the BMS
 BMSState_t current_state = BOOT_STATE;
 
@@ -312,7 +314,7 @@ fault_stat_t sm_fault_eval(fault_eval_t *item)
 			send_fault_timer_message(2, item->code, item->data_1);
 			return FAULT_STAT_FAULTED;
 		}
-
+	
 		return 0;
 
 	}
@@ -388,6 +390,11 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 	if (is_timer_active(&charger_settle_countup) &&
 	    !is_timer_expired(&charger_settle_countup))
 		return false;
+
+	// let temp go down if chip temp gets too high to prevent latching fault during balancing
+	if (segment_is_balancing(bmsdata->chips) && bmsdata->max_chiptemp.val >= MAX_BALANCING_CHIP_TEMP) {
+		return false;
+	}
 
 	// Do not balance if the shutdown circuit is open.
 	return !read_shutdown();
