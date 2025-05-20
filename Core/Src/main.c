@@ -43,7 +43,7 @@ extern BMSState_t current_state;
 // #define DEBUG_STATS
 //#define DEBUG_VOLTAGES
 //#define DEBUG_RAW_VOLTAGES
-#define DEBUG_RAW_VOLTAGES_FORMATTED
+// #define DEBUG_RAW_VOLTAGES_FORMATTED
 // #define DEBUG_OCV
 // #define DEUBG_THERMS
 // #define DEBUG_OTHER
@@ -262,7 +262,7 @@ printf("\n");
   }
   #endif
 
-#define DEBUG_THERM_VOLTS
+// #define DEBUG_THERM_VOLTS
   #ifdef DEBUG_THERM_VOLTS
   printf("THERM VOLTS: \n");
   for(uint8_t c = 0; c < NUM_CHIPS; c++)

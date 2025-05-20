@@ -67,12 +67,12 @@ void chipsSelectionSort(acc_data_t *bmsdata,
 void handle_balance_cells(acc_data_t *bmsdata)
 {
 	// the maximum number of cells to balance per chip, usually tuned for thermal reasons
-	static const int MAX_BAL_CHIP = 7;
+	static const int MAX_BAL_CHIP = 3;
 
 	// the low cell, eventually they all must get there
 	float low = bmsdata->min_ocv.val;
 	// the margin above the low cell to ignore, which is usually X% of the delta
-	float min_thresh = bmsdata->delt_ocv * 0.4;
+	float min_thresh = bmsdata->delt_ocv * 0.1;
 
 	val_idexed_t new_ocv_map[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 
@@ -85,6 +85,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 		// this is OK because they are sorted greatest to least in delta
 		int cell_max = min(get_num_cells(bmsdata[chip].chip_data),
 				   MAX_BAL_CHIP);
+		printf("%d\n", cell_max);
 		for (size_t cell = 0; cell < cell_max; cell++) {
 			/* Check if cell voltage is above (low + threshold) */
 			if (new_ocv_map[chip][cell].val > (low + min_thresh)) {

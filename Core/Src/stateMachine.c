@@ -214,7 +214,7 @@ void sm_fault_return(acc_data_t *bmsdata)
         fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 =  fault_data->max_ocv.val,      .optype_1 = GT, .lim_1 =                                                     MAX_VOLT,         .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
         fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =     fault_data->max_temp.val,  .optype_1 = GT, .lim_1 =                                                        MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
     	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 =  fault_data->min_ocv.val,      .optype_1 = LT, .lim_1 =                                                                  0.9, .timeout =       LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-		fault_table[7]  = (fault_eval_t) {.id = "Die Overtemp",            .timer =   die_overtemp_timer, .data_1 = fault_data->max_chiptemp.val,  .optype_1 = GT, .lim_1 = 													   MAX_CHIP_TEMP, .timeout =   MAX_CHIPTEMP_TIME, .code =            DIE_TEMP_MAXIMUM_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
+		fault_table[7]  = (fault_eval_t) {.id = "Die Overtemp",            .timer =   die_overtemp_timer, .data_1 = fault_data->max_chiptemp.val,  .optype_1 = GT, .lim_1 = 													   MAX_CHIP_TEMP, .timeout =   MAX_CHIPTEMP_TIME, .code =            DIE_TEMP_MAXIMUM_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  }; 
 
 		cancel_timer(&ovr_curr_timer);
 		cancel_timer(&ovr_chgcurr_timer);
@@ -370,14 +370,19 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
-	return false;
-
-	if (!bmsdata->is_charger_connected)
+	/*
+	 * Do not balance if:
+	 * The charger is not connected
+	 * The high cell is not high enough
+	 * The delta is too small
+	 * Charging is enabled
+	 */
+	if (!bmsdata->is_charger_connected ||
+	    bmsdata->max_voltage.val <= BAL_MIN_V ||
+	    bmsdata->delt_voltage <= MAX_DELTA_V ||
+	    bmsdata->is_charging_enabled) {
 		return false;
-	if (bmsdata->max_voltage.val <= BAL_MIN_V)
-		return false;
-	if (bmsdata->delt_voltage <= MAX_DELTA_V)
-		return false;
+	}
 
 	// Do not balance during the countup.
 	if (is_timer_active(&charger_settle_countup) &&
