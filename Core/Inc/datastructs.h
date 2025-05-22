@@ -95,8 +95,9 @@ typedef struct {
 typedef enum {
 	ISOSPI_STATE_NORMAL = 0x01U,
 	ISOSPI_BREAK_DETECTED = 0x02U,
-	ISOSPI_RECOVERY_SUCCESS = 0x03U,
-	ISOSPI_RECOVERY_FAILED = 0x04U
+	ISOSPI_STATE_VERIFYING = 0x03U,
+	ISOSPI_RECOVERY_SUCCESS = 0x04U,
+	ISOSPI_RECOVERY_FAILED = 0x05U
 } isospi_comm_state_t;
 
 /**
@@ -105,7 +106,7 @@ typedef enum {
 typedef struct {
 	isospi_comm_state_t state;
 	uint8_t break_chip_index;
-	uint8_t recovery_attempts;
+	uint8_t verification_attempts;
 	uint8_t recovery_successful;
 	uint8_t fault_latched;
 } isospi_status_t;

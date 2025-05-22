@@ -727,13 +727,13 @@ void send_isospi_status_message(const isospi_status_t *status)
 	struct __attribute__((__packed__)) {
 		uint8_t state;
 		uint8_t break_chip_index;
-		uint8_t recovery_attempts;
+		uint8_t ver_attempts;
 		uint8_t recovery_successful;
 	} msg_data;
 
 	msg_data.state = (uint8_t)status->state;
 	msg_data.break_chip_index = status->break_chip_index + 1;
-	msg_data.recovery_attempts = status->recovery_attempts;
+	msg_data.ver_attempts = status->verification_attempts;
 	msg_data.recovery_successful = status->recovery_successful;
 
 	can_msg_t msg = { .id = ISOSPI_STS_CANID,

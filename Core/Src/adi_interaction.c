@@ -6,7 +6,7 @@
 #include "compute.h"
 #include "isospi_recovery.h"
 
-#define MAX_PEC_ERROR_ACCUM 1000U // Max accumulated PECs
+#define MAX_PEC_ERROR_ACCUM 300U // Max accumulated PECs
 
 void count_pec_errors(cell_asic chips[NUM_CHIPS])
 {
