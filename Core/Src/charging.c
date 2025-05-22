@@ -32,7 +32,7 @@ static float calc_cell_voltage_std(acc_data_t *data)
 /* Send cell balancing config to the segment */
 void handle_balance_cells(acc_data_t *bmsdata)
 {	
-	static bool is_balancing = false;
+	static bool is_balancing = true;
 
 	if (bmsdata->delt_ocv <= MAX_DELTA_V) {
 		/* No balancing, return */
@@ -46,35 +46,36 @@ void handle_balance_cells(acc_data_t *bmsdata)
 
 	/* Get cell voltage average and standard deviation */
 	float low = bmsdata->min_ocv.val;
-	float thresh = bmsdata->delt_ocv * 0.8;
+	float thresh = bmsdata->delt_ocv * 0.2;
 
 	/* Set the threshold for balancing to (mu - sigma * STD_FACTOR) */
 
 	/* Balance all cells above the threshold */
-	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
-			/* Check if cell voltage is above (average - standard deviation) */
-			if (bmsdata->chip_data[chip].open_cell_voltage[cell] >
-			    (low + thresh)) {
-				/* Balance cell */
-				balanceConfig[chip][cell] = true;
-			} else {
-				/* Do not balance cell */
-				balanceConfig[chip][cell] = false;
+	if (!is_balancing) {
+		for (int chip = 0; chip < NUM_CHIPS; chip++) {
+			for (int cell = 0; cell < NUM_CELLS_ALPHA; cell++) {
+				/* Check if cell voltage is above (average - standard deviation) */
+				if (bmsdata->chip_data[chip].open_cell_voltage[cell] >
+					(low + thresh)) {
+					/* Balance cell */
+					balanceConfig[chip][cell] = true;
+				} else {
+					/* Do not balance cell */
+					balanceConfig[chip][cell] = false;
+				}
 			}
 		}
 	}
 
-	/* Configure balancing */
-	segment_configure_balancing(bmsdata, balanceConfig);
-
 	// enable balancing
 	if (!is_timer_active(&bal_timer) || is_timer_expired(&bal_timer)) {
 		if (is_balancing) {
+			printf("STOPPING BALANCE.----------------------\n");
 			segment_disable_balancing(bmsdata);
-			start_timer(&bal_timer, 160 * 1000);
+			start_timer(&bal_timer, 10 * 1000);
 		} else {
 			printf("STARTING TO BALANCE.----------------------\n");
+			segment_configure_balancing(bmsdata, balanceConfig);
 			segment_enable_balancing(bmsdata);
 			start_timer(&bal_timer, 10 * 60 * 1000);
 		}
