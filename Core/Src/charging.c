@@ -8,6 +8,8 @@
 
 /* Constants */
 static const uint8_t STD_FACTOR = 1;
+nertimer_t bal_timer = { .active = false };
+
 
 /* Find standard deviation from BMS data */
 static float calc_cell_voltage_std(acc_data_t *data)
@@ -29,7 +31,9 @@ static float calc_cell_voltage_std(acc_data_t *data)
 
 /* Send cell balancing config to the segment */
 void handle_balance_cells(acc_data_t *bmsdata)
-{
+{	
+	static bool is_balancing = false;
+
 	if (bmsdata->delt_ocv <= MAX_DELTA_V) {
 		/* No balancing, return */
 		// technically this should never be reached
@@ -37,6 +41,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 		return;
 	}
 
+	
 	bool balanceConfig[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 
 	/* Get cell voltage average and standard deviation */
@@ -64,5 +69,15 @@ void handle_balance_cells(acc_data_t *bmsdata)
 	segment_configure_balancing(bmsdata, balanceConfig);
 
 	// enable balancing
-	segment_enable_balancing(bmsdata);
+	if (!is_timer_active(&bal_timer) || is_timer_expired(&bal_timer)) {
+		if (is_balancing) {
+			segment_disable_balancing(bmsdata);
+			start_timer(&bal_timer, 160 * 1000);
+		} else {
+			printf("STARTING TO BALANCE.----------------------\n");
+			segment_enable_balancing(bmsdata);
+			start_timer(&bal_timer, 10 * 60 * 1000);
+		}
+		is_balancing = !is_balancing;	
+	} 
 }

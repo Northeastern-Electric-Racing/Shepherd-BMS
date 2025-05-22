@@ -338,7 +338,7 @@ fault_stat_t sm_fault_eval(fault_eval_t *item)
  * OCV */
 /* charger settle countdown = 5 minute interval between 1 minute settle pauses */
 bool sm_charging_check(acc_data_t *bmsdata)
-{
+{	
 	// samity check
 	if (!bmsdata->is_charger_connected) {
 		//printf("Charger not connected\r\n");
@@ -370,9 +370,7 @@ bool sm_charging_check(acc_data_t *bmsdata)
 
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
-{
-	return false;
-
+{	
 	if (!bmsdata->is_charger_connected)
 		return false;
 	if (bmsdata->max_voltage.val <= BAL_MIN_V)
