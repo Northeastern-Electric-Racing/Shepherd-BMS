@@ -5,7 +5,7 @@
 #define DEBUG_STATS
 
 // Hardware definition
-#define NUM_SEGMENTS	5
+#define NUM_SEGMENTS	4
 #define NUM_CHIPS	NUM_SEGMENTS * 2
 #define NUM_CELLS_ALPHA 14
 #define NUM_CELLS_BETA	11

@@ -92,10 +92,12 @@ void vGetSegmentData(void *pv_params)
 			segment_unmute(bmsdata->chips, hspi);
 		}
 
-		if (bmsdata->should_balance)
+		if (bmsdata->should_balance) {
 			segment_configure_balancing(bmsdata->chips,
 						    bmsdata->discharge_config,
 						    hspi);
+		}
+
 
 		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 

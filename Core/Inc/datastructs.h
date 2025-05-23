@@ -150,7 +150,7 @@ typedef struct {
 	float delt_ocv;
 
 	// the current discharge configuration the state machine wants
-	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA];
+	PWM_DUTY discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA];
 	// whether balancing should be on, or muted
 	bool should_balance;
 
