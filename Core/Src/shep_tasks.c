@@ -157,7 +157,7 @@ void vStateMachine(void *pv_params)
 	start_timer(&telem_timer, 500);
 
 	for (;;) {
-		sm_balance_cells(bmsdata);
+		sm_handle_state(bmsdata);
 
 		if (is_timer_expired(&telem_timer)) {
 			// these are unimportant telemetry messages so they can be sent infrequently

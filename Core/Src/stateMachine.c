@@ -19,7 +19,7 @@ nertimer_t charger_message_timer;
 
 const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	/*   BOOT,     READY,      CHARGING,   FAULTED	*/
-	{ true, true, false, true }, /* BOOT */
+	{ true, true, true, true }, /* BOOT */
 	{ false, true, true, true }, /* READY */
 	{ false, true, true, true }, /* CHARGING */
 	{ true, false, false, true } /* FAULTED */
@@ -55,6 +55,7 @@ void init_boot(acc_data_t *bmsdata)
 void handle_boot(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
+	bmsdata->is_charger_connected = true;
 	// the charger could be connected on state machine boot, so lets not re-enter ready!
 	if (bmsdata->is_charger_connected) {
 		request_transition(bmsdata, CHARGING_STATE);
@@ -106,8 +107,10 @@ void handle_charging(acc_data_t *bmsdata)
 	}
 
 	/* Check if we should balance */
-	if (sm_balancing_check(bmsdata))
+	if (sm_balancing_check(bmsdata)) {
+		printf("BALANCE CHECK PASSED ----------\n");
 		sm_balance_cells(bmsdata);
+	}
 	// else
 	// 	segment_disable_balancing(bmsdata);
 
@@ -371,6 +374,8 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
 {	
+	return true;
+
 	if (!bmsdata->is_charger_connected)
 		return false;
 	if (bmsdata->max_voltage.val <= BAL_MIN_V)
