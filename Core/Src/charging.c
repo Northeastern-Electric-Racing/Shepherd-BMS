@@ -46,7 +46,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 
 	/* Get cell voltage average and standard deviation */
 	float low = bmsdata->min_ocv.val;
-	float thresh = bmsdata->delt_ocv * 0.2;
+	float thresh = bmsdata->delt_ocv * 0.4;
 
 	/* Set the threshold for balancing to (mu - sigma * STD_FACTOR) */
 
