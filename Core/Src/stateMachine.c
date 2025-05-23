@@ -55,7 +55,6 @@ void init_boot(acc_data_t *bmsdata)
 void handle_boot(acc_data_t *bmsdata)
 {
 	segment_disable_balancing(bmsdata);
-	bmsdata->is_charger_connected = true;
 	// the charger could be connected on state machine boot, so lets not re-enter ready!
 	if (bmsdata->is_charger_connected) {
 		request_transition(bmsdata, CHARGING_STATE);
@@ -374,8 +373,6 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
 {	
-	return true;
-
 	if (!bmsdata->is_charger_connected)
 		return false;
 	if (bmsdata->max_voltage.val <= BAL_MIN_V)
