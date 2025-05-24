@@ -271,15 +271,23 @@ bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 		if (chips[chip].rx_cfgb.dcc > 0) {
 			return true;
 		}
-		// right now this checks all cells, even depop-ed ones
-		for (uint8_t i = 0; i < 12; i++) {
-			if (chips[chip].PwmA.pwma[i] > 0) {
-				return true;
+		// checks alpha
+		if (chip % 2 == 0) {
+			for (uint8_t i = 0; i < 12; i++) {
+				if (chips[chip].PwmA.pwma[i] > 0) {
+					return true;
+				}
 			}
-		}
-		for (uint8_t i = 0; i < 4; i++) {
-			if (chips[chip].PwmB.pwmb[i] > 0) {
-				return true;
+			for (uint8_t i = 0; i < 2; i++) {
+				if (chips[chip].PwmB.pwmb[i] > 0) {
+					return true;
+				}
+			}
+		} else {
+			for (uint8_t i = 0; i < 11; i++) {
+				if (chips[chip].PwmA.pwma[i] > 0) {
+					return true;
+				}
 			}
 		}
 	}
@@ -333,9 +341,11 @@ void segment_configure_balancing(
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells_seg(chip);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&chips[chip], cell,
-					   discharge_config[chip][cell]);
+			set_cell_pwm(&chips[chip], cell,
+				     discharge_config[chip][cell] ?
+					     PWM_100_0_PCT :
+					     PWM_0_0_PCT);
 		}
 	}
-	write_config_regs(chips, hspi);
+	write_pwm_regs(chips, hspi);
 }
