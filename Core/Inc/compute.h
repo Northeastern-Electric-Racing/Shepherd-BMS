@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "stm32f4xx.h"
+#include "stm32xx_hal.h"
 
 #define CURRENT_SENSOR_PIN_L A1
 #define CURRENT_SENSOR_PIN_H A0
