@@ -339,10 +339,10 @@ void write_config_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 	write_adbms_data(chips, WRCFGB, Config, B, hspi);
 }
 
-void write_pwm_regs(cell_asic chips[NUM_CHIPS])
+void write_pwm_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	write_adbms_data(chips, WRPWM1, Pwm, A);
-	write_adbms_data(chips, WRPWM2, Pwm, B);
+	write_adbms_data(chips, WRPWM1, Pwm, A, hspi);
+	write_adbms_data(chips, WRPWM2, Pwm, B, hspi);
 }
 
 void write_clear_flags(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)

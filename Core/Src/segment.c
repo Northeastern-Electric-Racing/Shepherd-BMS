@@ -339,5 +339,5 @@ void segment_configure_balancing(
 					     PWM_0_0_PCT);
 		}
 	}
-	write_config_regs(chips, hspi);
+	write_pwm_regs(chips, hspi);
 }

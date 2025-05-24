@@ -208,7 +208,7 @@ void write_config_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
  * 
  * @param chips 
  */
-void write_pwm_regs(cell_asic chips[NUM_CHIPS]);
+void write_pwm_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Clears all status regster C flags except the CS FLT
