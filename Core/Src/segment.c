@@ -271,15 +271,23 @@ bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 		if (chips[chip].rx_cfgb.dcc > 0) {
 			return true;
 		}
-		// right now this checks all cells, even depop-ed ones
-		for (uint8_t i = 0; i < 12; i++) {
-			if (chips[chip].PwmA.pwma[i] > 0) {
-				return true;
+		// checks alpha
+		if (chip % 2 == 0) {
+			for (uint8_t i = 0; i < 12; i++) {
+				if (chips[chip].PwmA.pwma[i] > 0) {
+					return true;
+				}
 			}
-		}
-		for (uint8_t i = 0; i < 4; i++) {
-			if (chips[chip].PwmB.pwmb[i] > 0) {
-				return true;
+			for (uint8_t i = 0; i < 2; i++) {
+				if (chips[chip].PwmB.pwmb[i] > 0) {
+					return true;
+				}
+			}
+		} else {
+			for (uint8_t i = 0; i < 11; i++) {
+				if (chips[chip].PwmA.pwma[i] > 0) {
+					return true;
+				}
 			}
 		}
 	}

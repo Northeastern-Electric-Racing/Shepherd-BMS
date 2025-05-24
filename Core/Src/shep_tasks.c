@@ -24,6 +24,8 @@
 
 #define ANALYZER_FLAG 1
 
+extern BMSState_t current_state;
+
 osThreadId_t get_segment_data_thread;
 const osThreadAttr_t get_segment_data_attrs = { .name = "Get Segment Data",
 						.stack_size = 8192,
