@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "bmsConfig.h"
 #include "timer.h"
-#include "cmsis_os2.h"
+#include "ner_cmsis_os.h"
 #include "adBms6830Data.h"
 
 /**

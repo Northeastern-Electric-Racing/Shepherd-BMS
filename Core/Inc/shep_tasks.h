@@ -11,7 +11,7 @@
 #ifndef SHEP_TASKS_H
 #define SHEP_TASKS_H
 
-#include "cmsis_os.h"
+#include "ner_cmsis_os.h"
 
 /**
  * @brief Task for retrieving segment data

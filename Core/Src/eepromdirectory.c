@@ -1,5 +1,5 @@
 #include "eepromdirectory.h"
-#include "stm32f4xx_hal.h"
+#include "stm32xx_hal.h"
 #include "m24c32_eeprom_directory.h"
 #include "m24c32.h"
 
