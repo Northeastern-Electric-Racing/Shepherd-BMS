@@ -262,7 +262,7 @@ void vDebugMode(void *pv_params)
 					 (cell + 1)) &
 						1);
 				// split half the time amongst the cells (over 2)
-				osDelay(10);
+				osDelay(5);
 			}
 
 			// Send chip status messages
