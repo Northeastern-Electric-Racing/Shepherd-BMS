@@ -202,6 +202,12 @@ void vDebugMode(void *pv_params)
 {
 	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
+	// frequency (Hz) at which each unique reading is updated (CHANGE THIS).
+	// in reality this is far from exactly because osDelays yield, but it should be a good enough relative value
+	static const float REFRESH_RATE = 1;
+	// the number of ms each chip should be sent in (DONT CHANGE)
+	const uint16_t CHIP_TIME = ((1 / REFRESH_RATE) * 1000) / NUM_CHIPS;
+
 	while (69 < 420) {
 		for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
 			uint8_t num_cells =
@@ -261,8 +267,11 @@ void vDebugMode(void *pv_params)
 					(bmsdata->chips[chip].statc.cs_flt >>
 					 (cell + 1)) &
 						1);
-				// split half the time amongst the cells (over 2)
-				osDelay(5);
+				// wait for a fraction of the chip time alotted between each cell
+				// the fraction is determined manually by the fact that there are 2 or 3 status messages and 24 cell messages
+				osDelay((CHIP_TIME * 0.85) /
+					(NUM_CELLS_ALPHA + NUM_CELLS_BETA -
+					 1)); // 4ms for 24A segment
 			}
 
 			// Send chip status messages
@@ -289,8 +298,7 @@ void vDebugMode(void *pv_params)
 						       bmsdata->chips[chip]
 							       .aux
 							       .a_codes[11]));
-				// wait for 1/4 the chip time
-				osDelay(30);
+
 				send_beta_status_b_message(
 					getVoltage(bmsdata->chips[chip]
 							   .stata.vref2),
@@ -324,8 +332,6 @@ void vDebugMode(void *pv_params)
 						 bmsdata->chips[chip]
 							 .aux.a_codes[10])),
 					&bmsdata->chips[chip].statc);
-				// wait for 1/4 the chip time
-				osDelay(30);
 				send_alpha_status_b_message(
 					getVoltage(
 						bmsdata->chips[chip].statb.vr4k),
@@ -338,8 +344,8 @@ void vDebugMode(void *pv_params)
 						bmsdata->chips[chip].statb.vd),
 					&bmsdata->chips[chip].statc);
 			}
-			// wait for 1/4 the chip time
-			osDelay(30);
+			// wait for the remaining time
+			osDelay(0.15 * CHIP_TIME);
 		}
 	}
 }
