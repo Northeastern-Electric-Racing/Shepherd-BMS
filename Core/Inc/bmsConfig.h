@@ -21,7 +21,7 @@
 #define MAX_TEMP    60 /* Celsius */
 #define MIN_TEMP    -40 /* Celsius */
 #define MAX_DELTA_V 0.010
-#define BAL_MIN_V   4.00
+#define BAL_MIN_V   MIN_VOLT
 
 /* Molicel P45B Cell Specifications */
 #define TYP_CAPICITY_AH 4.5 /* Amp-hours */
@@ -56,7 +56,8 @@
 #define OCV_CURR_THRESH 0.5 /* in A */
 
 // Charging settings
-#define CHARGING_CURRENT    3.5
+#define CHARGING_CURRENT \
+	5.0 /* Bay = 5, wall outlet = 3.5, police generator = 3.8 */
 #define CHARGE_SETL_TIMEOUT 30000 // 1 minute, may need adjustment
 #define CHARGE_SETL_TIMEUP  120000 // 5 minutes, may need adjustment
 
