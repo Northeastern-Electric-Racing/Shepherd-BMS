@@ -322,7 +322,7 @@ void snap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 void unsnap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	adbms_wake_isospi(hspi);
-  spiSendCmd(UNSNAP);
+	spiSendCmd(UNSNAP);
 }
 
 void write_config_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
