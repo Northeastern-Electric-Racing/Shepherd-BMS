@@ -45,14 +45,14 @@ static uint32_t can1_id_list_extended[2] = {
 	CHARGERBOX_CANID
 };
 
-static uint16_t can2_id_list_standard[4] = {
-	//CANID_X,
-};
+// static uint16_t can2_id_list_standard[4] = {
+// 	//CANID_X,
+// };
 
-static uint32_t can2_id_list_extended[2] = {
-	//CANID_X,
-	CHARGERBOX_CANID
-};
+// static uint32_t can2_id_list_extended[2] = {
+// 	//CANID_X,
+// 	CHARGERBOX_CANID
+// };
 
 osStatus_t queue_and_set_flag(osMessageQueueId_t queue, const void *msg_ptr,
 			      osThreadId_t thread_id, uint32_t flags)
@@ -202,8 +202,6 @@ void vCanDispatch(void *pv_params)
 {
 	can_msg_t msg_from_queue;
 	HAL_StatusTypeDef msg_status;
-
-	acc_data_t *bmsdata = (acc_data_t *)pv_params;
 
 	can_t *line = can1;
 

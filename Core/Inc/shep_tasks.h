@@ -12,6 +12,7 @@
 #define SHEP_TASKS_H
 
 #include "cmsis_os.h"
+#include "datastructs.h"
 
 /**
  * @brief Task for retrieving segment data
@@ -21,6 +22,10 @@
 void vGetSegmentData(void *pv_params);
 extern osThreadId_t get_segment_data_thread;
 extern const osThreadAttr_t get_segment_data_attrs;
+typedef struct {
+	acc_data_t *bmsdata;
+	SPI_HandleTypeDef *hspi;
+} get_segment_data_args_t;
 
 /**
  * @brief Task for analyzing data after it is collected

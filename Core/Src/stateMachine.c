@@ -19,7 +19,7 @@ nertimer_t charger_message_timer;
 
 const bool valid_transition_from_to[NUM_STATES][NUM_STATES] = {
 	/*   BOOT,     READY,      CHARGING,   FAULTED	*/
-	{ true, true, false, true }, /* BOOT */
+	{ true, true, true, true }, /* BOOT */
 	{ false, true, true, true }, /* READY */
 	{ false, true, true, true }, /* CHARGING */
 	{ true, false, false, true } /* FAULTED */
@@ -54,7 +54,7 @@ void init_boot(acc_data_t *bmsdata)
 
 void handle_boot(acc_data_t *bmsdata)
 {
-	segment_disable_balancing(bmsdata);
+	bmsdata->should_balance = false;
 	// the charger could be connected on state machine boot, so lets not re-enter ready!
 	if (bmsdata->is_charger_connected) {
 		request_transition(bmsdata, CHARGING_STATE);
@@ -66,7 +66,6 @@ void handle_boot(acc_data_t *bmsdata)
 
 void init_ready(acc_data_t *bmsdata)
 {
-	segment_disable_balancing(bmsdata);
 	return;
 }
 
@@ -108,8 +107,8 @@ void handle_charging(acc_data_t *bmsdata)
 	/* Check if we should balance */
 	if (sm_balancing_check(bmsdata))
 		sm_balance_cells(bmsdata);
-	// else
-	// 	segment_disable_balancing(bmsdata);
+	else
+		bmsdata->should_balance = false;
 
 	// disable discharge and charge from the MC
 	send_mc_discharge_message(0);
@@ -127,7 +126,7 @@ void charger_message_recieved(acc_data_t *bmsdata)
 void init_faulted(acc_data_t *bmsdata)
 {
 	// never balance when faulted
-	segment_disable_balancing(bmsdata);
+	bmsdata->should_balance = false;
 
 	send_mc_charge_message(0);
 	send_mc_discharge_message(0);
@@ -148,7 +147,7 @@ void handle_faulted(acc_data_t *bmsdata)
 	// not all is well, re-assert shutdown, turn our DCL and CCL to zero, turn off charging
 	compute_set_fault(true);
 	// never balance when faulted
-	segment_disable_balancing(bmsdata);
+	bmsdata->should_balance = false;
 
 	send_mc_charge_message(0);
 	send_mc_discharge_message(0);
@@ -393,4 +392,5 @@ bool sm_balancing_check(acc_data_t *bmsdata)
 void sm_balance_cells(acc_data_t *bmsdata)
 {
 	handle_balance_cells(bmsdata);
+	bmsdata->should_balance = true;
 }
