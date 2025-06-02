@@ -413,8 +413,8 @@ int main(void)
   // }
 	init_both_can(&hcan1, &hcan2);
   compute_init();
-  // the BMS faults upon boot, the shutdown loop must clear out before drive
-  compute_set_fault(true);
+  // // the BMS faults upon boot, the shutdown loop must clear out before drive
+  compute_set_fault(false);
   printf("Init passed\n");
   /* USER CODE END 2 */
 

@@ -34,7 +34,7 @@ const int THERM_MAP[NUM_CELLS_ALPHA] = { 0, 0, 1, 1, 2, 2, 3,
 const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    { 
 	{0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 1, 0},
+	{0, 0, 0, 0, 0, 1, 1},
 	{0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0, 0},
 	{1, 0, 0, 0, 0, 0, 0},
@@ -487,7 +487,7 @@ void calc_cont_ccl(acc_data_t *bmsdata)
 
 	// bmsdata->cont_CCL = MAX_PACK_CHG_CURR * temp_cold_factor *
 	// 		    temp_hot_factor * cell_volt_derate_factor;
-	bmsdata->cont_CCL = 30;
+	bmsdata->cont_CCL = 40;
 }
 
 void calc_open_cell_voltage(acc_data_t *bmsdata)
