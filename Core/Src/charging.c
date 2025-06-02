@@ -63,17 +63,25 @@ void chipsSelectionSort(acc_data_t *bmsdata,
 	}
 }
 
+static PWM_DUTY calc_pwm_duty(acc_data_t* bmsdata, float curr_val) {
+	// the low cell, eventually they all must get there
+	float low = bmsdata->min_ocv.val;
+	// the margin above the low cell to ignore, which is usually X% of the delta
+	float coeff = 0.4;
+
+	for (PWM_DUTY i = PWM_100_0_PCT; i > PWM_0_0_PCT; i--) {
+		if (curr_val > (low + bmsdata->delt_ocv * (coeff + (i * (1 - coeff) / (1.0 * PWM_100_0_PCT))))) {
+			return i;
+		}
+	} 
+	return PWM_0_0_PCT;
+}
+
 /* Send cell balancing config to the segments */
 void handle_balance_cells(acc_data_t *bmsdata)
 {
 	// the maximum number of cells to balance per chip, usually tuned for thermal reasons
 	static const int MAX_BAL_CHIP = 7;
-
-	// the low cell, eventually they all must get there
-	float low = bmsdata->min_ocv.val;
-	// the margin above the low cell to ignore, which is usually X% of the delta
-	float min_thresh = bmsdata->delt_ocv * 0.4;
-
 	val_idexed_t new_ocv_map[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
 
 	// first, sort and cleanup everything
@@ -86,18 +94,9 @@ void handle_balance_cells(acc_data_t *bmsdata)
 		int cell_max = min(get_num_cells(bmsdata[chip].chip_data),
 				   MAX_BAL_CHIP);
 		for (size_t cell = 0; cell < cell_max; cell++) {
-			/* Check if cell voltage is above (low + threshold) */
-			if (new_ocv_map[chip][cell].val > (low + min_thresh)) {
-				/* Balance cell */
-				bmsdata->discharge_config
+			bmsdata->discharge_config
 					[chip][new_ocv_map[chip][cell].idex] =
-					true;
-			} else {
-				/* Do not balance cell */
-				bmsdata->discharge_config
-					[chip][new_ocv_map[chip][cell].idex] =
-					false;
-			}
+					calc_pwm_duty(bmsdata, new_ocv_map[chip][cell].val);
 		}
 	}
 }

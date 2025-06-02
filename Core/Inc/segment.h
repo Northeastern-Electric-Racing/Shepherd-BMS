@@ -82,7 +82,7 @@ void segment_manual_balancing(cell_asic chips[NUM_CHIPS],
  */
 void segment_configure_balancing(
 	cell_asic chips[NUM_CHIPS],
-	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA],
+	PWM_DUTY discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA],
 	SPI_HandleTypeDef *hspi);
 
 /**

@@ -92,10 +92,12 @@ void vGetSegmentData(void *pv_params)
 			segment_unmute(bmsdata->chips, hspi);
 		}
 
-		if (bmsdata->should_balance)
+		if (bmsdata->should_balance) {
 			segment_configure_balancing(bmsdata->chips,
 						    bmsdata->discharge_config,
 						    hspi);
+		}
+
 
 		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
@@ -217,6 +219,27 @@ void vDebugMode(void *pv_params)
 				num_cells -= 1;
 			}
 			for (int cell = 0; cell < num_cells; cell += 2) {
+				bool is_bal_a = false;
+				if (cell < 12) {
+					if (bmsdata->chips[chip]
+						    .PwmA.pwma[cell] > 0) {
+						is_bal_a = true;
+					}
+				} else if (bmsdata->chips[chip]
+						   .PwmB.pwmb[cell - 12] > 0) {
+					is_bal_a = true;
+				}
+				bool is_bal_b = false;
+				if (cell + 1 < 12) {
+					if (bmsdata->chips[chip]
+						    .PwmA.pwma[cell + 1] > 0) {
+						is_bal_b = true;
+					}
+				} else if (bmsdata->chips[chip]
+						   .PwmB.pwmb[cell + 1 - 12] >
+					   0) {
+					is_bal_b = true;
+				}
 				send_cell_data_message(
 					bmsdata->chip_data[chip].alpha,
 
@@ -235,11 +258,12 @@ void vDebugMode(void *pv_params)
 					cell + 1,
 
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
-					 cell) & 1,
+					 cell) & 1 ||
+						is_bal_a,
 
 					(bmsdata->chips[chip].tx_cfgb.dcc >>
-					 (cell + 1)) &
-						1,
+					 (cell + 1)) & 1 ||
+						is_bal_b,
 					(bmsdata->chips[chip].statc.cs_flt >>
 					 cell) & 1,
 					(bmsdata->chips[chip].statc.cs_flt >>
@@ -260,7 +284,10 @@ void vDebugMode(void *pv_params)
 						.cell_voltages[10],
 					NER_GET_BIT(
 						bmsdata->chips[chip].tx_cfgb.dcc,
-						10),
+						10) ||
+						bmsdata->chips[chip]
+								.PwmA.pwma[10] >
+							0,
 					chip,
 
 					bmsdata->chip_data[chip].on_board_temp,
