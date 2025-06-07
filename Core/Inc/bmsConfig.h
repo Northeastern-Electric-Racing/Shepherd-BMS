@@ -57,7 +57,7 @@
 #define OCV_CURR_THRESH 0.5 /* in A */
 
 // Charging settings
-#define CHARGING_CURRENT    3.5
+#define CHARGING_CURRENT 3.5
 
 //Fault times
 #define OVER_CURR_TIME \
