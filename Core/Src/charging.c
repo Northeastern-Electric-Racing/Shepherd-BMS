@@ -15,7 +15,7 @@
 
 
 static void merge_sort(uint8_t i, uint8_t j, float *src, float *dest) {
-
+	
 	if (i >= j) {
 		return;
 	}
@@ -37,7 +37,13 @@ static void merge_sort(uint8_t i, uint8_t j, float *src, float *dest) {
 		} else {
 			dest[k] = src[p_right++];
 		}
-	}	
+	}
+
+	for (uint8_t k = i; k <= j; k++) {
+		src[k] = dest[k];
+	}
+
+	memcpy(&src[i], &dest[i], (j - i + 1) * sizeof(float));
 }
 
 /* Send cell balancing config to sthe segments */
