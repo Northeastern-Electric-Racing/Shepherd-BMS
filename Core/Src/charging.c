@@ -15,6 +15,11 @@
 
 
 static void merge_sort(uint8_t i, uint8_t j, uint16_t *src, uint16_t *dest) {
+
+	if (i >= j) {
+		return;
+	}
+
     uint8_t mid = (i + j) / 2;
     merge_sort(i, mid, src, dest);
     merge_sort(mid + 1, j, src, dest);
