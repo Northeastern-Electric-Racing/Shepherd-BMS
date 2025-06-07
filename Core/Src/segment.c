@@ -346,5 +346,5 @@ void segment_configure_balancing(
 		}
 		printf("\n");
 	}
-	//write_config_regs(chips, hspi);
+	write_config_regs(chips, hspi);
 }
