@@ -72,7 +72,7 @@ void segment_manual_balancing(acc_data_t *bmsdata);
  * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.
  */
 void segment_configure_balancing(
-	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA]);
+	acc_data_t *bmsdata, bool **discharge_config);
 
 /**
  * @brief Returns if any cells are balancing.
@@ -100,19 +100,5 @@ void segment_restart(acc_data_t *bmsdata);
  * @param chips Pointer to accumulator data struct.
  */
 void get_adc_comparison(acc_data_t *bmsdata);
-
-/**
- * @brief Read the serial ID of the chip.
- * 
- * @param chips Array of chips to read.
- */
-void read_serial_id(cell_asic chips[NUM_CHIPS]);
-
-/**
- * @brief Read voltages in every register connected to AUX2 ADC.
- * 
- * @param chips Array of chips to get voltages of.
- */
-void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
 
 #endif

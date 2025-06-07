@@ -4,3 +4,4 @@ Core/Inc/cell_data_logging.h
 Core/Inc/eepromdirectory.h
 Drivers/Embedded-Base/general/include/sht30.h
 Drivers/adbms/lib/inc/adBms6830ParseCreate.h
+Core/Inc/segment.h
