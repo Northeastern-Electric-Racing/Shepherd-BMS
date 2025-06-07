@@ -24,20 +24,21 @@
 #define BAL_MIN_V   4.00
 
 /* Molicel P45B Cell Specifications */
-#define TYP_CAPICITY_AH 4.5 /* Amp-hours */
-#define TYP_CAPACITY_WH 16.2 /* Watt-hours */
-#define MIN_CAPICITY_AH 4.3 /* Amp-hours */
-#define MIN_CAPACITY_WH 15.5 /* Watt-hours */
-#define MIN_VOLT	2.5
-#define NOM_VOLT	3.6
-#define MAX_VOLT	4.2
-#define MAX_CHARGE_VOLT 4.19
-#define MAX_CHG_CURR	13.5 /* Amps */
-#define MAX_DISCHG_CURR 45 /* Amps */
-#define MIN_CHG_TEMP	0 /* Celsius */
-#define MIN_DISCHG_TEMP -40 /* Celsius */
-#define MAX_CELL_TEMP	60 /* Celsius (rules) */
-#define TYP_IMPDNCE	0.015 /* Ohms, DC, 50% SoC */
+#define TYP_CAPICITY_AH	    4.5 /* Amp-hours */
+#define TYP_CAPACITY_WH	    16.2 /* Watt-hours */
+#define MIN_CAPICITY_AH	    4.3 /* Amp-hours */
+#define MIN_CAPACITY_WH	    15.5 /* Watt-hours */
+#define MIN_VOLT	    2.5
+#define NOM_VOLT	    3.6
+#define MAX_VOLT	    4.2
+#define MAX_CHARGE_VOLT	    4.19 // LOADED FAULT
+#define MAX_CHARGE_VOLT_FLT 4.25 // LOADED FAULT
+#define MAX_CHG_CURR	    13.5 /* Amps */
+#define MAX_DISCHG_CURR	    45 /* Amps */
+#define MIN_CHG_TEMP	    0 /* Celsius */
+#define MIN_DISCHG_TEMP	    -40 /* Celsius */
+#define MAX_CELL_TEMP	    60 /* Celsius (rules) */
+#define TYP_IMPDNCE	    0.015 /* Ohms, DC, 50% SoC */
 
 // Pack Limits
 #define MAX_PACK_CHG_CURR \
@@ -57,14 +58,13 @@
 
 // Charging settings
 #define CHARGING_CURRENT    3.5
-#define CHARGE_SETL_TIMEOUT 30000 // 1 minute, may need adjustment
-#define CHARGE_SETL_TIMEUP  120000 // 5 minutes, may need adjustment
 
 //Fault times
 #define OVER_CURR_TIME \
 	55000 //todo adjust these based on testing and/or counter values
 #define OVER_CHG_CURR_TIME 55000
 #define UNDER_VOLT_TIME	   55000
+#define OVER_VOLT_CHG_TIME 15000
 #define OVER_VOLT_TIME	   55000
 #define LOW_CELL_TIME	   55000
 #define HIGH_TEMP_TIME	   55000
