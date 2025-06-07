@@ -373,6 +373,8 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
+	return true;
+
 	if (bmsdata->max_voltage.val <= BAL_MIN_V)
 		return false;
 
