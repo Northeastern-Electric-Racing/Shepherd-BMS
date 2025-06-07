@@ -11,9 +11,14 @@
 BMSState_t current_state = BOOT_STATE;
 
 // the countup timer for settling rest
-nertimer_t charger_settle_countup = { .active = false };
+nertimer_t charger_settle_countup = { .active = false, .completed = false };
 // the countdown timer unitl setting rest
-nertimer_t charger_settle_countdown = { .active = false };
+nertimer_t charger_settle_countdown = { .active = false, .completed = false };
+
+nertimer_t charger_settle_countup_stage1 = { .active = false,
+					     .completed = false };
+nertimer_t charger_settle_countdown_stage1 = { .active = false,
+					       .completed = false };
 
 nertimer_t charger_message_timer;
 
@@ -210,7 +215,7 @@ void sm_fault_return(acc_data_t *bmsdata)
         fault_table[0]  = (fault_eval_t) {.id = "Discharge Current Limit", .timer =       ovr_curr_timer, .data_1 =     fault_data->pack_current,  .optype_1 = GT, .lim_1 = fault_data->cont_DCL ,                                                .timeout =      OVER_CURR_TIME, .code = DISCHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
         fault_table[1]  = (fault_eval_t) {.id = "Charge Current Limit",    .timer =    ovr_chgcurr_timer, .data_1 =     fault_data->pack_current,  .optype_1 = GT, .lim_1 =                                        fault_data->cont_CCL,          .timeout =  OVER_CHG_CURR_TIME, .code =    CHARGE_LIMIT_ENFORCEMENT_FAULT,  .optype_2 = LT,  .data_2 =         fault_data->pack_current,  .lim_2 =          0, .is_critical = true  };
         fault_table[2]  = (fault_eval_t) {.id = "Low Cell Voltage",        .timer =      undr_volt_timer, .data_1 =  fault_data->min_ocv.val,      .optype_1 = LT, .lim_1 =                                                     MIN_VOLT,         .timeout =     UNDER_VOLT_TIME, .code =              CELL_VOLTAGE_TOO_LOW,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
-        fault_table[3]  = (fault_eval_t) {.id = "High Charge Voltage",     .timer =    ovr_chgvolt_timer, .data_1 =  fault_data->max_ocv.val,      .optype_1 = GT, .lim_1 =                                              MAX_CHARGE_VOLT,         .timeout =  OVER_VOLT_TIME,     .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ, .data_2 = fault_data->is_charger_connected,  .lim_2 =      true,   .is_critical = true  };
+        fault_table[3]  = (fault_eval_t) {.id = "High Charge Voltage",     .timer =    ovr_chgvolt_timer, .data_1 =  fault_data->max_voltage.val,  .optype_1 = GT, .lim_1 =                                              MAX_CHARGE_VOLT_FLT,     .timeout =  OVER_VOLT_CHG_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = EQ, .data_2 = fault_data->is_charger_connected,  .lim_2 =      true,   .is_critical = true  };
         fault_table[4]  = (fault_eval_t) {.id = "High Cell Voltage",       .timer =       ovr_volt_timer, .data_1 =  fault_data->max_ocv.val,      .optype_1 = GT, .lim_1 =                                                     MAX_VOLT,         .timeout =      OVER_VOLT_TIME, .code =             CELL_VOLTAGE_TOO_HIGH,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
         fault_table[5]  = (fault_eval_t) {.id = "High Temp",               .timer =      high_temp_timer, .data_1 =     fault_data->max_temp.val,  .optype_1 = GT, .lim_1 =                                                        MAX_CELL_TEMP, .timeout =      HIGH_TEMP_TIME, .code =                      PACK_TOO_HOT,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
     	fault_table[6]  = (fault_eval_t) {.id = "Extremely Low Voltage",   .timer =       low_cell_timer, .data_1 =  fault_data->min_ocv.val,      .optype_1 = LT, .lim_1 =                                                                  0.9, .timeout =       LOW_CELL_TIME, .code =                  LOW_CELL_VOLTAGE,  .optype_2 = NOP/* ------------------------------UNUSED-------------------------*/, .is_critical = true  };
@@ -231,7 +236,7 @@ void sm_fault_return(acc_data_t *bmsdata)
 		fault_table[1].data_1 = fault_data->pack_current;
 		fault_table[1].lim_1 = fault_data->cont_CCL;
 		fault_table[2].data_1 = fault_data->min_ocv.val;
-		fault_table[3].data_1 = fault_data->max_ocv.val;
+		fault_table[3].data_1 = fault_data->max_voltage.val;
 		fault_table[4].data_2 = fault_data->is_charger_connected;
 		fault_table[4].data_1 = fault_data->max_ocv.val;
 		fault_table[5].data_1 = fault_data->max_temp.val;
@@ -333,9 +338,14 @@ fault_stat_t sm_fault_eval(fault_eval_t *item)
 	return 0;
 }
 
-/* charger settle countup =  1 minute pause to let readings settle and get good
- * OCV */
-/* charger settle countdown = 5 minute interval between 1 minute settle pauses */
+/**
+ * @brief This charging algorithm has 4 stages
+ * 
+ * 1. Charge up until the high cell non OCV max voltage is > 4.19, pause for 1 minute every 15 minutes
+ * 2. Let settle for 1 minutes
+ * 3. Charge for 20 seconds, settle, repeat step 2 until OCV max > 4.19
+ * 4. Stop charging:)
+ */
 bool sm_charging_check(acc_data_t *bmsdata)
 {
 	// samity check
@@ -344,27 +354,70 @@ bool sm_charging_check(acc_data_t *bmsdata)
 		return false;
 	}
 
-	// dont charge during the countup
-	if (!is_timer_expired(&charger_settle_countup) &&
-	    is_timer_active(&charger_settle_countup)) {
-		//printf("Charger settle countup active\r\n");
-		return false;
+	// if OCV=V, and we are near 4.19V, the formula should not take effect
+	// this is easy to do with a simple one-time trigger, such that if we enter stage 2 we can never go back
+	static bool reached_stage_2 = false;
+
+	// STAGE 1 -- COUNTDOWN=charge, COUNTUP=settle
+	if (bmsdata->max_voltage.val < MAX_CHARGE_VOLT && !reached_stage_2) {
+		// BEGIN COUNTDOWN (first run only)
+		if (!is_timer_expired(&charger_settle_countdown_stage1)) {
+			start_timer(&charger_settle_countdown_stage1, 900000);
+			return true;
+		}
+		// CONTINUE COUNTDOWN
+		if (is_timer_active(&charger_settle_countdown_stage1)) {
+			return true;
+		}
+		// END COUNTDOWN, BEGIN COUNTUP
+		if (is_timer_expired(&charger_settle_countdown_stage1)) {
+			start_timer(&charger_settle_countup_stage1, 60000);
+			return false;
+		}
+		// CONTINUE COUNTUP
+		if (is_timer_active(&charger_settle_countup_stage1)) {
+			return false;
+		}
+		// END COUNTUP, BEGIN COUNTDOWN
+		if (is_timer_expired(&charger_settle_countup_stage1)) {
+			start_timer(&charger_settle_countdown_stage1, 900000);
+			return true;
+		}
 	}
 
-	// if we are counting down (the normal charging time)
-	if (is_timer_active(&charger_settle_countdown)) {
-		// if we need to stop charging, start the pause timer and stop charging immediately
-		if (is_timer_expired(&charger_settle_countdown)) {
-			start_timer(&charger_settle_countup,
-				    CHARGE_SETL_TIMEOUT);
-			return false;
-		} else
+	// STAGE 2 & 3 -- COUNTDOWN=charge, COUNTUP=settle
+	if (bmsdata->max_ocv.val < MAX_CHARGE_VOLT) {
+		// mark that stage 2 has been, reached, and we shouldnt go back to stage 1
+		reached_stage_2 = true;
+
+		// BEGIN COUNTDOWN (first run only)
+		if (!is_timer_expired(&charger_settle_countdown)) {
+			start_timer(&charger_settle_countdown, 15000);
 			return true;
-	} else {
-		// start the countdown timer if it is inactive, meaning we went from pause --> unpause
-		start_timer(&charger_settle_countdown, CHARGE_SETL_TIMEUP);
-		return true;
+		}
+		// CONTINUE COUNTDOWN
+		if (is_timer_active(&charger_settle_countdown)) {
+			return true;
+		}
+		// END COUNTDOWN, BEGIN COUNTUP
+		if (is_timer_expired(&charger_settle_countdown)) {
+			start_timer(&charger_settle_countup, 60000);
+			return false;
+		}
+		// CONTINUE COUNTUP
+		if (is_timer_active(&charger_settle_countup)) {
+			return false;
+		}
+		// END COUNTUP, BEGIN COUNTDOWN
+		if (is_timer_expired(&charger_settle_countup)) {
+			start_timer(&charger_settle_countdown, 15000);
+			return true;
+		}
 	}
+
+	// STAGE 4 -- max_ocv > 4.19, max_voltage > 4.19
+	// stage 4 can return to stage 2 & 3 if we drop back below 4.19 volts
+	return false;
 }
 
 // check if balancing is allowed
