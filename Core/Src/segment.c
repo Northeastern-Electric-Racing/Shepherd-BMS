@@ -337,5 +337,14 @@ void segment_configure_balancing(
 					   discharge_config[chip][cell]);
 		}
 	}
-	write_config_regs(chips, hspi);
+
+	printf("CONFIG: \n");
+	for (int chip = 0; chip < NUM_CHIPS; chip++) {
+		uint8_t num_cells = get_num_cells_seg(chip);
+		for (int cell = 0; cell < num_cells; cell++) {
+			printf("%d ", discharge_config[chip][cell]);
+		}
+		printf("\n");
+	}
+	//write_config_regs(chips, hspi);
 }

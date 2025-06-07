@@ -14,7 +14,7 @@
 	})
 
 
-static void merge_sort(uint8_t i, uint8_t j, uint16_t *src, uint16_t *dest) {
+static void merge_sort(uint8_t i, uint8_t j, float *src, float *dest) {
 
 	if (i >= j) {
 		return;
@@ -26,7 +26,7 @@ static void merge_sort(uint8_t i, uint8_t j, uint16_t *src, uint16_t *dest) {
 	uint16_t p_left = i;
 	uint16_t p_right = mid + 1;
 
-	for (uint8_t k = i; k < j; k++) {
+	for (uint8_t k = i; k <= j; k++) {
 		if (p_left > mid) {
 			dest[k] = src[p_right++];
 		} else if (p_right > j) {
@@ -59,7 +59,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 	for (size_t chip = 0; chip < NUM_CHIPS; chip++) {
 		/* Number of cells in this chip. */
 		uint8_t num_cells = get_num_cells(&bmsdata->chip_data[chip]);
-		uint16_t ocvVals[num_cells];
+		float ocvVals[num_cells];
 
 		/* Clear balancing config. */
 		for (uint8_t cell = 0; cell < num_cells; cell++) {
@@ -67,8 +67,16 @@ void handle_balance_cells(acc_data_t *bmsdata)
 			ocvVals[cell] = bmsdata->chip_data[chip].open_cell_voltage[cell];
 		}
 		
-		uint16_t ocvSorted[num_cells];
-		merge_sort(0, num_cells, ocvVals, ocvSorted); 
+		float ocvSorted[num_cells];
+		// sort cell OCVs from greatest to least to know which
+		// to prioritize balancing
+		merge_sort(0, num_cells - 1, ocvVals, ocvSorted); 
+
+		printf("OCV SORTED %d: ", chip);
+		for (int i = 0; i < num_cells; i++) {
+			printf("%f ", ocvSorted[i]);
+		}
+		printf("\n");
 
 		/* Number of cells that can be balanced. */
 		int cells_left = MAX_BAL_CHIP;
@@ -76,7 +84,7 @@ void handle_balance_cells(acc_data_t *bmsdata)
 		/* Balance cells with an OCV above the threshold. */
 		for (size_t cell = 0; (cell < num_cells) && (cells_left > 0);
 		     cell++) {
-			if (ocvVals[cell] > (bmsdata->min_ocv.val + min_thresh)) {
+			if (ocvSorted[cell] > (bmsdata->min_ocv.val + min_thresh)) {
 				bmsdata->discharge_config[chip][cell] = true;
 				cells_left -= 1;
 			}
