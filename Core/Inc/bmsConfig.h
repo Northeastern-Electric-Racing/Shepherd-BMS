@@ -31,7 +31,7 @@
 #define MIN_VOLT	    2.5
 #define NOM_VOLT	    3.6
 #define MAX_VOLT	    4.2
-#define MAX_CHARGE_VOLT	    4.19 // LOADED FAULT
+#define MAX_CHARGE_VOLT	    4.19
 #define MAX_CHARGE_VOLT_FLT 4.25 // LOADED FAULT
 #define MAX_CHG_CURR	    13.5 /* Amps */
 #define MAX_DISCHG_CURR	    45 /* Amps */
