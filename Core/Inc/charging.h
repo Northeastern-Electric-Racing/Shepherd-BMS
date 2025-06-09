@@ -4,7 +4,7 @@
 #include "datastructs.h"
 
 /**
- * @brief entrypoint for handling balancing of cells
+ * @brief entrypoint for handling balancing of cells.  DOES NOT ENABLE BALANCING, but does configure it.
  * 
  * @param bmsdata general BMS data struct
  */
