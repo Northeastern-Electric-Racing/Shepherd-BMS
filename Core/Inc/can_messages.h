@@ -84,7 +84,8 @@ void send_shutdown_ctrl_message(uint8_t mpe_state);
 void send_cell_voltage_message(crit_cellval_t max_voltage,
 			       crit_cellval_t min_voltage, float avg_voltage);
 
-void send_segment_volt_message(acc_data_t *bmsdata);
+void send_segment_average_volt_message(acc_data_t *bmsdata);
+void send_segment_total_volt_message(acc_data_t *bmsdata);
 
 /**
  * @brief sends cell temperature message

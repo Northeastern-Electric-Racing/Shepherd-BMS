@@ -351,6 +351,7 @@ void calc_pack_voltage_stats(acc_data_t *bmsdata)
 			bmsdata->segment_average_volts[c / 2] =
 				total_seg_volt /
 				((float)(NUM_CELLS_ALPHA + NUM_CELLS_BETA));
+			bmsdata->segment_total_volts[c / 2] = total_seg_volt;
 			total_seg_volt = 0;
 		}
 	}
