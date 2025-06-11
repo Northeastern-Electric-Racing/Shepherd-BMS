@@ -151,7 +151,10 @@ void calc_cell_temps(acc_data_t *bmsdata)
 					bmsdata->chip_data[chip]
 						.cell_temp[cell] = temp;
 				} else {
-					bmsdata->chip_data[chip].cell_temp[cell] = bmsdata->segment_average_temps[chip % 2];
+					bmsdata->chip_data[chip]
+						.cell_temp[cell] =
+						bmsdata->segment_average_temps
+							[chip % 2];
 				}
 				// if (cell == 2 && chip == 5)
 				// 	bmsdata->chip_data[chip]
