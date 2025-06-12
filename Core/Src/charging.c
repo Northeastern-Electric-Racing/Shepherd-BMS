@@ -51,7 +51,7 @@ static void merge_sort(uint8_t i, uint8_t j, bal_cell_t *src, bal_cell_t *dest) 
 	memcpy(&src[i], &dest[i], (j - i + 1) * sizeof(bal_cell_t));
 }
 
-/* Send cell balancing config to sthe segments */
+/* Send cell balancing config to the segments */
 void handle_balance_cells(acc_data_t *bmsdata)
 {
 
