@@ -33,7 +33,7 @@ const int THERM_MAP[NUM_CELLS_ALPHA] = { 0, 0, 1, 1, 2, 2, 3,
 // 	};
 const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    { 
 	{0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 1, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 1, 1},
 	{0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 0, 0, 0, 0, 0},
@@ -145,8 +145,17 @@ void calc_cell_temps(acc_data_t *bmsdata)
 					bmsdata->chips[chip]
 						.raux.ra_codes[THERM_MAP[cell]];
 
-				bmsdata->chip_data[chip].cell_temp[cell] =
-					calc_cell_temp(getVoltage(x));
+				float temp = calc_cell_temp(getVoltage(x));
+				// sanity check bad values
+				if (temp < 81) {
+					bmsdata->chip_data[chip]
+						.cell_temp[cell] = temp;
+				} else {
+					bmsdata->chip_data[chip]
+						.cell_temp[cell] =
+						bmsdata->segment_average_temps
+							[chip % 2];
+				}
 				// if (cell == 2 && chip == 5)
 				// 	bmsdata->chip_data[chip]
 				// 		.cell_temp[cell] = 61.5;
