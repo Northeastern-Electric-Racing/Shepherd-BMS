@@ -160,6 +160,7 @@ void handle_faulted(acc_data_t *bmsdata)
 
 void sm_handle_state(acc_data_t *bmsdata)
 {
+	printf("FAULT STATUS: %d\n", current_state);
 	// always check for faults no matter the current state
 	sm_fault_return(bmsdata);
 
