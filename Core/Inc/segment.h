@@ -3,11 +3,13 @@
 
 #include "datastructs.h"
 
+typedef bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA];
+
 /**
  * @brief Initialize chips with default values.
- * 
+ *  
  */
-void segment_init(acc_data_t *bmsdata);
+void segment_init(acc_data_t *bmsdata); 
 /**
  * @brief Stop discharge quickly
  * 
@@ -72,7 +74,7 @@ void segment_manual_balancing(acc_data_t *bmsdata);
  * @param discharge_config Array containing the discharge configuration. true = discharge, false = do not discharge.
  */
 void segment_configure_balancing(
-	acc_data_t *bmsdata, bool **discharge_config);
+	acc_data_t *bmsdata, discharge_config dc);
 
 /**
  * @brief Returns if any cells are balancing.

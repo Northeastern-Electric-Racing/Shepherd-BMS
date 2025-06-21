@@ -290,7 +290,7 @@ void segment_manual_balancing(acc_data_t *bmsdata)
 }
 
 void segment_configure_balancing(
-	acc_data_t *bmsdata, bool **discharge_config)
+	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA])
 {
 	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
