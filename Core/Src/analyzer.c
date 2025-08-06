@@ -450,7 +450,7 @@ void calc_cont_dcl(acc_data_t *bmsdata)
 		scaled_dcl = MIN_DCL;
 	}
 
-	bmsdata->cont_DCL = 200;
+	bmsdata->cont_DCL = 145;
 }
 
 void calc_cont_ccl(acc_data_t *bmsdata)
