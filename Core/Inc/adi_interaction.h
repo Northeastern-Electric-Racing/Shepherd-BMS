@@ -5,16 +5,6 @@
 #include "bmsConfig.h"
 #include "datastructs.h"
 
-/**
- * @brief Count PEC errors for all chips, send CAN message, and reset counters.
- *
- * This function iterates through all chips, accumulates the PEC (Packet Error Code) 
- * error count, resets the PEC error counter and Command counter, then sends a CAN message if any errors exist.
- *
- * @param bmsdata Pointer to accumulator data structure.
- */
-void count_pec_errors(cell_asic chips[NUM_CHIPS]);
-
 // --- BEGIN SET HELPERS ---
 
 /**

@@ -128,8 +128,6 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 		printf("[isoSPI] Break Detected at Chip %u\n\r",
 		       first_faulty_chip + 1);
 
-		// Immediately escalate to recovery without waiting for next task cycle
-		isospi_state_dispatcher(bmsdata);
 		return;
 	}
 

@@ -8,7 +8,15 @@
 
 #define MAX_PEC_ERROR_ACCUM 300U // Max accumulated PECs
 
-void count_pec_errors(cell_asic chips[NUM_CHIPS])
+/**
+ * @brief Count PEC errors for all chips, send CAN message, and reset counters.
+ *
+ * This function iterates through all chips, accumulates the PEC (Packet Error Code) 
+ * error count, resets the PEC error counter and Command counter, then sends a CAN message if any errors exist.
+ *
+ * @param bmsdata Pointer to accumulator data structure.
+ */
+static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 {
 	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
 		uint16_t pec_error_count =
@@ -170,15 +178,13 @@ void adbms_wake_core(cell_asic chips[NUM_CHIPS])
 {
 	uint8_t ic_count_a = 0U, ic_count_b = 0U;
 
-	__disable_irq();
-
 	getIsoSPILineChipCount(NUM_CHIPS, chips, &ic_count_a, &ic_count_b);
 
 	if (ic_count_a > 0) {
 		for (uint8_t ic = 0; ic < ic_count_a; ic++) {
 			adBmsLineCsLow(ISOSPI_LINE_A);
 			adBmsLineCsHigh(ISOSPI_LINE_A);
-			delay_us(1000);
+			delay_us(4000);
 		}
 	}
 
@@ -186,11 +192,9 @@ void adbms_wake_core(cell_asic chips[NUM_CHIPS])
 		for (uint8_t ic = 0; ic < ic_count_b; ic++) {
 			adBmsLineCsLow(ISOSPI_LINE_B);
 			adBmsLineCsHigh(ISOSPI_LINE_B);
-			delay_us(1000);
+			delay_us(4000);
 		}
 	}
-
-	__enable_irq();
 }
 
 /**
