@@ -50,20 +50,26 @@ static void reset_all_pec_error_sums(cell_asic chips[NUM_CHIPS])
  * @param start_chip Index of the chip where the break occurred.
  * @return 1 if all chips recovered successfully, 0 otherwise.
  */
-static int32_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
+static uint8_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
 {
+	uint8_t result = 1U;
+
 	for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
 		if (bmsdata->chips[i].pec_error_sum >
 		    ISOSPI_VALIDATION_THRESHOLD) {
 			printf("[isoSPI] Verification failed at chip %u (PEC: %u)\n\r",
 			       i + 1, bmsdata->chips[i].pec_error_sum);
-			reset_all_pec_error_sums(bmsdata->chips);
-			return 0;
+			result = 0U;
 		}
 	}
-	printf("[isoSPI] Verification passed\n\r");
+
+	if (result == 1U) {
+		printf("[isoSPI] Verification passed\n\r");
+	}
+
 	reset_all_pec_error_sums(bmsdata->chips);
-	return 1;
+
+	return result;
 }
 
 /**
@@ -78,61 +84,61 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 {
 	// Start accumulation timer on first PEC activity
 	if (!is_timer_active(&pec_accum_timer)) {
-		for (uint8_t i = 0U; i < NUM_CHIPS; i++) {
+		uint8_t is_active = 0U;
+		for (uint8_t i = 0U; (i < NUM_CHIPS) && (is_active == 0U);
+		     i++) {
 			if (bmsdata->chips[i].pec_error_sum > 0U) {
 				start_timer(&pec_accum_timer,
 					    ISOSPI_ACCUM_PERIOD_MS);
-				return;
+				is_active = 1U;
 			}
 		}
-		return;
-	}
+	} else {
+		// Only proceed if timer has expired
+		if (is_timer_expired(&pec_accum_timer)) {
+			uint8_t first_faulty_chip = NUM_CHIPS,
+				fault_detected = 0U;
 
-	// Only proceed if timer has expired
-	if (!is_timer_expired(&pec_accum_timer)) {
-		return;
-	}
-
-	uint8_t first_faulty_chip = NUM_CHIPS;
-	int fault_detected = 0;
-
-	// Find the first chip that has too many PEC errors
-	for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
-		if (bmsdata->chips[chip].pec_error_sum >
-		    ISOSPI_PEC_ERROR_THRESHOLD) {
-			first_faulty_chip = chip;
-			fault_detected = 1;
-			break;
-		}
-	}
-
-	// Check that all chips after the break also exceed threshold
-	if (bmsdata->isospi_status.recovery_successful == 0U &&
-	    fault_detected) {
-		for (uint8_t chip = first_faulty_chip; chip < NUM_CHIPS;
-		     chip++) {
-			if (bmsdata->chips[chip].pec_error_sum <=
-			    ISOSPI_PEC_ERROR_THRESHOLD) {
-				fault_detected = 0;
-				break;
+			// Find the first chip that has too many PEC errors
+			for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
+				if (bmsdata->chips[chip].pec_error_sum >
+				    ISOSPI_PEC_ERROR_THRESHOLD) {
+					first_faulty_chip = chip;
+					fault_detected = 1U;
+					break;
+				}
 			}
+
+			// Check that all chips after the break also exceed threshold
+			if (bmsdata->isospi_status.recovery_successful == 0U &&
+			    fault_detected == 1U) {
+				for (uint8_t chip = first_faulty_chip;
+				     chip < NUM_CHIPS; chip++) {
+					if (bmsdata->chips[chip].pec_error_sum <=
+					    ISOSPI_PEC_ERROR_THRESHOLD) {
+						fault_detected = 0U;
+						break;
+					}
+				}
+			}
+
+			if (fault_detected == 1U) {
+				// Sets non-critical fault initially
+				bmsdata->isospi_status.state =
+					ISOSPI_BREAK_DETECTED;
+				bmsdata->isospi_status.break_chip_index =
+					first_faulty_chip;
+				bmsdata->fault_code_noncrit |=
+					INTERNAL_ISOSPI_BREAK_FAULT;
+
+				printf("[isoSPI] Break Detected at Chip %u\n\r",
+				       first_faulty_chip + 1);
+			}
+
+			// Reset PEC accumulation and restart timer for next window
+			reset_all_pec_error_sums(bmsdata->chips);
 		}
 	}
-
-	if (fault_detected) {
-		// Sets non-critical fault initially
-		bmsdata->isospi_status.state = ISOSPI_BREAK_DETECTED;
-		bmsdata->isospi_status.break_chip_index = first_faulty_chip;
-		bmsdata->fault_code_noncrit |= INTERNAL_ISOSPI_BREAK_FAULT;
-
-		printf("[isoSPI] Break Detected at Chip %u\n\r",
-		       first_faulty_chip + 1);
-
-		return;
-	}
-
-	// Reset PEC accumulation and restart timer for next window
-	reset_all_pec_error_sums(bmsdata->chips);
 }
 
 /**
@@ -209,31 +215,29 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		if (bmsdata->isospi_status.recovery_successful == 1U) {
 			printf("[isoSPI] Break reoccurred after recovery\n\r");
 			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
-			break;
+		} else {
+			printf("[isoSPI] Recovery Started\n\r");
+			attempt_isospi_recovery(bmsdata);
+			bmsdata->isospi_status.state = ISOSPI_STATE_VERIFYING;
 		}
-
-		printf("[isoSPI] Recovery Started\n\r");
-		attempt_isospi_recovery(bmsdata);
-		bmsdata->isospi_status.state = ISOSPI_STATE_VERIFYING;
 		break;
 
 	case ISOSPI_STATE_VERIFYING:
-		if (bmsdata->isospi_status.verification_attempts >=
-		    ISOSPI_VERIFICATION_READS) {
+		// clang-format off
+		if (bmsdata->isospi_status.verification_attempts >= ISOSPI_VERIFICATION_READS) {
 			printf("[isoSPI] Verification failed after max attempts\n\r");
 			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
 		} else {
-			// clang-format off
+
 			// Confirm PEC errors have dropped below acceptable level after switching lines
-			if (verify_isospi_recovery(bmsdata, bmsdata->isospi_status.break_chip_index) == 1) {
+			if (verify_isospi_recovery(bmsdata, bmsdata->isospi_status.break_chip_index) == 1U) {
 				printf("[isoSPI] Recovery succeeded\n\r");
-				bmsdata->isospi_status.state =
-					ISOSPI_RECOVERY_SUCCESS;
+				bmsdata->isospi_status.state = ISOSPI_RECOVERY_SUCCESS;
 				bmsdata->isospi_status.recovery_successful = 1U;
 			}
-			// clang-format on
 			bmsdata->isospi_status.verification_attempts++;
 		}
+		// clang-format on
 		break;
 
 	case ISOSPI_RECOVERY_SUCCESS:
@@ -265,6 +269,8 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		break;
 
 	default:
+		printf("[isoSPI] Invalid state: %d\n\r",
+		       bmsdata->isospi_status.state);
 		break;
 	}
 }
