@@ -96,14 +96,13 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 	} else {
 		// Only proceed if timer has expired
 		if (is_timer_expired(&pec_accum_timer)) {
-			uint8_t first_faulty_chip = NUM_CHIPS,
-				fault_detected = 0U;
+			uint8_t first_faulty_chip_idx = 0U, fault_detected = 0U;
 
 			// Find the first chip that has too many PEC errors
 			for (uint8_t chip = 0U; chip < NUM_CHIPS; chip++) {
 				if (bmsdata->chips[chip].pec_error_sum >
 				    ISOSPI_PEC_ERROR_THRESHOLD) {
-					first_faulty_chip = chip;
+					first_faulty_chip_idx = chip;
 					fault_detected = 1U;
 					break;
 				}
@@ -112,7 +111,7 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 			// Check that all chips after the break also exceed threshold
 			if (bmsdata->isospi_status.recovery_successful == 0U &&
 			    fault_detected == 1U) {
-				for (uint8_t chip = first_faulty_chip;
+				for (uint8_t chip = first_faulty_chip_idx;
 				     chip < NUM_CHIPS; chip++) {
 					if (bmsdata->chips[chip].pec_error_sum <=
 					    ISOSPI_PEC_ERROR_THRESHOLD) {
@@ -127,12 +126,12 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 				bmsdata->isospi_status.state =
 					ISOSPI_BREAK_DETECTED;
 				bmsdata->isospi_status.break_chip_index =
-					first_faulty_chip;
+					first_faulty_chip_idx;
 				bmsdata->fault_code_noncrit |=
 					INTERNAL_ISOSPI_BREAK_FAULT;
 
 				printf("[isoSPI] Break Detected at Chip %u\n\r",
-				       first_faulty_chip + 1);
+				       first_faulty_chip_idx + 1);
 			}
 
 			// Reset PEC accumulation and restart timer for next window
