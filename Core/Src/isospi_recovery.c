@@ -198,7 +198,6 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 
 	reset_all_pec_error_sums(bmsdata->chips);
 
-	send_isospi_status_message(&bmsdata->isospi_status);
 	send_isospi_lines_message(bmsdata->chips);
 }
 
@@ -223,6 +222,7 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		break;
 
 	case ISOSPI_STATE_VERIFYING:
+		send_isospi_status_message(&bmsdata->isospi_status);
 		// clang-format off
 		if (bmsdata->isospi_status.verification_attempts >= ISOSPI_VERIFICATION_READS) {
 			printf("[isoSPI] Verification failed after max attempts\n\r");
