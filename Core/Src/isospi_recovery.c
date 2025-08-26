@@ -47,14 +47,15 @@ static void reset_all_pec_error_sums(cell_asic chips[NUM_CHIPS])
  * below the acceptable threshold for the chips after the detected break.
  *
  * @param bmsdata Pointer to accumulator data.
- * @param start_chip Index of the chip where the break occurred.
+ * @param start_chip_idx Index of the chip where the break occurred.
  * @return 1 if all chips recovered successfully, 0 otherwise.
  */
-static uint8_t verify_isospi_recovery(acc_data_t *bmsdata, uint8_t start_chip)
+static uint8_t verify_isospi_recovery(acc_data_t *bmsdata,
+				      uint8_t start_chip_idx)
 {
 	uint8_t result = 1U;
 
-	for (uint8_t i = start_chip; i < NUM_CHIPS; i++) {
+	for (uint8_t i = start_chip_idx; i < NUM_CHIPS; i++) {
 		if (bmsdata->chips[i].pec_error_sum >
 		    ISOSPI_VALIDATION_THRESHOLD) {
 			printf("[isoSPI] Verification failed at chip %u (PEC: %u)\n\r",
@@ -125,13 +126,13 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 				// Sets non-critical fault initially
 				bmsdata->isospi_status.state =
 					ISOSPI_BREAK_DETECTED;
-				bmsdata->isospi_status.break_chip_index =
-					first_faulty_chip_idx;
+				bmsdata->isospi_status.break_chip =
+					(uint8_t)(first_faulty_chip_idx + 1U);
 				bmsdata->fault_code_noncrit |=
 					INTERNAL_ISOSPI_BREAK_FAULT;
 
 				printf("[isoSPI] Break Detected at Chip %u\n\r",
-				       first_faulty_chip_idx + 1);
+				       first_faulty_chip_idx + 1U);
 			}
 
 			// Reset PEC accumulation and restart timer for next window
@@ -146,25 +147,30 @@ static void detect_isospi_break(acc_data_t *bmsdata)
  * Updates chip direction, sets COMM_BK, writes configs, and verifies recovery by checking PEC errors.
  *
  * @param bmsdata Pointer to the accumulator data structure.
- * @return int 1 if recovery was successful, 0 otherwise.
  */
 static void attempt_isospi_recovery(acc_data_t *bmsdata)
 {
-	uint8_t break_chip = bmsdata->isospi_status.break_chip_index;
+	uint8_t break_chip_idx =
+		(uint8_t)(bmsdata->isospi_status.break_chip - 1U);
 
-	printf("[isoSPI] Switching chips %u to %u to Line B\n\r",
-	       break_chip + 1, NUM_CHIPS);
+	if (break_chip_idx < (NUM_CHIPS - 1)) {
+		printf("[isoSPI] Switching chips %u to %u to Line B\n\r",
+		       break_chip_idx + 1U, NUM_CHIPS);
+	} else {
+		printf("[isoSPI] Switching chip %u to Line B\n\r",
+		       break_chip_idx + 1U);
+	}
 
 	// Switch all chips after the break to use the other isoSPI line
-	for (int i = break_chip; i < NUM_CHIPS; i++) {
+	for (uint8_t i = break_chip_idx; i < NUM_CHIPS; i++) {
 		set_iso_spi_line(&bmsdata->chips[i], ISOSPI_LINE_B);
 	}
 
 	// Only set COMM_BK if we're not rerouting the entire chain
-	if (break_chip > 0U) {
+	if (break_chip_idx > 0U) {
 		// Set COMM_BK on both sides of the break
-		set_comm_break(&bmsdata->chips[break_chip], COMM_BK_ON);
-		set_comm_break(&bmsdata->chips[break_chip - 1], COMM_BK_ON);
+		set_comm_break(&bmsdata->chips[break_chip_idx], COMM_BK_ON);
+		set_comm_break(&bmsdata->chips[break_chip_idx - 1], COMM_BK_ON);
 	}
 
 	// Write updated config to chips
@@ -191,12 +197,14 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 	cancel_timer(&pec_accum_timer);
 
 	bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
+	bmsdata->isospi_status.break_chip = 0U;
 	bmsdata->isospi_status.verification_attempts = 0U;
 	bmsdata->isospi_status.recovery_successful = 0U;
 	bmsdata->isospi_status.fault_latched = 0U;
 
 	reset_all_pec_error_sums(bmsdata->chips);
 
+	send_isospi_status_message(&bmsdata->isospi_status);
 	send_isospi_lines_message(bmsdata->chips);
 }
 
@@ -229,7 +237,9 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		} else {
 
 			// Confirm PEC errors have dropped below acceptable level after switching lines
-			if (verify_isospi_recovery(bmsdata, bmsdata->isospi_status.break_chip_index) == 1U) {
+			uint8_t break_chip_idx = (uint8_t)(bmsdata->isospi_status.break_chip - 1U);
+
+			if (verify_isospi_recovery(bmsdata, break_chip_idx) == 1U) {
 				printf("[isoSPI] Recovery succeeded\n\r");
 				bmsdata->isospi_status.state = ISOSPI_RECOVERY_SUCCESS;
 				bmsdata->isospi_status.recovery_successful = 1U;
