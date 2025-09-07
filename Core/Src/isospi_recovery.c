@@ -5,16 +5,46 @@
 #include "can_messages.h"
 #include "timer.h"
 
-/* PEC Error Thresholds */
-#define ISOSPI_PEC_ERROR_THRESHOLD  20U // Break detect threshold
-#define ISOSPI_VALIDATION_THRESHOLD 5U // PECs allowed during recovery
+/** @brief Break detect threshold.
+ *  Number of PEC errors in the accumulation window that indicates a break.
+ */
+#define ISOSPI_PEC_ERROR_THRESHOLD (20U)
 
-/* Timing (ms) */
-#define ISOSPI_STARTUP_MASK_TIME 1500U // Wait before PEC fault evaluation (ms)
-#define ISOSPI_ACCUM_PERIOD_MS	 3000U // Accumulation window
+/** @brief Arm threshold for accumulation timer.
+ *  Set just above the PEC error sum noise level per cycle,
+ *  so random noise doesn’t start the accumulation window.
+ */
+#define ISOSPI_PEC_ACCUM_START_THRESH (5U)
 
-/* Recovery Parameters */
-#define ISOSPI_VERIFICATION_READS 3U // Reads to confirm success
+/** @brief Validation threshold during recovery.
+ *  Maximum PEC errors allowed while verifying recovery success.
+ *  Lower this value for stricter validation.
+ */
+#define ISOSPI_VALIDATION_THRESHOLD (5U)
+
+/** @brief Startup mask time (ms).
+ *  Time to ignore PEC faults after power-up to avoid false trips.
+ */
+#define ISOSPI_STARTUP_MASK_TIME (1500U)
+
+/** @brief Accumulation runs.
+ *  Number of dispatcher runs to accumulate the PEC sum before comparing to ISOSPI_PEC_ERROR_THRESHOLD.
+ *  Observed PECs/run for chips with break: 9 (discharge_state), 20 (charge_state)
+ */
+#define ACCUM_RUNS (8U)
+
+/** @brief Accumulation window (ms).
+ *  For accumulation, the PEC sum updates at the ADBMS system-wide sample rate
+ *  defined in bmsConfig.h. The window comes from that period and how many runs
+ *  we accumulate for.
+ *  Examples: 2 Hz -> 500 ms * 6 = 3000 ms
+ */
+#define ISOSPI_ACCUM_PERIOD_MS ((1000U / (SAMPLE_RATE)) * (ACCUM_RUNS))
+
+/** @brief Verification reads after recovery.
+ *  Number of read attempts required to confirm recovery success.
+ */
+#define ISOSPI_VERIFICATION_READS (3U)
 
 /** 
  * @brief Timer to mask PEC faults during startup delay window 
@@ -83,17 +113,24 @@ static uint8_t verify_isospi_recovery(acc_data_t *bmsdata,
  */
 static void detect_isospi_break(acc_data_t *bmsdata)
 {
-	// Start accumulation timer on first PEC activity
+	// Start accumulation timer on a spike in PEC errors
 	if (!is_timer_active(&pec_accum_timer)) {
 		uint8_t is_active = 0U;
 		for (uint8_t i = 0U; (i < NUM_CHIPS) && (is_active == 0U);
 		     i++) {
-			if (bmsdata->chips[i].pec_error_sum > 0U) {
-				start_timer(&pec_accum_timer,
-					    ISOSPI_ACCUM_PERIOD_MS);
+			if (bmsdata->chips[i].pec_error_sum >
+			    ISOSPI_PEC_ACCUM_START_THRESH) {
 				is_active = 1U;
 			}
 		}
+
+		if (is_active == 1U) {
+			start_timer(&pec_accum_timer, ISOSPI_ACCUM_PERIOD_MS);
+		} else {
+			// Reset PEC sums; PEC rise rate not high enough for a break
+			reset_all_pec_error_sums(bmsdata->chips);
+		}
+
 	} else {
 		// Only proceed if timer has expired
 		if (is_timer_expired(&pec_accum_timer)) {
@@ -110,32 +147,29 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 			}
 
 			// Check that all chips after the break also exceed threshold
-			if (bmsdata->isospi_status.recovery_successful == 0U &&
-			    fault_detected == 1U) {
-				for (uint8_t chip = first_faulty_chip_idx;
-				     chip < NUM_CHIPS; chip++) {
-					if (bmsdata->chips[chip].pec_error_sum <=
-					    ISOSPI_PEC_ERROR_THRESHOLD) {
-						fault_detected = 0U;
+			if (fault_detected == 1U) {
+				uint8_t all_above_thresh = 1U;
+
+				// clang-format off
+				for (uint8_t chip = first_faulty_chip_idx; chip < NUM_CHIPS; chip++) {
+					if (bmsdata->chips[chip].pec_error_sum <= ISOSPI_PEC_ERROR_THRESHOLD) {
+						all_above_thresh = 0U;
 						break;
 					}
 				}
+
+				if (all_above_thresh == 1U) {
+					// Sets non-critical fault initially
+					bmsdata->isospi_status.state = ISOSPI_BREAK_DETECTED;
+					bmsdata->isospi_status.break_chip = (uint8_t)(first_faulty_chip_idx + 1U);
+					bmsdata->fault_code_noncrit |= INTERNAL_ISOSPI_BREAK_FAULT;
+
+					printf("[isoSPI] Break Detected at Chip %u\n\r", first_faulty_chip_idx + 1U);
+				}
+				// clang-format on
 			}
 
-			if (fault_detected == 1U) {
-				// Sets non-critical fault initially
-				bmsdata->isospi_status.state =
-					ISOSPI_BREAK_DETECTED;
-				bmsdata->isospi_status.break_chip =
-					(uint8_t)(first_faulty_chip_idx + 1U);
-				bmsdata->fault_code_noncrit |=
-					INTERNAL_ISOSPI_BREAK_FAULT;
-
-				printf("[isoSPI] Break Detected at Chip %u\n\r",
-				       first_faulty_chip_idx + 1U);
-			}
-
-			// Reset PEC accumulation and restart timer for next window
+			// Reset PEC accumulation
 			reset_all_pec_error_sums(bmsdata->chips);
 		}
 	}
@@ -212,20 +246,19 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 {
 	switch (bmsdata->isospi_status.state) {
 	case ISOSPI_STATE_NORMAL:
-		detect_isospi_break(bmsdata);
+		if (bmsdata->isospi_status.recovery_successful == 0U) {
+			detect_isospi_break(bmsdata);
+		} else {
+			// After the first recovery is successful, any further breaks cannot be corrected.
+			reset_all_pec_error_sums(bmsdata->chips);
+		}
 		break;
 
 	case ISOSPI_BREAK_DETECTED:
 		send_isospi_status_message(&bmsdata->isospi_status);
-
-		if (bmsdata->isospi_status.recovery_successful == 1U) {
-			printf("[isoSPI] Break reoccurred after recovery\n\r");
-			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
-		} else {
-			printf("[isoSPI] Recovery Started\n\r");
-			attempt_isospi_recovery(bmsdata);
-			bmsdata->isospi_status.state = ISOSPI_STATE_VERIFYING;
-		}
+		printf("[isoSPI] Recovery Started\n\r");
+		attempt_isospi_recovery(bmsdata);
+		bmsdata->isospi_status.state = ISOSPI_STATE_VERIFYING;
 		break;
 
 	case ISOSPI_STATE_VERIFYING:

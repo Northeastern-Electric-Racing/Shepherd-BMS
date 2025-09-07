@@ -48,16 +48,18 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 			printf("PEC Error: Chip %u, Count: %u\n\r", chip,
 			       pec_error_count);
 			send_pec_error_message(chip, pec_error_count);
-		}
 
-		// Accumulate PEC errors only after startup mask period ends, with overflow protection
-		if (!is_startup_mask_active()) {
-			if ((MAX_PEC_ERROR_ACCUM - chips[chip].pec_error_sum) <
-			    pec_error_count) {
-				chips[chip].pec_error_sum = MAX_PEC_ERROR_ACCUM;
-			} else {
-				chips[chip].pec_error_sum +=
-					pec_error_count; // cleared in detect_isospi_break()
+			// Accumulate PEC errors only after startup mask period ends, with overflow protection
+			if (!is_startup_mask_active()) {
+				if ((MAX_PEC_ERROR_ACCUM -
+				     chips[chip].pec_error_sum) <
+				    pec_error_count) {
+					chips[chip].pec_error_sum =
+						MAX_PEC_ERROR_ACCUM;
+				} else {
+					chips[chip].pec_error_sum +=
+						pec_error_count; // cleared in detect_isospi_break()
+				}
 			}
 		}
 
