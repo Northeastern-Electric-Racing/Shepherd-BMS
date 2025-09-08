@@ -30,7 +30,7 @@
 #define MIN_CAPACITY_WH 15.5 /* Watt-hours */
 #define MIN_VOLT	2.5
 #define NOM_VOLT	3.6
-#define MAX_VOLT	4.2
+#define MAX_VOLT	4.22
 #define MAX_CHARGE_VOLT 4.19
 #define MAX_CHG_CURR	13.5 /* Amps */
 #define MAX_DISCHG_CURR 45 /* Amps */
