@@ -159,9 +159,11 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 				}
 
 				if (all_above_thresh == 1U) {
-					// Sets non-critical fault initially
+
 					bmsdata->isospi_status.state = ISOSPI_BREAK_DETECTED;
 					bmsdata->isospi_status.break_chip = (uint8_t)(first_faulty_chip_idx + 1U);
+
+					// Sets non-critical isospi break fault
 					bmsdata->fault_code_noncrit |= INTERNAL_ISOSPI_BREAK_FAULT;
 
 					printf("[isoSPI] Break Detected at Chip %u\n\r", first_faulty_chip_idx + 1U);
@@ -289,7 +291,6 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		// Clear all faults return to normal operation state
 		printf("[isoSPI] Recovery Complete, Fault Cleared\n\r");
 		bmsdata->fault_code_noncrit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
-		bmsdata->fault_code_crit &= ~INTERNAL_ISOSPI_BREAK_FAULT;
 		bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;
 		break;
 
@@ -298,10 +299,6 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 		if (!bmsdata->isospi_status.fault_latched) {
 			send_isospi_status_message(&bmsdata->isospi_status);
 			printf("[isoSPI] Recovery Failed. Critical Fault Latched\n\r");
-
-			bmsdata->fault_code_noncrit &=
-				~INTERNAL_ISOSPI_BREAK_FAULT;
-			bmsdata->fault_code_crit |= INTERNAL_ISOSPI_BREAK_FAULT;
 
 			bmsdata->isospi_status.recovery_successful = 0U;
 			bmsdata->isospi_status.fault_latched = 1U;
