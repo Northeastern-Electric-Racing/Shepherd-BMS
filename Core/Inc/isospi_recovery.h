@@ -27,6 +27,6 @@ void isospi_break_detection_init(acc_data_t *bmsdata);
  * @param isospi_state Current communication state.
  * @param bmsdata Pointer to accumulator data structure.
  */
-void isospi_state_dispatcher(acc_data_t *bmsdata);
+void isospi_state_dispatcher(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi);
 
 #endif // ISOSPI_RECOVERY_H

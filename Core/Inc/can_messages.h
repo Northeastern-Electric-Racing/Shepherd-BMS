@@ -84,7 +84,8 @@ void send_shutdown_ctrl_message(uint8_t mpe_state);
 void send_cell_voltage_message(crit_cellval_t max_voltage,
 			       crit_cellval_t min_voltage, float avg_voltage);
 
-void send_segment_volt_message(acc_data_t *bmsdata);
+void send_segment_average_volt_message(acc_data_t *bmsdata);
+void send_segment_total_volt_message(acc_data_t *bmsdata);
 
 /**
  * @brief sends cell temperature message
@@ -110,7 +111,7 @@ void send_segment_temp_message(acc_data_t *bmsdata);
 void send_fault_message(uint8_t status, int16_t curr, int16_t in_dcl);
 
 void send_fault_timer_message(uint8_t start_stop, uint32_t fault_code,
-			      uint16_t data_1);
+			      float data_1);
 
 /**
  * @brief Send CAN message for debugging the car on the fly.

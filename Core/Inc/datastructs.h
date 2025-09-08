@@ -138,6 +138,8 @@ typedef struct {
 	float segment_average_temps[NUM_SEGMENTS];
 	/* OCV average voltages */
 	float segment_average_volts[NUM_SEGMENTS];
+	/* Total voltages for each segment */
+	float segment_total_volts[NUM_SEGMENTS];
 
 	// the board temperature
 	float internal_temp;
@@ -171,6 +173,11 @@ typedef struct {
 	crit_cellval_t min_ocv;
 	float avg_ocv;
 	float delt_ocv;
+
+	// the current discharge configuration the state machine wants
+	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA];
+	// whether balancing should be on, or muted
+	bool should_balance;
 
 	/// whether the charger is connected, synonymous with being in the state of CHARGING, and therefore irreversible
 	bool is_charger_connected;

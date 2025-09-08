@@ -283,6 +283,13 @@ printf("\n");
     }
     printf("\n");
   }
+  printf("CHIP TEMPS: \n");
+  for(uint8_t c = 0; c < NUM_CHIPS; c++)
+  {
+   
+    printf("%.1f\t", acc_data->chip_data[c].die_temp);
+  }
+  printf("\n");
   #endif
 
   #ifdef DEBUG_OTHER
@@ -368,6 +375,10 @@ int main(void)
   acc_data->segment_average_volts[3] = 3.666;
   acc_data->segment_average_volts[4] = 3.666;
 
+  // always default to no balancing
+  memset(acc_data->discharge_config, 0, sizeof(acc_data->discharge_config));
+  acc_data->should_balance = false;
+
   
   /* USER CODE END Init */
 
@@ -402,8 +413,8 @@ int main(void)
   // }
 	init_both_can(&hcan1, &hcan2);
   compute_init();
-  // the BMS faults upon boot, the shutdown loop must clear out before drive
-  compute_set_fault(true);
+  // // the BMS faults upon boot, the shutdown loop must clear out before drive
+  compute_set_fault(false);
   printf("Init passed\n");
   /* USER CODE END 2 */
 
@@ -433,13 +444,16 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   
   /* Messaging */
-  can_dispatch_handle = osThreadNew(vCanDispatch, acc_data, &can_dispatch_attributes);
+  can_dispatch_handle = osThreadNew(vCanDispatch, NULL, &can_dispatch_attributes);
   assert(can_dispatch_handle);
   
   can_receive_thread = osThreadNew(vCanReceive, acc_data, &can_receive_attributes);
   assert(can_receive_thread);
 
-  get_segment_data_thread = osThreadNew(vGetSegmentData, acc_data, &get_segment_data_attrs);
+  get_segment_data_args_t *seg_args = malloc(sizeof(get_segment_data_args_t));
+  seg_args->bmsdata = acc_data;
+  seg_args->hspi = &hspi2;
+  get_segment_data_thread = osThreadNew(vGetSegmentData, seg_args, &get_segment_data_attrs);
   assert(get_segment_data_thread);
 
   analyzer_thread = osThreadNew(vAnalyzer, acc_data, &analyzer_attrs);
@@ -892,7 +906,7 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 16;
+  htim2.Init.Prescaler = 63;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim2.Init.Period = 4294967295;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;

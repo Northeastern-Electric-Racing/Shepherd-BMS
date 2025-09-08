@@ -1,10 +1,25 @@
 #include "segment.h"
 
 #include "adi_interaction.h"
-#include "analyzer.h"
 #include "c_utils.h"
 #include "isospi_recovery.h"
 #include "serialPrintResult.h"
+
+/**
+ * @brief Get the num cells using the order of the chip, for functions without chipdata access.
+ * 
+ * @param chip_index 
+ * @return uint8_t the number of cells in the chip
+ */
+uint8_t get_num_cells_seg(uint8_t chip_index)
+{
+	// TODO make less hardcoded
+	if (chip_index % 2 == 0) {
+		return NUM_CELLS_ALPHA;
+	} else {
+		return NUM_CELLS_BETA;
+	}
+}
 
 /**
  * @brief Initialize a chip with our default values.
@@ -74,44 +89,39 @@ void init_chip(cell_asic *chip)
 	clear_cell_discharge(chip);
 }
 
-void segment_init(acc_data_t *bmsdata)
+void segment_init(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	printf("Initializing Segments...");
-
-	isospi_break_detection_init(bmsdata);
-
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		bmsdata->chip_data[chip].alpha = chip % 2 == 0;
-
-		init_chip(&bmsdata->chips[chip]);
+		init_chip(&chips[chip]);
 	}
 
-	write_config_regs(bmsdata->chips);
+	write_config_regs(chips, hspi);
 
 	// disable balancing on init
-	mute_chips(bmsdata->chips);
+	mute_chips(chips, hspi);
 
-	start_c_adc_conv(bmsdata->chips);
-}
-
-void segment_mute(acc_data_t *bmsdata)
-{
-	mute_chips(bmsdata->chips);
-}
-void segment_unmute(acc_data_t *bmsdata)
-{
-	unmute_chips(bmsdata->chips);
-}
-void segment_snap(acc_data_t *bmsdata)
-{
-	snap_chips(bmsdata->chips);
-}
-void segment_unsnap(acc_data_t *bmsdata)
-{
-	unsnap_chips(bmsdata->chips);
+	start_c_adc_conv(chips, hspi);
 }
 
-void segment_adc_comparison(acc_data_t *bmsdata)
+void segment_mute(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
+{
+	mute_chips(chips, hspi);
+}
+void segment_unmute(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
+{
+	unmute_chips(chips, hspi);
+}
+void segment_snap(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
+{
+	snap_chips(chips, hspi);
+}
+void segment_unsnap(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
+{
+	unsnap_chips(chips, hspi);
+}
+
+void segment_adc_comparison(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	// TODO: S-ADC measurements are all over the place.
 
@@ -121,30 +131,29 @@ void segment_adc_comparison(acc_data_t *bmsdata)
 	// read_adbms_data(bmsdata->chips, RDCVALL, Rdcvall, ALL_GRP);
 
 	// Result of C-ADC and S-ADC comparison is stored in status register group C
-	read_status_registers(bmsdata->chips);
+	read_status_registers(chips, hspi);
 
 	for (uint8_t chip = 0; chip < NUM_CHIPS; chip++) {
-		uint8_t cells = get_num_cells(&bmsdata->chip_data[chip]);
+		uint8_t cells = get_num_cells_seg(chip);
 		for (uint8_t cell = 0; cell < cells; cell++) {
-			if (NER_GET_BIT(bmsdata->chips[chip].statc.cs_flt,
-					cell)) {
+			if (NER_GET_BIT(chips[chip].statc.cs_flt, cell)) {
 				printf("ADC VOLTAGE DISCREPANCY ERROR\nChip %d, Cell %d\nC-ADC: %f, S-ADC: %f\n",
 				       chip + 1, cell + 1,
 				       getVoltage(
-					       bmsdata->chips[chip]
-						       .fcell.fc_codes[cell]),
+					       chips[chip].fcell.fc_codes[cell]),
 				       getVoltage(
-					       bmsdata->chips[chip]
+					       chips[chip]
 						       .scell.sc_codes[cell]));
 			}
 		}
 	}
 }
 
-void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
+void segment_monitor_flts(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		//printf("CHIP %d :", chip);
+		printf("MUTE: %d, %d\n", chip, chips[chip].rx_cfga.mute_st);
 		if (chips[chip].statc.cs_flt > 0) {
 			//printf("C VS S MISMATCH on cells ");
 			for (int i = 0; i < 16; i++) {
@@ -193,89 +202,112 @@ void segment_monitor_flts(cell_asic chips[NUM_CHIPS])
 		}
 	}
 	// clear them.  they will still be in memory for usage until this function or read_status_registers is called
-	write_clear_flags(chips);
+	write_clear_flags(chips, hspi);
 }
 
 // ensure stuff used is in the correctfunction
-void segment_retrieve_active_data(acc_data_t *bmsdata)
+void segment_retrieve_active_data(cell_asic chips[NUM_CHIPS],
+				  SPI_HandleTypeDef *hspi)
 
 {
 	// read all therms using AUX 2
-	adc_and_read_aux2_registers(bmsdata->chips);
+	adc_and_read_aux2_registers(chips, hspi);
 
 	// read from ADC convs
-	read_filtered_voltage_registers(bmsdata->chips);
+	read_filtered_voltage_registers(chips, hspi);
 }
 
 // ensure stuff used is in the correctfunction
-void segment_retrieve_charging_data(acc_data_t *bmsdata)
+void segment_retrieve_charging_data(cell_asic chips[NUM_CHIPS],
+				    SPI_HandleTypeDef *hspi)
 
 {
 	// read all therms using AUX 2
-	adc_and_read_aux2_registers(bmsdata->chips);
+	adc_and_read_aux2_registers(chips, hspi);
 
 	// poll stuff like vref, etc.
-	adc_and_read_aux_registers(bmsdata->chips);
+	adc_and_read_aux_registers(chips, hspi);
 
 	// read from ADC convs
-	get_c_adc_voltages(bmsdata->chips);
+	get_c_adc_voltages(chips, hspi);
 
-	// read the above into status registers
-	read_status_registers(bmsdata->chips);
+	read_status_registers(chips, hspi);
+
+	// Read configuration registers to monitor burning status and the like
+	read_config_register_a(chips, hspi);
+	read_config_register_b(chips, hspi);
 
 	//segment_adc_comparison(bmsdata);
 	// check our fault flags
-	segment_monitor_flts(bmsdata->chips);
+	segment_monitor_flts(chips, hspi);
 }
 
-void segment_retrieve_debug_data(acc_data_t *bmsdata)
+void segment_retrieve_debug_data(cell_asic chips[NUM_CHIPS],
+				 SPI_HandleTypeDef *hspi)
 {
 	// poll stuff like vref, etc.
-	adc_and_read_aux_registers(bmsdata->chips);
+	adc_and_read_aux_registers(chips, hspi);
 
 	// read the above into status registers
-	read_status_registers(bmsdata->chips);
+	read_status_registers(chips, hspi);
+
+	// Read configuration registers to monitor burning status and the like
+	read_config_register_a(chips, hspi);
+	read_config_register_b(chips, hspi);
 
 	//segment_adc_comparison(bmsdata);
 	// check our fault flags
-	segment_monitor_flts(bmsdata->chips);
+	segment_monitor_flts(chips, hspi);
 
-	read_s_voltage_registers(bmsdata->chips);
+	read_s_voltage_registers(chips, hspi);
 }
 
-void segment_restart(acc_data_t *bmsdata)
+void segment_restart(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 {
-	soft_reset_chips(bmsdata->chips);
-	segment_init(bmsdata);
+	soft_reset_chips(chips, hspi);
+	segment_init(chips, hspi);
 }
 
 bool segment_is_balancing(cell_asic chips[NUM_CHIPS])
 {
-	read_config_register_b(chips);
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		if (chips[chip].rx_cfgb.dcc > 0) {
 			return true;
+		}
+		// right now this checks all cells, even depop-ed ones
+		for (uint8_t i = 0; i < 12; i++) {
+			if (chips[chip].PwmA.pwma[i] > 0) {
+				return true;
+			}
+		}
+		for (uint8_t i = 0; i < 4; i++) {
+			if (chips[chip].PwmB.pwmb[i] > 0) {
+				return true;
+			}
 		}
 	}
 	return false;
 }
 
-void segment_disable_balancing(acc_data_t *bmsdata)
+void segment_disable_balancing(cell_asic chips[NUM_CHIPS],
+			       SPI_HandleTypeDef *hspi)
 {
 	// Initializes all array elements to zero
 	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA] = { 0 };
-	segment_configure_balancing(bmsdata, discharge_config);
+	segment_configure_balancing(chips, discharge_config, hspi);
 
 	// force balancing muted
-	mute_chips(bmsdata->chips);
+	mute_chips(chips, hspi);
 }
 
-void segment_enable_balancing(acc_data_t *bmsdata)
+void segment_enable_balancing(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi)
 { // TODO verify balancing safe
-	unmute_chips(bmsdata->chips);
+	unmute_chips(chips, hspi);
 }
 
-void segment_manual_balancing(acc_data_t *bmsdata)
+void segment_manual_balancing(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi)
 {
 	// clang-format off
 	bool discharge_confg[NUM_CHIPS][NUM_CELLS_ALPHA] = {
@@ -292,19 +324,21 @@ void segment_manual_balancing(acc_data_t *bmsdata)
 	};
 	// clang-format on
 
-	segment_configure_balancing(bmsdata, discharge_confg);
+	segment_configure_balancing(chips, discharge_confg, hspi);
 }
 
 void segment_configure_balancing(
-	acc_data_t *bmsdata, bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA])
+	cell_asic chips[NUM_CHIPS],
+	bool discharge_config[NUM_CHIPS][NUM_CELLS_ALPHA],
+	SPI_HandleTypeDef *hspi)
 {
 	// TODO: Test
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
-		uint8_t num_cells = get_num_cells(bmsdata->chip_data);
+		uint8_t num_cells = get_num_cells_seg(chip);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&bmsdata->chips[chip], cell,
+			set_cell_discharge(&chips[chip], cell,
 					   discharge_config[chip][cell]);
 		}
 	}
-	write_config_regs(bmsdata->chips);
+	write_config_regs(chips, hspi);
 }

@@ -2,6 +2,7 @@
 #define ADI_INTERACTION_H
 
 #include "adBms6830Data.h"
+#include "stm32f4xx_hal.h"
 #include "bmsConfig.h"
 #include "datastructs.h"
 
@@ -174,46 +175,46 @@ void set_discharge_timeout(cell_asic *chip, DCTO timeout);
  * 
  * @param chips 
  */
-void soft_reset_chips(cell_asic chips[NUM_CHIPS]);
+void soft_reset_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Mute the chips so they never burn
  * 
  * @param chips 
  */
-void mute_chips(cell_asic chips[NUM_CHIPS]);
+void mute_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 /**
  * @brief Unmute the chips, allowing them to burn if DCC or PWM is set
  * 
  * @param chips 
  */
-void unmute_chips(cell_asic chips[NUM_CHIPS]);
+void unmute_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 /**
  * @brief Freeze the result registers, but the chip still collects data in the background
  * 
  * @param chips 
  */
-void snap_chips(cell_asic chips[NUM_CHIPS]);
+void snap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 /**
  * @brief Unfreeze result registers allowing new data to be displayed
  * 
  * @param chips 
  */
-void unsnap_chips(cell_asic chips[NUM_CHIPS]);
+void unsnap_chips(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Write config registers. Wakes chips before writing.
  * 
  * @param chips Array of chips to write config registers of.
  */
-void write_config_regs(cell_asic chips[NUM_CHIPS]);
+void write_config_regs(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Clears all status regster C flags except the CS FLT
  * 
  * @param chips 
  */
-void write_clear_flags(cell_asic chips[NUM_CHIPS]);
+void write_clear_flags(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 // --- END WRITE COMMANDS ---
 
@@ -224,63 +225,85 @@ void write_clear_flags(cell_asic chips[NUM_CHIPS]);
  * 
  * @param chips The chips to read voltages into
  */
-void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS]);
+void read_filtered_voltage_registers(cell_asic chips[NUM_CHIPS],
+				     SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read all S voltage results A-E.  ADC must be continous.
  * 
  * @param chips The chips to read the voltages into
  */
-void read_s_voltage_registers(cell_asic chips[NUM_CHIPS]);
+void read_s_voltage_registers(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read every register connected to the AUX ADC.
  * 
  * @param chips Array of chips to get voltage readings of.
  */
-void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS]);
+void adc_and_read_aux_registers(cell_asic chips[NUM_CHIPS],
+				SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read voltages in every register connected to AUX2 ADC.
  * 
  * @param chips Array of chips to get voltages of.
  */
-void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS]);
+void adc_and_read_aux2_registers(cell_asic chips[NUM_CHIPS],
+				 SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read all status registers.
  * 
  * @param chips Array of chips to read.
  */
-void read_status_registers(cell_asic chips[NUM_CHIPS]);
+void read_status_registers(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read status register c, containing chip level faults.
  * 
  * @param chips 
  */
-void read_status_register_c(cell_asic chips[NUM_CHIPS]);
+void read_status_register_c(cell_asic chips[NUM_CHIPS],
+			    SPI_HandleTypeDef *hspi);
+
+/**
+ * @brief Reads config register A
+ * 
+ * @param chips 
+ */
+void read_config_register_a(cell_asic chips[NUM_CHIPS],
+			    SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read config register b, containing DCC and more
  * 
  * @param chips 
  */
-void read_config_register_b(cell_asic chips[NUM_CHIPS]);
+void read_config_register_b(cell_asic chips[NUM_CHIPS],
+			    SPI_HandleTypeDef *hspi);
+
+/**
+ * @brief Reads PWM registers. Note: overrwrites the PwmA struct with what the chip is doing, destructive if have not written yet
+ * 
+ * @param chips 
+ */
+void read_pwm_registers(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read status and aux registers in one command.
  * 
  * @param chips Array of chips to read.
  */
-void read_status_aux_registers(cell_asic chips[NUM_CHIPS]);
+void read_status_aux_registers(cell_asic chips[NUM_CHIPS],
+			       SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Read the serial ID of the chip.
  * 
  * @param chips Array of chips to read.
  */
-void read_serial_id(cell_asic chips[NUM_CHIPS]);
+void read_serial_id(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 // --- END READ COMMANDS ---
 
@@ -291,34 +314,36 @@ void read_serial_id(cell_asic chips[NUM_CHIPS]);
  * 
  * @param chips Array of chips to get voltage readings from.
  */
-void get_c_adc_voltages(cell_asic chips[NUM_CHIPS]);
+void get_c_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Trigger, poll, and fetch the avgeraged cell voltages.
  * 
  * @param chip Array of chips to get voltage readings of.
  */
-void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS]);
+void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS],
+			    SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Trigger, poll, and fetch voltages from the S-ADCs.
  * 
  * @param chip Array of chips to get voltage readings from.
  */
-void get_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Trigger, poll, and fetch the c and s adc voltages, using instaneous redundancy.
  * 
  * @param chips Array of chips to get voltage readings of.
  */
-void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS]);
+void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS],
+			      SPI_HandleTypeDef *hspi);
 
 /**
  * @brief Starts a continous c ADC conversion with S redundancy
  * 
  */
-void start_c_adc_conv(cell_asic chips[NUM_CHIPS]);
+void start_c_adc_conv(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 // --- END ADC POLL ---
 

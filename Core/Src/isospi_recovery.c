@@ -178,7 +178,8 @@ static void detect_isospi_break(acc_data_t *bmsdata)
  *
  * @param bmsdata Pointer to the accumulator data structure.
  */
-static void attempt_isospi_recovery(acc_data_t *bmsdata)
+static void attempt_isospi_recovery(acc_data_t *bmsdata,
+				    SPI_HandleTypeDef *hspi)
 {
 	uint8_t break_chip_idx =
 		(uint8_t)(bmsdata->isospi_status.break_chip - 1U);
@@ -204,13 +205,13 @@ static void attempt_isospi_recovery(acc_data_t *bmsdata)
 	}
 
 	// Write updated config to chips
-	write_config_regs(bmsdata->chips);
+	write_config_regs(bmsdata->chips, hspi);
 
 	// Disable Balancing
-	mute_chips(bmsdata->chips);
+	mute_chips(bmsdata->chips, hspi);
 
 	// Start adc conversions
-	start_c_adc_conv(bmsdata->chips);
+	start_c_adc_conv(bmsdata->chips, hspi);
 
 	reset_all_pec_error_sums(bmsdata->chips);
 }
@@ -237,7 +238,7 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 	send_isospi_status_message(&bmsdata->isospi_status);
 }
 
-void isospi_state_dispatcher(acc_data_t *bmsdata)
+void isospi_state_dispatcher(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 {
 	switch (bmsdata->isospi_status.state) {
 	case ISOSPI_STATE_NORMAL:
@@ -252,7 +253,7 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 	case ISOSPI_BREAK_DETECTED:
 		send_isospi_status_message(&bmsdata->isospi_status);
 		printf("[isoSPI] Recovery Started\n\r");
-		attempt_isospi_recovery(bmsdata);
+		attempt_isospi_recovery(bmsdata, hspi);
 		bmsdata->isospi_status.state = ISOSPI_STATE_VERIFYING;
 		break;
 
