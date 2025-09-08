@@ -6,11 +6,11 @@
 #include "timer.h"
 
 /** @brief Break detect threshold.
- *  Number of PEC errors in the accumulation window that indicates a break.
+ *  PEC errors > this value in the accumulation window indicate a break.
  */
-#define ISOSPI_PEC_ERROR_THRESHOLD (20U)
+#define ISOSPI_PEC_ERROR_THRESHOLD (25U)
 
-/** @brief Arm threshold for accumulation timer.
+/** @brief Threshold for accumulation timer.
  *  Set just above the PEC error sum noise level per cycle,
  *  so random noise doesn’t start the accumulation window.
  */
@@ -23,26 +23,20 @@
 #define ISOSPI_VALIDATION_THRESHOLD (5U)
 
 /** @brief Startup mask time (ms).
- *  Time to ignore PEC faults after power-up to avoid false trips.
+ *  Time to ignore PECs after init to avoid false detections.
  */
 #define ISOSPI_STARTUP_MASK_TIME (1500U)
 
-/** @brief Accumulation runs.
- *  Number of dispatcher runs to accumulate the PEC sum before comparing to ISOSPI_PEC_ERROR_THRESHOLD.
- *  Observed PECs/run for chips with break: 9 (discharge_state), 20 (charge_state)
- */
-#define ACCUM_RUNS (8U)
-
 /** @brief Accumulation window (ms).
  *  For accumulation, the PEC sum updates at the ADBMS system-wide sample rate
- *  defined in bmsConfig.h. The window comes from that period and how many runs
- *  we accumulate for.
- *  Examples: 2 Hz -> 500 ms * 6 = 3000 ms
+ *  defined in bmsConfig.h.
+ *  Observed PECs/run for chips with break: ~9 (discharge_state), ~20 (charge_state)
+ *  Current: 2 Hz -> 500 ms * 8 runs = 4000 ms
  */
-#define ISOSPI_ACCUM_PERIOD_MS ((1000U / (SAMPLE_RATE)) * (ACCUM_RUNS))
+#define ISOSPI_ACCUM_PERIOD_MS (4000U)
 
-/** @brief Verification reads after recovery.
- *  Number of read attempts required to confirm recovery success.
+/** @brief Maximum number of verification read attempts after recovery.
+ *  Recovery passes if any attempt succeeds; fails if all attempts fail.
  */
 #define ISOSPI_VERIFICATION_READS (3U)
 
@@ -241,7 +235,6 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 	reset_all_pec_error_sums(bmsdata->chips);
 
 	send_isospi_status_message(&bmsdata->isospi_status);
-	send_isospi_lines_message(bmsdata->chips);
 }
 
 void isospi_state_dispatcher(acc_data_t *bmsdata)
@@ -286,7 +279,6 @@ void isospi_state_dispatcher(acc_data_t *bmsdata)
 
 	case ISOSPI_RECOVERY_SUCCESS:
 		send_isospi_status_message(&bmsdata->isospi_status);
-		send_isospi_lines_message(bmsdata->chips);
 
 		// Clear all faults return to normal operation state
 		printf("[isoSPI] Recovery Complete, Fault Cleared\n\r");

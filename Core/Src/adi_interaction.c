@@ -6,7 +6,7 @@
 #include "compute.h"
 #include "isospi_recovery.h"
 
-#define MAX_PEC_ERROR_ACCUM 300U // Max accumulated PECs
+#define MAX_PEC_ERROR_ACCUM 200U // Max accumulated PECs
 
 /**
  * @brief Count PEC errors for all chips, send CAN message, and reset counters.

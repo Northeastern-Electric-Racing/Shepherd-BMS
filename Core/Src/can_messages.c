@@ -743,26 +743,3 @@ void send_isospi_status_message(const isospi_status_t *status)
 	memcpy(msg.data, &msg_data, sizeof(msg_data));
 	queue_can_msg(msg);
 }
-
-/**
- * @brief Sends chip line assignments over CAN using a bitfield.
- *
- * @param chips Pointer to chip array.
- */
-void send_isospi_lines_message(const cell_asic *chips)
-{
-	uint8_t bitfield[ISOSPI_LINE_SIZE] = { 0 };
-
-	for (uint8_t chip = 1; chip <= NUM_CHIPS; chip++) {
-		if (chips[chip - 1].isospi_line == ISOSPI_LINE_B) {
-			bitfield[(chip - 1) / 8] |= (1U << ((chip - 1) % 8));
-		}
-	}
-
-	can_msg_t msg = { .id = ISOSPI_LINE_CANID,
-			  .len = ISOSPI_LINE_SIZE,
-			  .data = { 0 } };
-
-	memcpy(msg.data, bitfield, ISOSPI_LINE_SIZE);
-	queue_can_msg(msg);
-}
