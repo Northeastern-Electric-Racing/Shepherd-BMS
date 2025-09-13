@@ -8,6 +8,8 @@
 
 #define MAX_PEC_ERROR_ACCUM (200U) // Max accumulated PECs
 
+#define ADBMS_ADC_POLL_TIMEOUT (100U) // ms
+
 /**
  * @brief Count PEC errors for all chips, send CAN message, and reset counters.
  *
@@ -278,7 +280,8 @@ uint32_t adBmsPollAdc_indicator(cell_asic chips[NUM_CHIPS],
 				uint8_t poll_type[2])
 {
 	set_debug_led_2(1);
-	uint32_t result = adBmsPollAdc(NUM_CHIPS, chips, poll_type);
+	uint32_t result = adBmsPollAdc(NUM_CHIPS, chips, poll_type,
+				       ADBMS_ADC_POLL_TIMEOUT);
 	set_debug_led_2(0);
 	return result;
 }
