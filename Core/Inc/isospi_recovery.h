@@ -13,20 +13,20 @@ int is_startup_mask_active(void);
 /**
  * @brief Initializes ISO SPI break detection timers and state.
  *
- * Should be called during system startup or segment re-initialization.
+ * Should be called during system startup after segment initialization.
  *
  * @param bmsdata Pointer to the accumulator data structure.
  */
 void isospi_break_detection_init(acc_data_t *bmsdata);
 
 /**
- * @brief Dispatches logic based on current ISO SPI communication state.
+ * @brief Manages the isoSPI communication state machine.
  *
- * Handles transitions between NORMAL, BREAK_DETECTED, RECOVERY_SUCCESS, and RECOVERY_FAILED states.
+ * Handles logic and transitions for states in @ref isospi_comm_state_t.
  *
- * @param isospi_state Current communication state.
  * @param bmsdata Pointer to accumulator data structure.
+ * @param hspi    SPI handle used for isoSPI communication.
  */
-void isospi_state_dispatcher(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi);
+void isospi_handle_state(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi);
 
 #endif // ISOSPI_RECOVERY_H

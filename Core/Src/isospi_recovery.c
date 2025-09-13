@@ -72,23 +72,23 @@ static void reset_all_pec_error_sums(cell_asic chips[NUM_CHIPS])
  *
  * @param bmsdata Pointer to accumulator data.
  * @param start_chip_idx Index of the chip where the break occurred.
- * @return 1 if all chips recovered successfully, 0 otherwise.
+ * @return 0 if all chips recovered successfully, 1 otherwise.
  */
-static uint8_t verify_isospi_recovery(acc_data_t *bmsdata,
+static uint8_t isospi_verify_recovery(acc_data_t *bmsdata,
 				      uint8_t start_chip_idx)
 {
-	uint8_t result = 1U;
+	uint8_t result = 0U;
 
 	for (uint8_t i = start_chip_idx; i < NUM_CHIPS; i++) {
 		if (bmsdata->chips[i].pec_error_sum >
 		    ISOSPI_VALIDATION_THRESHOLD) {
 			printf("[isoSPI] Verification failed at chip %u (PEC: %u)\n\r",
 			       i + 1, bmsdata->chips[i].pec_error_sum);
-			result = 0U;
+			result = 1U;
 		}
 	}
 
-	if (result == 1U) {
+	if (result == 0U) {
 		printf("[isoSPI] Verification passed\n\r");
 	}
 
@@ -105,7 +105,7 @@ static uint8_t verify_isospi_recovery(acc_data_t *bmsdata,
  *
  * @param bmsdata Pointer to accumulator data structure.
  */
-static void detect_isospi_break(acc_data_t *bmsdata)
+static void isospi_detect_break(acc_data_t *bmsdata)
 {
 	// Start accumulation timer on a spike in PEC errors
 	if (!is_timer_active(&pec_accum_timer)) {
@@ -172,14 +172,12 @@ static void detect_isospi_break(acc_data_t *bmsdata)
 }
 
 /**
- * @brief Attempts to recover from an ISO SPI break by switching to the secondary line.
- *
- * Updates chip direction, sets COMM_BK, writes configs, and verifies recovery by checking PEC errors.
+ * @brief Recover from an isoSPI break by switching chips after the break to the secondary line.
  *
  * @param bmsdata Pointer to the accumulator data structure.
+ * @param hspi    SPI handle used for isoSPI communication.
  */
-static void attempt_isospi_recovery(acc_data_t *bmsdata,
-				    SPI_HandleTypeDef *hspi)
+static void isospi_recover_break(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 {
 	uint8_t break_chip_idx =
 		(uint8_t)(bmsdata->isospi_status.break_chip - 1U);
@@ -204,14 +202,8 @@ static void attempt_isospi_recovery(acc_data_t *bmsdata,
 		set_comm_break(&bmsdata->chips[break_chip_idx - 1], COMM_BK_ON);
 	}
 
-	// Write updated config to chips
-	write_config_regs(bmsdata->chips, hspi);
-
-	// Disable Balancing
-	mute_chips(bmsdata->chips, hspi);
-
-	// Start adc conversions
-	start_c_adc_conv(bmsdata->chips, hspi);
+	// Restart the segment to apply the new isoSPI line setup and resynchronize
+	segment_restart(bmsdata->chips, hspi);
 
 	reset_all_pec_error_sums(bmsdata->chips);
 }
@@ -238,12 +230,12 @@ void isospi_break_detection_init(acc_data_t *bmsdata)
 	send_isospi_status_message(&bmsdata->isospi_status);
 }
 
-void isospi_state_dispatcher(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
+void isospi_handle_state(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 {
 	switch (bmsdata->isospi_status.state) {
 	case ISOSPI_STATE_NORMAL:
 		if (bmsdata->isospi_status.recovery_successful == 0U) {
-			detect_isospi_break(bmsdata);
+			isospi_detect_break(bmsdata);
 		} else {
 			// After the first recovery is successful, any further breaks cannot be corrected.
 			reset_all_pec_error_sums(bmsdata->chips);
@@ -253,7 +245,7 @@ void isospi_state_dispatcher(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 	case ISOSPI_BREAK_DETECTED:
 		send_isospi_status_message(&bmsdata->isospi_status);
 		printf("[isoSPI] Recovery Started\n\r");
-		attempt_isospi_recovery(bmsdata, hspi);
+		isospi_recover_break(bmsdata, hspi);
 		bmsdata->isospi_status.state = ISOSPI_STATE_VERIFYING;
 		break;
 
@@ -265,10 +257,10 @@ void isospi_state_dispatcher(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 			bmsdata->isospi_status.state = ISOSPI_RECOVERY_FAILED;
 		} else {
 
-			// Confirm PEC errors have dropped below acceptable level after switching lines
+			// Confirm PEC errors have dropped below acceptable level after recovery
 			uint8_t break_chip_idx = (uint8_t)(bmsdata->isospi_status.break_chip - 1U);
 
-			if (verify_isospi_recovery(bmsdata, break_chip_idx) == 1U) {
+			if (isospi_verify_recovery(bmsdata, break_chip_idx) == 0U) {
 				printf("[isoSPI] Recovery succeeded\n\r");
 				bmsdata->isospi_status.state = ISOSPI_RECOVERY_SUCCESS;
 				bmsdata->isospi_status.recovery_successful = 1U;

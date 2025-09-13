@@ -36,8 +36,6 @@ void init_chip(cell_asic *chip)
 	memset(chip->configb.rx_data, 0, sizeof(chip->configb.rx_data));
 	memset(chip->configb.tx_data, 0, sizeof(chip->configb.tx_data));
 
-	set_iso_spi_line(chip, ISOSPI_LINE_A);
-
 	set_REFON(chip, PWR_UP);
 
 	set_volt_adc_comp_thresh(chip, CVT_135mV);
@@ -65,9 +63,6 @@ void init_chip(cell_asic *chip)
 	set_gpio_pull(chip, GPO9, GPO_SET);
 	set_gpio_pull(chip, GPO10, GPO_SET);
 
-	// Not an endpoint in the daisy chain
-	set_comm_break(chip, COMM_BK_OFF);
-
 	set_iir_corner_freq(chip, IIR_FPA16);
 
 	// Init config B
@@ -94,6 +89,26 @@ void segment_init(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 	printf("Initializing Segments...");
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		init_chip(&chips[chip]);
+	}
+
+	// One-time init for isoSPI line and comm_break.
+	static bool is_first_init = true;
+
+	/* 
+	 * These fields are later controlled by isoSPI recovery to
+	 * manage communication on each line after an isoSPI break,
+	 * so re-inits from segment_restart() must not overwrite them.
+	 */
+	if (is_first_init) {
+		for (int chip = 0; chip < NUM_CHIPS; chip++) {
+			// Set chip to primary isoSPI line A
+			set_iso_spi_line(&chips[chip], ISOSPI_LINE_A);
+
+			// Not an endpoint in the daisy chain
+			set_comm_break(&chips[chip], COMM_BK_OFF);
+		}
+
+		is_first_init = false;
 	}
 
 	write_config_regs(chips, hspi);
