@@ -44,7 +44,7 @@ void vGetSegmentData(void *pv_params)
 	HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
 	segment_init(bmsdata->chips, hspi);
 	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
-	
+
 	isospi_break_detection_init(bmsdata);
 
 	// must delay after init for some reason, or else ADC doesnt start up (-3.45 or something)
