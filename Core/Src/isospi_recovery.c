@@ -280,10 +280,10 @@ void isospi_handle_state(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 		break;
 
 	case ISOSPI_RECOVERY_FAILED:
-		// Run critical fault logic only once to avoid repeating logs and CAN messages
+		// Run recovery failed fault logic only once to avoid repeating logs and CAN messages
 		if (!bmsdata->isospi_status.fault_latched) {
 			send_isospi_status_message(&bmsdata->isospi_status);
-			printf("[isoSPI] Recovery Failed. Critical Fault Latched\n\r");
+			printf("[isoSPI] Recovery Failed. Non-critical Fault Latched\n\r");
 
 			bmsdata->isospi_status.recovery_successful = 0U;
 			bmsdata->isospi_status.fault_latched = 1U;
