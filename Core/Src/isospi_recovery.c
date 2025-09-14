@@ -43,7 +43,7 @@
 /** 
  * @brief Timer to mask PEC faults during startup delay window 
  */
-static nertimer_t startup_mask_timer;
+static nertimer_t startup_pec_mask_timer;
 
 /** 
  * @brief Timer to accumulate PEC errors before break detection 
@@ -208,15 +208,15 @@ static void isospi_recover_break(acc_data_t *bmsdata, SPI_HandleTypeDef *hspi)
 	reset_all_pec_error_sums(bmsdata->chips);
 }
 
-int is_startup_mask_active(void)
+int is_startup_pec_mask_active(void)
 {
-	return !is_timer_expired(&startup_mask_timer);
+	return !is_timer_expired(&startup_pec_mask_timer);
 }
 
 void isospi_break_detection_init(acc_data_t *bmsdata)
 {
 	// Wait a short time before enabling PEC detection to avoid startup noise
-	start_timer(&startup_mask_timer, ISOSPI_STARTUP_MASK_TIME);
+	start_timer(&startup_pec_mask_timer, ISOSPI_STARTUP_MASK_TIME);
 	cancel_timer(&pec_accum_timer);
 
 	bmsdata->isospi_status.state = ISOSPI_STATE_NORMAL;

@@ -6,9 +6,9 @@
 /**
  * @brief Checks whether the isoSPI startup mask period is still active.
  *
- * @return 1 if the startup mask is active (PEC faults should be ignored), 0 otherwise.
+ * @return 1 if the startup mask is active (PECs should be ignored), 0 otherwise.
  */
-int is_startup_mask_active(void);
+int is_startup_pec_mask_active(void);
 
 /**
  * @brief Initializes ISO SPI break detection timers and state.

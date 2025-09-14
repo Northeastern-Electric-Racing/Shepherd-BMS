@@ -6,7 +6,7 @@
 #include "mcuWrapper.h"
 #include "isospi_recovery.h"
 
-#define MAX_PEC_ERROR_ACCUM (200U) // Max accumulated PECs
+#define MAX_PEC_ERROR_ACCUM (100U) // Max accumulated PECs
 
 #define ADBMS_ADC_POLL_TIMEOUT (100U) // ms
 
@@ -100,8 +100,9 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 
 			send_pec_error_message(chip, pec_error_count);
 
-			// Accumulate PEC errors only after startup mask period ends, with overflow protection
-			if (!is_startup_mask_active()) {
+			// Accumulate PEC errors only after startup mask timer ends
+			if (!is_startup_pec_mask_active()) {
+				// Saturate at MAX_PEC_ERROR_ACCUM
 				if ((MAX_PEC_ERROR_ACCUM -
 				     chips[chip].pec_error_sum) <
 				    pec_error_count) {
