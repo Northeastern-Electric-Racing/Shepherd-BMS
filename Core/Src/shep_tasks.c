@@ -96,6 +96,12 @@ void vGetSegmentData(void *pv_params)
 			segment_configure_balancing(bmsdata->chips,
 						    bmsdata->discharge_config,
 						    hspi);
+		} else {
+			// open wire detect happens when not balancing
+			// single shot measurement on s-adcs for open wire detection
+			get_s_adc_voltages(
+				bmsdata->chips, hspi,
+				OW_ON_EVEN_CH); // trying even channels
 		}
 
 		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);

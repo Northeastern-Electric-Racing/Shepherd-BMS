@@ -338,8 +338,5 @@ void segment_configure_balancing(
 		}
 	}
 
-	// single shot measurement on s-adcs for open wire detection
-	get_s_adc_voltages(chips, hspi, OW_ON_ALL_CH);
-
 	write_config_regs(chips, hspi);
 }

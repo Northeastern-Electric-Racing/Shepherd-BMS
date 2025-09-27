@@ -333,8 +333,8 @@ printf("\n");
   #endif
 
   #ifdef DEBUG_OPEN_WIRE
-  if (!acc_data->should_balance) {
-    printf("ACC is not balancing! No detection is activated.");
+  if (acc_data->should_balance) {
+    printf("ACC is balancing! No detection is activated.");
   }
 
   for(uint8_t c = 0; c < NUM_CHIPS; c++)
@@ -350,7 +350,7 @@ printf("\n");
       
         printf("\n");
     }
-  }
+  } 
   #endif
 }
 
