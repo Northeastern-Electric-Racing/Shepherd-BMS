@@ -320,7 +320,7 @@ void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS],
  * 
  * @param chip Array of chips to get voltage readings from.
  */
-void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi, OW_C_S open_wire_detect);
 
 /**
  * @brief Trigger, poll, and fetch the c and s adc voltages, using instaneous redundancy.
