@@ -44,7 +44,6 @@ extern BMSState_t current_state;
 //#define DEBUG_VOLTAGES
 //#define DEBUG_RAW_VOLTAGES
 #define DEBUG_RAW_VOLTAGES_FORMATTED
-#define DEBUG_OPEN_WIRE
 // #define DEBUG_OCV
 // #define DEUBG_THERMS
 // #define DEBUG_OTHER
@@ -331,28 +330,8 @@ printf("\n");
         printf("\n");
     }
   #endif
-
-  #ifdef DEBUG_OPEN_WIRE
-  if (!acc_data->should_balance) {
-    printf("ACC is not balancing! No detection is activated.");
-  }
-
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    printf("Chip %d:  ", c);
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for (uint8_t cell = 0; cell < num_cells; cell++) {
-        if (acc_data->chips[c].diag_result.cell_ow[cell]) {
-          printf("OPEN");
-        } else {
-          printf("CLOSED");
-        }
-      
-        printf("\n");
-    }
-  #endif
-
 }
+
 
 /* USER CODE END 0 */
 
