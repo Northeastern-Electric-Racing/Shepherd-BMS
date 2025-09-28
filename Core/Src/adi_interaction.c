@@ -47,7 +47,7 @@ static void count_pec_errors(cell_asic chips[NUM_CHIPS])
 		// printf("10 %d\n\n\n", chips[chip].cccrc.sid_pec);
 
 		if (pec_error_count > 0U) {
-			printf("PEC Error: Chip %u, Count: %u\n\r", chip,
+			printf("PEC Error: Chip %u, Count: %u\n\r", chip + 1,
 			       pec_error_count);
 			// if only a few PEC errors happened, print which registers they came from
 			if (pec_error_count < 10) {
