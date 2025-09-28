@@ -98,7 +98,7 @@ static uint8_t isospi_verify_recovery(acc_data_t *bmsdata,
 }
 
 /**
- * @brief Checks for ISO SPI communication break using PEC error tracking.
+ * @brief Checks for isoSPI communication break using PEC error tracking.
  *
  * If a break is detected based on PEC thresholds, the internal state is updated and
  * a non-critical fault is flagged. Resets counters after each check.
