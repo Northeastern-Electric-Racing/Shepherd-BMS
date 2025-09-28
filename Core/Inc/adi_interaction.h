@@ -4,8 +4,17 @@
 #include "adBms6830Data.h"
 #include "stm32f4xx_hal.h"
 #include "bmsConfig.h"
+#include "datastructs.h"
 
 // --- BEGIN SET HELPERS ---
+
+/**
+ * @brief Set the isoSPI line of the chip.
+ * 
+ * @param chip Pointer to the chip to modify.
+ * @param line isoSPI line of chip.
+ */
+void set_iso_spi_line(cell_asic *chip, isospi_line_ line);
 
 /**
  * @brief Set the status of the REFON bit.
@@ -320,7 +329,8 @@ void get_avgd_cell_voltages(cell_asic chips[NUM_CHIPS],
  * 
  * @param chip Array of chips to get voltage readings from.
  */
-void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi, OW_C_S open_wire_detect);
+void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi,
+			OW_C_S open_wire_detect);
 
 /**
  * @brief Trigger, poll, and fetch the c and s adc voltages, using instaneous redundancy.
@@ -334,7 +344,7 @@ void get_c_and_s_adc_voltages(cell_asic chips[NUM_CHIPS],
  * @brief Starts a continous c ADC conversion with S redundancy
  * 
  */
-void start_c_adc_conv(SPI_HandleTypeDef *hspi);
+void start_c_adc_conv(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi);
 
 // --- END ADC POLL ---
 

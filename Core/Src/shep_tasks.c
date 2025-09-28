@@ -19,6 +19,8 @@
 #include "segment.h"
 #include "serialPrintResult.h"
 #include "stateMachine.h"
+#include "adi_interaction.h"
+#include "isospi_recovery.h"
 
 #define STATE_MACHINE_FLAG 1
 
@@ -43,6 +45,8 @@ void vGetSegmentData(void *pv_params)
 	segment_init(bmsdata->chips, hspi);
 	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
+	isospi_break_detection_init(bmsdata);
+
 	// must delay after init for some reason, or else ADC doesnt start up (-3.45 or something)
 	osDelay(500);
 
@@ -59,12 +63,18 @@ void vGetSegmentData(void *pv_params)
 		if (current_state == CHARGING_STATE) {
 			// in charging, debug data is required to get things like die temp
 			segment_retrieve_charging_data(bmsdata->chips, hspi);
+
+			isospi_handle_state(bmsdata, hspi);
+
 		} else {
 			// snap before getting data
 			segment_snap(bmsdata->chips, hspi);
 			segment_retrieve_active_data(bmsdata->chips, hspi);
 			// unsnap after getting data
 			segment_unsnap(bmsdata->chips, hspi);
+
+			isospi_handle_state(bmsdata, hspi);
+
 			if (DEBUG_MODE_ENABLED) {
 				segment_retrieve_debug_data(bmsdata->chips,
 							    hspi);

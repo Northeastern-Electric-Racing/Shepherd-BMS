@@ -739,3 +739,30 @@ void send_pec_error_message(uint8_t chip_num, uint16_t pec_count)
 
 	queue_can_msg(msg);
 }
+
+/**
+ * @brief Sends ISO SPI status over CAN.
+ *
+ * @param status Pointer to isospi_status_t structure.
+ */
+void send_isospi_status_message(const isospi_status_t *status)
+{
+	struct __attribute__((__packed__)) {
+		uint8_t state;
+		uint8_t break_location;
+		uint8_t ver_attempts;
+		uint8_t recovery_successful;
+	} msg_data;
+
+	msg_data.state = (uint8_t)status->state;
+	msg_data.break_location = status->break_chip;
+	msg_data.ver_attempts = status->verification_attempts;
+	msg_data.recovery_successful = status->recovery_successful;
+
+	can_msg_t msg = { .id = ISOSPI_STS_CANID,
+			  .len = ISOSPI_STS_SIZE,
+			  .data = { 0 } };
+
+	memcpy(msg.data, &msg_data, sizeof(msg_data));
+	queue_can_msg(msg);
+}

@@ -219,4 +219,11 @@ void send_alpha_status_b_message(float v_res, uint8_t chip, float vref2,
  */
 void send_pec_error_message(uint8_t chip_num, uint16_t pec_count);
 
+/**
+ * @brief Sends ISO SPI status over CAN.
+ *
+ * @param status Pointer to isospi_status_t structure.
+ */
+void send_isospi_status_message(const isospi_status_t *status);
+
 #endif
