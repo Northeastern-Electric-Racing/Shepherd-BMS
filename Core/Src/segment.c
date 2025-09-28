@@ -355,5 +355,6 @@ void segment_configure_balancing(
 					   discharge_config[chip][cell]);
 		}
 	}
+
 	write_config_regs(chips, hspi);
 }

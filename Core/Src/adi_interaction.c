@@ -542,7 +542,7 @@ void get_s_adc_voltages(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi,
 {
 	adBms6830_Adsv(NUM_CHIPS, chips, SINGLE, DCP_OFF, open_wire_detect);
 	adBmsPollAdc_indicator(chips, PLSADC);
-
+  
 	read_s_voltage_registers(chips, hspi);
 }
 
