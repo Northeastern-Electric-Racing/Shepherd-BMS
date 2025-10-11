@@ -79,6 +79,7 @@ void handle_ready(acc_data_t *bmsdata)
 
 void init_charging(acc_data_t *bmsdata)
 {
+	compute_set_fault(false);
 	cancel_timer(&charger_settle_countup);
 	return;
 }
@@ -339,6 +340,8 @@ fault_stat_t sm_fault_eval(fault_eval_t *item)
 /* charger settle countdown = 5 minute interval between 1 minute settle pauses */
 bool sm_charging_check(acc_data_t *bmsdata)
 {
+	return false;
+
 	// samity check
 	if (!bmsdata->is_charger_connected) {
 		//printf("Charger not connected\r\n");
@@ -371,7 +374,10 @@ bool sm_charging_check(acc_data_t *bmsdata)
 // check if balancing is allowed
 bool sm_balancing_check(acc_data_t *bmsdata)
 {
-	return false;
+	if (bmsdata->max_voltage.val <= BAL_MIN_V)
+		return false;
+
+	return !read_shutdown();
 
 	if (!bmsdata->is_charger_connected)
 		return false;

@@ -355,7 +355,7 @@ int main(void)
   //TODO add ISR/timer based debug LED toggle
 
   acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-  acc_data->is_charger_connected = false;
+  acc_data->is_charger_connected = true;
   acc_data->is_charging_enabled = false;
   // this effectively does that if current reading is broken, voltage=ocv
   acc_data->pack_current = 0;
