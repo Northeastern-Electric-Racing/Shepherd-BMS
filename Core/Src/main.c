@@ -10,21 +10,12 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
 #include <assert.h>
-
-#include "analyzer.h"
-#include "can_handler.h"
-#include "can_messages.h"
-#include "datastructs.h"
-#include "compute.h"
-#include "segment.h"
-#include "serialPrintResult.h"
-#include "shep_tasks.h"
+#include "application.h"
 
 /* USER CODE END Includes */
 
@@ -36,14 +27,12 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-extern BMSState_t current_state;
-
 //#ifdef DEBUG_EVERYTHING
 //#define DEBUG_CHARGING
 // #define DEBUG_STATS
 //#define DEBUG_VOLTAGES
 //#define DEBUG_RAW_VOLTAGES
-#define DEBUG_RAW_VOLTAGES_FORMATTED
+// #define DEBUG_RAW_VOLTAGES_FORMATTED
 // #define DEBUG_OCV
 // #define DEUBG_THERMS
 // #define DEBUG_OTHER
@@ -78,15 +67,7 @@ TIM_HandleTypeDef htim8;
 
 UART_HandleTypeDef huart4;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* USER CODE BEGIN PV */
-acc_data_t *prev_acc_data = NULL;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,11 +84,8 @@ static void MX_I2C1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM8_Init(void);
 static void MX_ADC1_Init(void);
-static void MX_IWDG_Init(void);
 static void MX_TIM5_Init(void);
 static void MX_TIM1_Init(void);
-void StartDefaultTask(void *argument);
-
 /* USER CODE BEGIN PFP */
 
 /* this is for the hardware watchdog ic. Currently not activated  in hw */
@@ -141,198 +119,6 @@ int _write(int file, char* ptr, int len) {
   return len;
 }
 
-const void print_bms_stats(acc_data_t *acc_data)
-{
-
-  #ifdef DEBUG_OTHER
-  //TODO get this from eeprom once implemented
-  // question - should we read from eeprom here, or do that on loop and store locally?
-	// printf("Prev Fault: %#x", previousFault);
-
-  printf("CAN Error:\t%ld\n", HAL_CAN_GetError(&hcan1));
-  printf("Current * 10: %d\n", (acc_data->pack_current));
-  printf("Min, Max, Avg Temps: %ld, %ld, %d\n", acc_data->min_temp.val, acc_data->max_temp.val, acc_data->avg_temp);
-  #endif
-
-  #ifdef DEBUG_VOLTAGES
-  printf("Min, Max, Avg, Delta Voltages: %f, %f, %f, %f\n", acc_data->min_voltage.val, acc_data->max_voltage.val, acc_data->avg_voltage, acc_data->delt_voltage);
-  #endif
-
-  #ifdef DEBUG_OTHER
-  printf("DCL: %d\n", acc_data->discharge_limit);
-  printf("CCL: %d\n", acc_data->charge_limit);
-  printf("Cont CCL %d\n", acc_data->cont_CCL);
-  printf("SoC: %d\n", acc_data->soc);
-  printf("Is Balancing?: %d\n", segment_is_balancing(acc_data->chips));
-  printf("State: ");
-  if (current_state == 0) printf("BOOT\n");
-  else if (current_state == 1) printf("READY\n");
-  else if (current_state == 2) printf("CHARGING\n");
-  else if (current_state == 3) printf("FAULTED: %lX\n", acc_data->fault_code);
-
-  printf("Voltage Noise Percent:\n");
-  printf("Seg 1: %d\n", acc_data->segment_noise_percentage[0]);
-  printf("Seg 2: %d\n", acc_data->segment_noise_percentage[1]);
-  printf("Seg 3: %d\n", acc_data->segment_noise_percentage[2]);
-  printf("Seg 4: %d\n", acc_data->segment_noise_percentage[3]);
-  printf("Seg 5: %d\n", acc_data->segment_noise_percentage[4]);
-  printf("Seg 6: %d\n", acc_data->segment_noise_percentage[5]);
-  #endif
-
-  #ifdef DEBUG_RAW_VOLTAGES
-  printf("Raw Cell Voltage:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.2f\t", acc_data->chip_data[c].cell_voltages[cell]);
-    }
-    printf("\n");
-  }
-  #endif
-
-  #ifdef DEBUG_RAW_VOLTAGES_FORMATTED
-  printf("Mathed Voltages:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-{
-  uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-  for(uint8_t cell = 0; cell < num_cells; cell++)
-  {
-      printf("%.5f\t", acc_data->chip_data[c].cell_voltages[cell]);
-  }
-  printf("\n");
-}
-printf("OCV:\n");
-for(uint8_t c = 0; c < NUM_CHIPS; c++)
-{
-uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-for(uint8_t cell = 0; cell < num_cells; cell++)
-{
-    printf("%.5f\t", acc_data->chip_data[c].open_cell_voltage[cell]);
-}
-printf("\n");
-}
-
-  // make sure `read_c_voltage_registers` is being called
-  printf("C Voltages:\n");
-    for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.5f\t", getVoltage(acc_data->chips[c].cell.c_codes[cell]));
-    }
-    printf("\n");
-  }
-    // make sure `read_f_voltage_registers` is being called
-  // printf("F Voltages:\n");
-  //   for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-  //   for(uint8_t cell = 0; cell < num_cells; cell++)
-  //   {
-  //       printf("%.5f\t", getVoltage(acc_data->chips[c].fcell.fc_codes[cell]));
-  //   }
-  //   printf("\n");
-  // }
-  // // make sure `read_s_voltage_registers` is being called
-  // printf("S Voltages:\n");
-  // for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  // {
-  //   uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-  //   for(uint8_t cell = 0; cell < num_cells; cell++)
-  //   {
-  //       printf("%.5f\t", getVoltage(acc_data->chips[c].scell.sc_codes[cell]));
-  //   }
-  //   printf("\n");
-  // }
-  #endif
-
-  #ifdef DEBUG_OCV
-  printf("Open Cell Voltage:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%d\t", acc_data->chip_data[c].open_cell_voltage[cell]);
-    }
-    printf("\n");
-  }
-  #endif
-
-#define DEBUG_THERM_VOLTS
-  #ifdef DEBUG_THERM_VOLTS
-  printf("THERM VOLTS: \n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    for(uint8_t gpio = 0; gpio < 10; gpio++)
-    {
-        printf("%f\t", getVoltage(acc_data->chips[c].raux.ra_codes[gpio]));
-    }
-    printf("\n");
-  }
-  printf("THERM TEMPS: \n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for(uint8_t cell = 0; cell < num_cells; cell++)
-    {
-        printf("%.1f\t", acc_data->chip_data[c].cell_temp[cell]);
-    }
-    printf("\n");
-  }
-  printf("CHIP TEMPS: \n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-   
-    printf("%.1f\t", acc_data->chip_data[c].die_temp);
-  }
-  printf("\n");
-  #endif
-
-  #ifdef DEBUG_OTHER
-  
-  printf("UnFiltered Thermistor Temps:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    printf("Chip %d:  ", c);
-
-    uint8_t num_therms;
-    if (acc_data->chip_data->alpha) {
-      num_therms = 7;
-    } else {
-      num_therms = 6;
-    }
-
-    for (uint8_t therm = 0; therm < num_therms; therm++) {
-
-          printf("%d ", acc_data->chips[c].aux.a_codes[therm]);
-        }
-      
-        printf("\n");
-    }
-
-  #endif
-
-  #ifdef DEUBG_THERMS
-   printf("Cell Temps:\n");
-  for(uint8_t c = 0; c < NUM_CHIPS; c++)
-  {
-    printf("Chip %d:  ", c);
-    uint8_t num_cells = get_num_cells(&acc_data->chip_data[c]);
-    for (uint8_t cell = 0; cell < num_cells; cell++) {
-
-          printf("%d ", acc_data->chip_data[c].cell_temp[cell]);
-        }
-      
-        printf("\n");
-    }
-  #endif
-}
-
-
 /* USER CODE END 0 */
 
 /**
@@ -353,32 +139,6 @@ int main(void)
 
   /* USER CODE BEGIN Init */
   //TODO add ISR/timer based debug LED toggle
-
-  acc_data_t *acc_data = malloc(sizeof(acc_data_t));
-  acc_data->is_charger_connected = false;
-  acc_data->is_charging_enabled = false;
-  // this effectively does that if current reading is broken, voltage=ocv
-  acc_data->pack_current = 0;
-  acc_data->fault_code_crit = FAULTS_CLEAR;
-  acc_data->fault_code_noncrit = FAULTS_CLEAR;
-  
-  // these are starting numbers so averaging is less likely to produce NaN
-  acc_data->segment_average_temps[0] = 33.33;
-  acc_data->segment_average_temps[1] = 33.33;
-  acc_data->segment_average_temps[2] = 33.33;
-  acc_data->segment_average_temps[3] = 33.33;
-  acc_data->segment_average_temps[4] = 33.33;
-
-  acc_data->segment_average_volts[0] = 3.666;
-  acc_data->segment_average_volts[1] = 3.666;
-  acc_data->segment_average_volts[2] = 3.666;
-  acc_data->segment_average_volts[3] = 3.666;
-  acc_data->segment_average_volts[4] = 3.666;
-
-  // always default to no balancing
-  memset(acc_data->discharge_config, 0, sizeof(acc_data->discharge_config));
-  acc_data->should_balance = false;
-
   
   /* USER CODE END Init */
 
@@ -402,7 +162,6 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM8_Init();
   MX_ADC1_Init();
-  MX_IWDG_Init();
   MX_TIM5_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
@@ -411,75 +170,9 @@ int main(void)
   // while (1) {
 
   // }
-	init_both_can(&hcan1, &hcan2);
-  compute_init();
-  // // the BMS faults upon boot, the shutdown loop must clear out before drive
-  compute_set_fault(false);
-  printf("Init passed\n");
+	printf("STARTING MAIN");
+  app_main();
   /* USER CODE END 2 */
-
-  /* Init scheduler */
-  osKernelInitialize();
-
-  /* USER CODE BEGIN RTOS_MUTEX */
-  acc_data->mutex = osMutexNew(NULL);
-  /* USER CODE END RTOS_MUTEX */
-
-  /* USER CODE BEGIN RTOS_SEMAPHORES */
-  /* add semaphores, ... */
-  /* USER CODE END RTOS_SEMAPHORES */
-
-  /* USER CODE BEGIN RTOS_TIMERS */
-  /* start timers, add new ones, ... */
-  /* USER CODE END RTOS_TIMERS */
-
-  /* USER CODE BEGIN RTOS_QUEUES */
-
-  /* USER CODE END RTOS_QUEUES */
-
-  /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, (void*) acc_data, &defaultTask_attributes);
-
-  /* USER CODE BEGIN RTOS_THREADS */
-  
-  /* Messaging */
-  can_dispatch_handle = osThreadNew(vCanDispatch, NULL, &can_dispatch_attributes);
-  assert(can_dispatch_handle);
-  
-  can_receive_thread = osThreadNew(vCanReceive, acc_data, &can_receive_attributes);
-  assert(can_receive_thread);
-
-  get_segment_data_args_t *seg_args = malloc(sizeof(get_segment_data_args_t));
-  seg_args->bmsdata = acc_data;
-  seg_args->hspi = &hspi2;
-  get_segment_data_thread = osThreadNew(vGetSegmentData, seg_args, &get_segment_data_attrs);
-  assert(get_segment_data_thread);
-
-  analyzer_thread = osThreadNew(vAnalyzer, acc_data, &analyzer_attrs);
-  assert(analyzer_thread);
-
-  current_monitor_thread = osThreadNew(vCurrentMonitor, acc_data, &current_monitor_attrs);
-  assert(current_monitor_thread);
-
-  state_machine_thread = osThreadNew(vStateMachine, acc_data, &state_machine_attrs);
-  assert(state_machine_thread);
-
-  if (DEBUG_MODE_ENABLED) {
-    debug_mode_thread = osThreadNew(vDebugMode, acc_data, &debug_mode_attrs);
-    assert(debug_mode_thread);
-  }
-
-  /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -696,34 +389,6 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
-
-}
-
-/**
-  * @brief IWDG Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_IWDG_Init(void)
-{
-
-  /* USER CODE BEGIN IWDG_Init 0 */
-
-  /* USER CODE END IWDG_Init 0 */
-
-  /* USER CODE BEGIN IWDG_Init 1 */
-
-  /* USER CODE END IWDG_Init 1 */
-  hiwdg.Instance = IWDG;
-  hiwdg.Init.Prescaler = IWDG_PRESCALER_32;
-  hiwdg.Init.Reload = 4095;
-  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN IWDG_Init 2 */
-
-  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -1090,7 +755,7 @@ static void MX_DMA_Init(void)
 
   /* DMA interrupt init */
   /* DMA2_Stream4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA2_Stream4_IRQn, 5, 0);
+  HAL_NVIC_SetPriority(DMA2_Stream4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream4_IRQn);
 
 }
@@ -1103,8 +768,8 @@ static void MX_DMA_Init(void)
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -1154,86 +819,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 
-struct __attribute__((__packed__)) git_version_data {
-		uint8_t git_major_version;
-		uint8_t git_minor_version;
-		uint8_t git_patch_version;
-    uint8_t git_is_local_clean;
-		uint8_t git_is_upstream_clean;
-	} git_version_data;
-
-  struct __attribute__((__packed__)) git_hash_data {
-    uint32_t git_shorthash;
-    uint32_t git_authorhash;
-  } git_hash_data;
-
-/**
- * @brief Sends git version infomation as a can message
- */
-void send_git_version_message() {
-  //const struct git_hash_data git_hash_data2 = {GIT_SHORTHASH , GIT_AUTHORHASH};
-  const struct git_version_data git_version_data2 = {GIT_MAJOR_VERSION , GIT_MINOR_VERSION, GIT_PATCH_VERSION, GIT_IS_LOCAL_CLEAN, GIT_IS_UPSTREAM_CLEAN };
-  
-  can_msg_t msg1 = { .id = 0x69A, .len = sizeof(git_version_data2)};
-  //can_msg_t msg2 = { .id = 0x69B, .len = sizeof(git_hash_data2)};
-
-  memcpy(&msg1.data, &git_version_data2, sizeof(git_version_data2));
-  //memcpy(&msg2.data, &git_hash_data2, sizeof(git_hash_data2));
-
-  queue_can_msg(msg1);
-  //queue_can_msg(msg2);
-  
-}
-
 /* USER CODE END 4 */
-
-/* USER CODE BEGIN Header_StartDefaultTask */
-/**
-  * @brief  Function implementing the defaultTask thread.
-  * @param  argument: Not used
-  * @retval None
-  */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
-{
-  /* USER CODE BEGIN 5 */
-  acc_data_t* bmsdata = (acc_data_t*) argument;
-
-  bool alt = true;
-
-  /* Infinite loop */
-  for(;;)
-  {
-    #ifdef DEBUG_STATS
-    print_bms_stats(bmsdata);
-    #endif
-
-    if (alt) {
-      printf(".\n");
-    } else {
-      printf("..\n");
-    }
-
-    alt = !alt;
-
-    pet_watchdog();
-
-    send_git_version_message();
-  
-    HAL_IWDG_Refresh(&hiwdg);
-
-    toggle_debug_led_1();
-    osDelay(500);
-
-  }
-  /* USER CODE END 5 */
-}
 
 /**
   * @brief  Period elapsed callback in non blocking mode
@@ -1248,7 +840,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 
   /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM3) {
+  if (htim->Instance == TIM3)
+  {
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
@@ -1270,8 +863,7 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
   * @brief  Reports the name of the source file and the source line number
   *         where the assert_param error has occurred.

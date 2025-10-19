@@ -42,7 +42,7 @@ void init_chip(cell_asic *chip)
 
 	// Short soak on ADAX
 	set_soak_on(chip, SOAKON_SET);
-	set_aux_soak_range(chip, SHORT);
+	set_aux_soak_range(chip, SHORT_6830);
 
 	// No open wire detect soak
 	set_open_wire_soak_time(chip, OWA0);

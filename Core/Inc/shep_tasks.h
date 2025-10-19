@@ -11,7 +11,6 @@
 #ifndef SHEP_TASKS_H
 #define SHEP_TASKS_H
 
-#include "cmsis_os.h"
 #include "datastructs.h"
 
 /**

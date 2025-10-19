@@ -19,7 +19,6 @@
 #include <stdbool.h>
 #include "datastructs.h"
 #include "ringbuffer.h"
-#include "cmsis_os.h"
 
 // Number of stored cell data readings in ring buffer.
 #define NUM_OF_READINGS 10
