@@ -213,17 +213,17 @@ void vCanDispatch(void *pv_params)
 		while (osOK == osMessageQueueGet(can_outbound_queue,
 						 &msg_from_queue, NULL, 0)) {
 			/* Wait if CAN outbound queue is full */
-			while (HAL_CAN_GetTxMailboxesFreeLevel(line->hcan) ==
-			       0) {
-				osDelay(1);
-			}
+			// while (HAL_CAN_GetTxMailboxesFreeLevel(line->hcan) ==
+			//        0) {
+			// 	osDelay(1);
+			// }
 
-			msg_status = can_send_msg(line, &msg_from_queue);
+			// msg_status = can_send_msg(line, &msg_from_queue);
 
-			if (msg_status != HAL_OK) {
-				// temporary
-				printf("CAN ERROR %d", msg_status);
-			}
+			// if (msg_status != HAL_OK) {
+			// 	// temporary
+			// 	printf("CAN ERROR %d", msg_status);
+			// }
 		}
 
 		osDelay(1);

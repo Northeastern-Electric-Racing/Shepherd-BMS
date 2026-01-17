@@ -49,7 +49,7 @@ void vGetSegmentData(void *pv_params)
 	for (;;) {
 		HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
 
-		segment_mute(bmsdata->chips, hspi);
+		//segment_mute(bmsdata->chips, hspi);
 
 		if (current_state == CHARGING_STATE) {
 			osDelay(75);
@@ -88,15 +88,16 @@ void vGetSegmentData(void *pv_params)
 		// 	}
 		// }
 
-		if (current_state == CHARGING_STATE) {
-			segment_unmute(bmsdata->chips, hspi);
-		}
+		//if (current_state == CHARGING_STATE) {
+		segment_unmute(bmsdata->chips, hspi);
+		//}
 
-		if (bmsdata->should_balance) {
-			segment_configure_balancing(bmsdata->chips,
-						    bmsdata->discharge_config,
-						    hspi);
-		}
+		// if (bmsdata->should_balance) {
+		// 	segment_configure_balancing(bmsdata->chips,
+		// 				    bmsdata->discharge_config,
+		// 				    hspi);
+		// }
+		segment_manual_balancing(bmsdata->chips, hspi);
 
 		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 

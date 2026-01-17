@@ -15,8 +15,8 @@ extern BMSState_t current_state;
  * @brief Map cells to therms (ra codes).  Note beta has only 6 therms.
  * 
  */
-const int THERM_MAP[NUM_CELLS_ALPHA] = { 0, 0, 1, 1, 2, 2, 3,
-					 3, 4, 4, 5, 5, 6, 6 };
+const int THERM_MAP[NUM_CELLS_ALPHA] = { 0, 0, 1, 1, 5, 5, 6,
+					 6, 7, 7, 8, 8, 9 };
 
 // clang-format off
 // const bool THERM_FAIL_MAP[NUM_CHIPS][NUM_THERMS_ALPHA] =    { 
@@ -88,12 +88,9 @@ uint8_t get_num_cells(chipdata_t *chip_data)
  */
 float calc_temp(float res)
 {
-	float coef = res / 10000.0;
-	// achieved via passing ThermCalcs.xlsx into https://www.standardsapplied.com/nonlinear-curve-fitting-calculator.html
-	return -1149.531863 * (pow(coef, 1.0 / 8)) +
-	       658.9396848 * (pow(coef, 1.0 / 4)) +
-	       -87.8102815 * (pow(coef, 1.0 / 2)) + 2.034216235 * coef +
-	       601.008351;
+	// achieved via math --  See BMS 25 Mapping and Calcs
+	return ((298.15 * 3462.28) / (298.15 * logf(res / 10100) + 3462.28)) -
+	       273.15;
 }
 
 /**
@@ -104,7 +101,7 @@ float calc_temp(float res)
  */
 float calc_cell_temp(float voltage)
 {
-	float res = (5600 * (3 - voltage)) / voltage;
+	float res = (10000 * (3 - voltage)) / voltage;
 	return calc_temp(res);
 }
 

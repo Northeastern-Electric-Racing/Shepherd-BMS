@@ -5,10 +5,10 @@
 #define DEBUG_STATS
 
 // Hardware definition
-#define NUM_SEGMENTS	5
+#define NUM_SEGMENTS	1
 #define NUM_CHIPS	NUM_SEGMENTS * 2
-#define NUM_CELLS_ALPHA 14
-#define NUM_CELLS_BETA	11
+#define NUM_CELLS_ALPHA 13
+#define NUM_CELLS_BETA	13
 #define NUM_CELLS_SEG	NUM_CELLS_ALPHA + NUM_CELLS_BETA
 #define NUM_CELLS                                \
 	((NUM_CELLS_ALPHA * (NUM_CHIPS / 2.0)) + \
