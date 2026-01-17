@@ -77,7 +77,7 @@ void init_chip(cell_asic *chip)
 	set_discharge_timer_monitor(chip, DTMEN_OFF);
 
 	// set this to allow sleep mode
-	set_discharge_timeout(chip, 0);
+	set_discharge_timeout(chip, 1);
 
 	// Set discharge timer range to 0 to 63 minutes with 1 minute increments
 	set_discharge_timer_range(chip, RANG_0_TO_63_MIN);
@@ -96,7 +96,7 @@ void segment_init(cell_asic chips[NUM_CHIPS], SPI_HandleTypeDef *hspi)
 	write_config_regs(chips, hspi);
 
 	// disable balancing on init
-	mute_chips(chips, hspi);
+	//mute_chips(chips, hspi);
 
 	start_c_adc_conv(hspi);
 }
@@ -226,7 +226,7 @@ void segment_retrieve_charging_data(cell_asic chips[NUM_CHIPS],
 	adc_and_read_aux_registers(chips, hspi);
 
 	// read from ADC convs
-	get_c_adc_voltages(chips, hspi);
+	read_filtered_voltage_registers(chips, hspi);
 
 	read_status_registers(chips, hspi);
 
@@ -333,10 +333,12 @@ void segment_configure_balancing(
 	for (int chip = 0; chip < NUM_CHIPS; chip++) {
 		uint8_t num_cells = get_num_cells_seg(chip);
 		for (int cell = 0; cell < num_cells; cell++) {
-			set_cell_discharge(&chips[chip], cell,
-					   discharge_config[chip][cell]);
+			set_cell_pwm(&chips[chip], cell,
+					   discharge_config[chip][cell] ?
+					     PWM_52_8_PCT :
+					     PWM_0_0_PCT);
 		}
 	}
 
-	write_config_regs(chips, hspi);
+	write_pwm_regs(chips, hspi);
 }

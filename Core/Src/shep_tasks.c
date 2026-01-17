@@ -41,6 +41,8 @@ void vGetSegmentData(void *pv_params)
 
 	HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
 	segment_init(bmsdata->chips, hspi);
+	segment_manual_balancing(bmsdata->chips, hspi);
+		segment_manual_balancing(bmsdata->chips, hspi);
 	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
 	// must delay after init for some reason, or else ADC doesnt start up (-3.45 or something)
@@ -50,26 +52,29 @@ void vGetSegmentData(void *pv_params)
 		HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
 
 		//segment_mute(bmsdata->chips, hspi);
+		segment_manual_balancing(bmsdata->chips, hspi);
 
 		if (current_state == CHARGING_STATE) {
 			osDelay(75);
 			// must delay to let settle after balancing has halted, or else cells read high
 		}
 
+		segment_retrieve_charging_data(bmsdata->chips, hspi);
+
 		if (current_state == CHARGING_STATE) {
 			// in charging, debug data is required to get things like die temp
-			segment_retrieve_charging_data(bmsdata->chips, hspi);
 		} else {
 			// snap before getting data
-			segment_snap(bmsdata->chips, hspi);
-			segment_retrieve_active_data(bmsdata->chips, hspi);
-			// unsnap after getting data
-			segment_unsnap(bmsdata->chips, hspi);
-			if (DEBUG_MODE_ENABLED) {
-				segment_retrieve_debug_data(bmsdata->chips,
-							    hspi);
-			}
+			// segment_snap(bmsdata->chips, hspi);
+			// segment_retrieve_active_data(bmsdata->chips, hspi);
+			// // unsnap after getting data
+			// segment_unsnap(bmsdata->chips, hspi);
+			
 		}
+		// if (DEBUG_MODE_ENABLED) {
+		// 		segment_retrieve_debug_data(bmsdata->chips,
+		// 					    hspi);
+		// 	}
 
 		// if in normal drive mode, reboot the segment every 45 seconds in case the chips go out of sync
 		// if (current_state == READY_STATE) {
@@ -97,12 +102,11 @@ void vGetSegmentData(void *pv_params)
 		// 				    bmsdata->discharge_config,
 		// 				    hspi);
 		// }
-		segment_manual_balancing(bmsdata->chips, hspi);
 
 		HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 
 		osThreadFlagsSet(analyzer_thread, ANALYZER_FLAG);
-		osDelay(1000 / SAMPLE_RATE);
+		osDelay(350);
 	}
 }
 
